@@ -107,6 +107,17 @@ struct Record {
     #[arg(long)]
     out: PathBuf,
 
+    /// The directory the program runs in.
+    ///
+    /// The recorder's own current directory unless this is given. A capture is
+    /// about a directory — a scratch project, a fixture tree — and the rig must not
+    /// leave that choice to `portable-pty`, whose default for a program it was given
+    /// no directory for is the user's home directory. A path that is not a directory
+    /// is refused rather than falling back, because falling back would land exactly
+    /// where this flag exists to prevent.
+    #[arg(long, value_name = "DIR")]
+    cwd: Option<PathBuf>,
+
     /// A file of keystrokes to drive the program with, one per line.
     ///
     /// Each line is an optional delay in milliseconds, then the keystroke to send
@@ -165,6 +176,9 @@ fn record(args: Record) -> Result<ExitCode> {
         // The rig's own defaults are the environment of every session; the record
         // says so below, from the driver's constants rather than from a copy.
         env: Vec::new(),
+        // `None` is not "wherever portable-pty likes": the driver resolves it to
+        // this process's own directory.
+        cwd: args.cwd,
     };
     // The record is known before the session runs, except for how it ended: the
     // writer completes it in `finish`.

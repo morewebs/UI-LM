@@ -86,6 +86,7 @@ fn captures_output_from_a_spawned_process() {
         rows: 5,
         cols: 20,
         env: vec![("TERM".into(), "xterm-256color".into())],
+        cwd: None,
     };
     let mut d = Driver::spawn(&cfg).unwrap();
     let mut buf = [0u8; 1024];
@@ -135,6 +136,7 @@ fn a_quiet_child_is_not_the_end_of_the_stream() {
         rows: 5,
         cols: 20,
         env: vec![],
+        cwd: None,
     };
     let mut d = Driver::spawn(&cfg).unwrap();
     let deadline = Instant::now() + POLL_DEADLINE;
@@ -194,6 +196,7 @@ fn keystrokes_reach_the_child() {
         rows: 5,
         cols: 20,
         env: vec![],
+        cwd: None,
     };
     let mut d = Driver::spawn(&cfg).unwrap();
     let keystrokes: &[u8] = if cfg!(windows) {
@@ -270,6 +273,7 @@ fn resize_resizes_the_emulated_screen() {
         rows: 5,
         cols: 20,
         env: vec![],
+        cwd: None,
     };
     let mut d = Driver::spawn(&cfg).unwrap();
     assert_eq!(d.screen().size(), (5, 20));
@@ -323,6 +327,7 @@ fn a_child_that_floods_cursor_queries_without_reading_does_not_stall_the_reader(
         rows: 5,
         cols: 20,
         env: vec![],
+        cwd: None,
     };
     let mut d = Driver::spawn(&cfg).unwrap();
     let deadline = Instant::now() + FLOOD_WINDOW;
@@ -362,4 +367,178 @@ fn a_child_that_floods_cursor_queries_without_reading_does_not_stall_the_reader(
             "answers past the write queue must be dropped and counted, but none were: {dropped}"
         );
     }
+}
+
+/// The size of the screen the working-directory tests read: wide enough that a
+/// temporary directory's path is one line rather than a wrapped fragment.
+const DIRECTORY_SCREEN: (u16, u16) = (10, 200);
+
+/// A child that prints its own working directory and exits.
+///
+/// `cd` and `pwd` are the platform's own answer to "where am I", so what the
+/// assertion reads is the directory the child really ran in — not a value the
+/// rig believes it asked for.
+fn prints_its_directory() -> (String, Vec<String>) {
+    if cfg!(windows) {
+        ("cmd".to_owned(), vec!["/c".to_owned(), "cd".to_owned()])
+    } else {
+        ("sh".to_owned(), vec!["-c".to_owned(), "pwd".to_owned()])
+    }
+}
+
+/// Reads until the stream ends, failing rather than hanging if it never does.
+fn read_to_end(d: &mut Driver) {
+    let deadline = Instant::now() + POLL_DEADLINE;
+    let mut buf = [0u8; 4096];
+    loop {
+        assert!(Instant::now() < deadline, "the child's stream never ended");
+        match d.read_some(&mut buf) {
+            Ok(0) => return,
+            Ok(_) => continue,
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            Err(e) => panic!("read failed: {e}"),
+        }
+    }
+}
+
+/// The screen the driver holds, as text: one line per row, padding removed.
+fn screen_text(d: &Driver, rows: u16, cols: u16) -> String {
+    (0..rows)
+        .map(|row| {
+            let line: String = (0..cols)
+                .map(|col| {
+                    d.screen()
+                        .cell(row, col)
+                        .map(|cell| cell.contents().chars().next().unwrap_or(' '))
+                        .unwrap_or(' ')
+                })
+                .collect();
+            line.trim_end().to_owned()
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// The directory a child that printed its own working directory reported: the
+/// first line of its screen that is not blank.
+fn reported_directory(screen: &str) -> &str {
+    screen
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .unwrap_or_else(|| panic!("the child printed no directory: {screen:?}"))
+}
+
+/// A directory in the form two of them can be compared in.
+///
+/// Windows reports a path in whatever case it likes, with either separator, and
+/// `std::fs::canonicalize` would add a `\\?\` prefix the child never prints — so
+/// neither a byte comparison nor the canonical form is the right test.
+fn comparable(path: &str) -> String {
+    let trimmed = path.trim();
+    let trimmed = trimmed.strip_prefix(r"\\?\").unwrap_or(trimmed);
+    if cfg!(windows) {
+        trimmed.replace('/', "\\").to_lowercase()
+    } else {
+        trimmed.to_owned()
+    }
+}
+
+/// The directory the child would fall back to if nothing set it on Windows —
+/// portable-pty's `USERPROFILE`, which is the behaviour this change rules out.
+fn home_directory() -> Option<String> {
+    std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" })
+        .map(|home| home.to_string_lossy().into_owned())
+}
+
+#[test]
+fn a_child_runs_in_the_directory_the_config_names() {
+    let _watchdog = arm_watchdog("a_child_runs_in_the_directory_the_config_names");
+    // The defect this guards: a capture script started in a scratch project still
+    // had its child run in the user's home directory, because the driver set no
+    // directory and portable-pty's default for one it was not given is the home
+    // directory. The tool screens of a session were the home directory's for the
+    // same reason, and a scenario could create a file there.
+    let scratch = tempfile::tempdir().unwrap();
+    let wanted = scratch.path().display().to_string();
+    let (command, args) = prints_its_directory();
+    let (rows, cols) = DIRECTORY_SCREEN;
+    let cfg = SessionConfig {
+        command,
+        args,
+        rows,
+        cols,
+        env: vec![],
+        cwd: Some(scratch.path().to_path_buf()),
+    };
+    let mut d = Driver::spawn(&cfg).unwrap();
+    read_to_end(&mut d);
+    let screen = screen_text(&d, rows, cols);
+    let reported = reported_directory(&screen);
+    assert_eq!(
+        comparable(reported),
+        comparable(&wanted),
+        "the child did not run in the directory the config named: it reported {reported:?} \
+         rather than {wanted:?}"
+    );
+    assert_eq!(d.try_wait().unwrap(), Some(0));
+}
+
+#[test]
+fn a_child_runs_in_the_recorders_directory_when_none_is_configured() {
+    let _watchdog = arm_watchdog("a_child_runs_in_the_recorders_directory_when_none_is_configured");
+    // With no directory configured the child must run where the recorder itself
+    // is, which is what a capture started inside a scratch project means. The
+    // alternative is portable-pty's home-directory default, and that is the one
+    // this test exists to rule out.
+    let here = std::env::current_dir()
+        .expect("the test process has a current directory")
+        .display()
+        .to_string();
+    let home = home_directory();
+    // A test process started in the home directory cannot tell "the recorder's own
+    // directory" from "portable-pty's fallback": both name the same path, and the
+    // assertion would hold for the wrong reason. Say so rather than pass vacuously.
+    if home
+        .as_deref()
+        .is_some_and(|home| comparable(home) == comparable(&here))
+    {
+        eprintln!(
+            "skipped: this test process's own directory {here:?} is the home directory, so a \
+             child that fell back to home would report exactly the path this test expects"
+        );
+        return;
+    }
+    let (command, args) = prints_its_directory();
+    let (rows, cols) = DIRECTORY_SCREEN;
+    let cfg = SessionConfig {
+        command,
+        args,
+        rows,
+        cols,
+        env: vec![],
+        cwd: None,
+    };
+    let mut d = Driver::spawn(&cfg).unwrap();
+    read_to_end(&mut d);
+    let screen = screen_text(&d, rows, cols);
+    let reported = reported_directory(&screen);
+    assert_eq!(
+        comparable(reported),
+        comparable(&here),
+        "a child with no configured directory must run in the recorder's own directory, not in \
+         portable-pty's home-directory default: it reported {reported:?}, and the recorder is in \
+         {here:?}"
+    );
+    if let Some(home) = home.as_deref() {
+        assert_ne!(
+            comparable(reported),
+            comparable(home),
+            "the child reported the home directory {home:?}, which is the fallback this test \
+             exists to rule out"
+        );
+    }
+    assert_eq!(d.try_wait().unwrap(), Some(0));
 }

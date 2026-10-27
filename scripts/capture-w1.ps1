@@ -357,15 +357,18 @@ foreach ($scenario in $selected) {
     if (Test-Path -LiteralPath $stdoutPath) { Remove-Item -LiteralPath $stdoutPath -Force }
     if (Test-Path -LiteralPath $stderrPath) { Remove-Item -LiteralPath $stderrPath -Force }
 
-    # `--cwd` is not a detail. portable-pty 0.9 gives the child a working directory
-    # of cwd.or(%USERPROFILE%) when the command builder sets none, and the recorder
-    # sets none, so a session spawned from a scratch directory still runs in the
-    # user's home: the tool screens are then the home directory's, and a scenario can
-    # write outside the capture tree. The application's own `--cwd` is the only way
-    # to put it in the scratch project. (The driver should pass its own working
-    # directory; that is a rig change, not a capture-script one.)
+    # `--cwd` is not a detail. portable-pty 0.9 gives a child whose command builder
+    # names no directory the value of cwd.or(%USERPROFILE%), and the recorder used to
+    # pass none, so a session spawned from a scratch directory still ran in the user's
+    # home: the tool screens were the home directory's, and one scenario created
+    # `made.txt` there. The driver now sets the child's directory itself - the
+    # recorder's own cwd unless `--cwd` says otherwise - so it is named here on
+    # purpose: `--cwd` to the recorder puts the child in the scratch project whatever
+    # directory this script was launched from, and the application's own `--cwd`
+    # tells grok the same project explicitly, which is how the captured sessions were
+    # driven. Both are passed rather than either alone.
     $captureArgs = @(
-        'record', '--rows', "$Rows", '--cols', "$Cols", '--out', $outDir, '--script', $keysPath, '--', $GrokExe, '--cwd', $scratch
+        'record', '--rows', "$Rows", '--cols', "$Cols", '--out', $outDir, '--script', $keysPath, '--cwd', $scratch, '--', $GrokExe, '--cwd', $scratch
     ) + @($scenario.args)
 
     $clock = [System.Diagnostics.Stopwatch]::StartNew()

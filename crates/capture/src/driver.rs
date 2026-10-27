@@ -36,9 +36,18 @@
 //!   — the position the child asked about — and is queued, so that a child which
 //!   floods queries without reading the answers cannot stall the read path; the
 //!   queue is bounded, and replies that do not fit are dropped and counted.
+//!
+//! The child's working directory is the third thing a host decides rather than
+//! inherits. `portable-pty` gives a command that names no directory the user's home
+//! directory, and a capture must never run a program there: a session started inside
+//! a scratch project recorded the home directory's tool screens and could create a
+//! file in it. So [`SessionConfig::working_directory`] — an explicit directory if the
+//! caller named one, the recorder's own current directory otherwise — is always what
+//! the command builder is given.
 
 use std::collections::VecDeque;
 use std::io::{self, Read, Write};
+use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, SyncSender, TryRecvError, TrySendError};
 use std::thread::JoinHandle;
 
@@ -87,6 +96,48 @@ pub struct SessionConfig {
     /// Environment overrides for the child, applied on top of the inherited
     /// environment and taking precedence over [`DEFAULT_ENV`].
     pub env: Vec<(String, String)>,
+    /// The directory the child runs in.
+    ///
+    /// `None` means the recorder's own current directory, which is what a capture
+    /// started inside a scratch project means by "here". Portable-pty's own default
+    /// for a command that names no directory is the user's home directory, and
+    /// that is never the right one: a session started in a scratch project recorded
+    /// the home directory's tool screens and could create a file there.
+    pub cwd: Option<PathBuf>,
+}
+
+impl SessionConfig {
+    /// The directory the child runs in: [`SessionConfig::cwd`] if the caller named
+    /// one, and the recorder's own current directory otherwise.
+    ///
+    /// This is deliberately not `cwd.or(home)`. `portable-pty`'s own resolution is
+    /// exactly that — `CommandBuilder::current_directory` is
+    /// `self.cwd.or(USERPROFILE)` — and it is the reason a W1 session started in a
+    /// scratch project still recorded the home directory: the tool searches found
+    /// nothing, the screens were the home directory's, and one scenario created a
+    /// file there. A capture tool that spawns an application in the user's home is
+    /// a defect, not a documented behaviour.
+    ///
+    /// An explicit directory that is not one is an error rather than a fallback:
+    /// `portable-pty` silently ignores a path that is not a directory and drops to
+    /// the home directory, so a typo in the flag would land exactly where this
+    /// method exists to prevent, and would do it quietly.
+    pub fn working_directory(&self) -> Result<PathBuf> {
+        let directory = match &self.cwd {
+            Some(directory) => directory.clone(),
+            None => std::env::current_dir().context(
+                "the recorder's own working directory could not be read, so the child has no \
+                 directory to default to",
+            )?,
+        };
+        if !directory.is_dir() {
+            anyhow::bail!(
+                "the child's working directory {} is not a directory",
+                directory.display()
+            );
+        }
+        Ok(directory)
+    }
 }
 
 /// A child process on a pty, and the emulator its output is fed to.
@@ -219,7 +270,9 @@ impl Driver {
     /// reading its output.
     ///
     /// The child inherits this process's environment, then [`DEFAULT_ENV`] is
-    /// applied, then `cfg.env` — so the caller can override the defaults.
+    /// applied, then `cfg.env` — so the caller can override the defaults. It runs in
+    /// [`SessionConfig::working_directory`], which is the caller's directory or the
+    /// recorder's own, never `portable-pty`'s home-directory default.
     pub fn spawn(cfg: &SessionConfig) -> Result<Self> {
         let pair = portable_pty::native_pty_system()
             .openpty(pty_size(cfg.rows, cfg.cols))
@@ -227,6 +280,9 @@ impl Driver {
 
         let mut cmd = CommandBuilder::new(&cfg.command);
         cmd.args(&cfg.args);
+        // Set explicitly, always: leaving it unset is what makes the child run in
+        // the user's home directory.
+        cmd.cwd(cfg.working_directory()?);
         for (key, value) in DEFAULT_ENV {
             cmd.env(key, value);
         }
@@ -537,6 +593,45 @@ fn pty_size(rows: u16, cols: u16) -> PtySize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A config that is never spawned: only the fields the working directory
+    /// depends on matter here.
+    fn config_with_cwd(cwd: Option<PathBuf>) -> SessionConfig {
+        SessionConfig {
+            command: "true".to_owned(),
+            args: Vec::new(),
+            rows: 5,
+            cols: 20,
+            env: Vec::new(),
+            cwd,
+        }
+    }
+
+    #[test]
+    fn a_configured_directory_is_used_and_one_that_is_not_a_directory_is_refused() {
+        // `portable-pty` filters the command's directory with `is_dir` and falls
+        // back to the home directory when that filter rejects it, so a helper that
+        // quietly passed a bad path through would put the child in the user's home.
+        // A path that is not a directory has to be this rig's error instead.
+        let scratch = tempfile::tempdir().expect("a temporary directory");
+        let named = config_with_cwd(Some(scratch.path().to_path_buf()));
+        assert_eq!(
+            named.working_directory().unwrap(),
+            scratch.path(),
+            "the caller's own directory must be what the child gets"
+        );
+
+        let missing = scratch.path().join("not-a-directory");
+        let broken = config_with_cwd(Some(missing.clone()));
+        let error = broken
+            .working_directory()
+            .expect_err("a directory that does not exist is not a directory to run a child in");
+        let message = format!("{error:#}");
+        assert!(
+            message.contains(&missing.display().to_string()),
+            "the error must name the directory that was asked for: {message:?}"
+        );
+    }
 
     /// The replies `read_some` would enqueue for `bytes`, in stream order.
     fn replies_for(parser: &mut vt100::Parser, progress: &mut usize, bytes: &[u8]) -> Vec<String> {

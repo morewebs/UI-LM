@@ -143,6 +143,96 @@ fn frame_text(frame: &Frame) -> String {
         .join("\n")
 }
 
+/// A child that prints its own working directory and exits.
+///
+/// `cd` and `pwd` are the platform's own answer to "where am I", so a frame
+/// holding one of their answers holds the directory the child really ran in.
+fn prints_its_directory() -> Vec<String> {
+    if cfg!(windows) {
+        vec!["cmd".into(), "/c".into(), "cd".into()]
+    } else {
+        vec!["sh".into(), "-c".into(), "pwd".into()]
+    }
+}
+
+/// The directory a child that printed its own working directory reported: the
+/// first line of its screen that is not blank.
+fn reported_directory(screen: &str) -> String {
+    screen
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .unwrap_or_else(|| panic!("the child printed no directory: {screen:?}"))
+        .to_owned()
+}
+
+/// A directory in the form two of them can be compared in.
+///
+/// Windows reports a path in whatever case it likes, with either separator, and
+/// `std::fs::canonicalize` would add a `\\?\` prefix the child never prints — so
+/// neither a byte comparison nor the canonical form is the right test.
+fn comparable(path: &str) -> String {
+    let trimmed = path.trim();
+    let trimmed = trimmed.strip_prefix(r"\\?\").unwrap_or(trimmed);
+    if cfg!(windows) {
+        trimmed.replace('/', "\\").to_lowercase()
+    } else {
+        trimmed.to_owned()
+    }
+}
+
+#[test]
+fn the_cwd_flag_puts_the_child_in_the_directory_it_names() {
+    let _watchdog = arm_watchdog("the_cwd_flag_puts_the_child_in_the_directory_it_names");
+    // Two scratch directories: the recorder is started in one and told about the
+    // other. Only a `--cwd` that reaches the driver — through the argument
+    // parser, the session config and the command builder — can put the child in
+    // the second, so this cannot pass because the recorder happened to inherit a
+    // directory.
+    let recorder_dir = tempfile::tempdir().unwrap();
+    let child_dir = tempfile::tempdir().unwrap();
+    let out = tempfile::tempdir().unwrap();
+    // Wider than [`recorder`]'s screen: a temporary directory's path is longer
+    // than forty columns, and a truncated path is not a directory the assertion
+    // could compare.
+    let output = Command::new(env!("CARGO_BIN_EXE_ui-lm-capture"))
+        .args(["record", "--rows", "10", "--cols", "200", "--out"])
+        .arg(out.path())
+        .arg("--cwd")
+        .arg(child_dir.path())
+        .current_dir(recorder_dir.path())
+        .arg("--")
+        .args(prints_its_directory())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "the recorder failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let (_, frames) = read_frames(out.path()).unwrap();
+    let screen = frame_text(
+        frames
+            .last()
+            .expect("a child that printed a directory drew a frame"),
+    );
+    let reported = reported_directory(&screen);
+    assert_eq!(
+        comparable(&reported),
+        comparable(&child_dir.path().display().to_string()),
+        "the child did not run in the directory `--cwd` named: it reported {reported:?} rather \
+         than {:?}",
+        child_dir.path().display().to_string()
+    );
+    assert_ne!(
+        comparable(&reported),
+        comparable(&recorder_dir.path().display().to_string()),
+        "the child ran in the recorder's own directory, so `--cwd` never reached the driver: it \
+         reported {reported:?}"
+    );
+}
+
 #[test]
 fn record_writes_frames_changed_rows_and_session() {
     let _watchdog = arm_watchdog("record_writes_frames_changed_rows_and_session");
