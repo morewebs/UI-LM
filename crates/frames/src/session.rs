@@ -122,9 +122,18 @@ impl SessionWriter {
     /// normal, and failing there would break an interrupted-and-retried capture for
     /// no reason the caller can act on. The record is *not* written here either:
     /// nothing is known about how this session ended until it does.
+    ///
+    /// The record goes first, and the stream is truncated second, which is the only
+    /// order that survives a kill between the two. Removing the record first leaves
+    /// no record beside the previous run's frames: `read_frames` rejects that, and
+    /// `read_orphaned_frames` recovers it, so the directory reads as an interrupted
+    /// capture — which is what it is. Truncating first would leave the old record
+    /// beside an empty stream, and that reads as a perfectly valid session with no
+    /// frames in it: one capture's facts wearing another's data, silently. Two
+    /// syscalls cannot be made atomic here, so the window is given the meaning that
+    /// cannot be mistaken for a finished session.
     pub fn new(dir: &Path, record: SessionRecord) -> io::Result<Self> {
         fs::create_dir_all(dir)?;
-        let frames = BufWriter::new(File::create(dir.join(FRAMES_FILE))?);
         // Ignore a missing record — the usual case, and the whole point of reuse
         // being safe — but do not swallow any other error: a record that exists and
         // cannot be deleted would leave two captures in one directory.
@@ -133,6 +142,7 @@ impl SessionWriter {
             Err(e) if e.kind() == io::ErrorKind::NotFound => {}
             Err(e) => return Err(e),
         }
+        let frames = BufWriter::new(File::create(dir.join(FRAMES_FILE))?);
         Ok(Self {
             dir: dir.to_path_buf(),
             record,
@@ -524,6 +534,58 @@ mod tests {
                 frame_from_chars(1, 1, 1, &[vec!['c']]),
             ],
             "the directory must hold the second run's frames and only those"
+        );
+    }
+
+    #[test]
+    fn new_clears_the_old_record_before_it_truncates_the_stream() {
+        // `new` is two separate syscalls, and a kill can land between them. The
+        // order decides what that half-made directory means. Record first: no
+        // record and the previous run's frames, which `read_frames` rejects and
+        // `read_orphaned_frames` recovers, so it reads as an interrupted capture.
+        // Stream first: the previous run's record beside a fresh empty stream, which
+        // reads as a perfectly valid session that never happened — the old capture's
+        // facts wearing this capture's frames. The outcome of a *successful* `new` is
+        // the same either way, so the order has to be observed from the state the
+        // first step leaves behind when the second one fails: `File::create` cannot
+        // open a directory, so a directory sitting at `frames.jsonl` makes `new`
+        // fail at the truncate — after the record step, if the record step is first.
+        let dir = tempdir().unwrap();
+        let mut first = SessionWriter::new(dir.path(), rec()).unwrap();
+        first
+            .append(&frame_from_chars(0, 1, 1, &[vec!['a']]))
+            .unwrap();
+        first.finish(None).unwrap();
+        assert!(
+            dir.path().join("session.json").exists(),
+            "the first capture finished, so its record is on disk"
+        );
+
+        // Nothing in `new` can fail before the truncate here: the directory exists,
+        // and the record exists and is deletable. So this failure is the truncate.
+        // (`frames.jsonl` is the first run's file; a directory in its place is what
+        // `File::create` cannot open.)
+        std::fs::remove_file(dir.path().join("frames.jsonl")).unwrap();
+        std::fs::create_dir(dir.path().join("frames.jsonl")).unwrap();
+        let err = match SessionWriter::new(dir.path(), rec()) {
+            Ok(_) => panic!("opening a directory as the frame stream must fail"),
+            Err(e) => e,
+        };
+        assert!(
+            matches!(
+                err.kind(),
+                io::ErrorKind::PermissionDenied | io::ErrorKind::IsADirectory
+            ),
+            "the failure must be the stream step's, for the assertion below to prove the \
+             record step ran first: {err}"
+        );
+
+        assert!(
+            !dir.path().join("session.json").exists(),
+            "the previous run's record must already be gone when the stream step fails: \
+             removing the record first is what stops a kill between the two steps from \
+             leaving a valid-looking session made of one capture's record and a stream \
+             that was truncated for another"
         );
     }
 
