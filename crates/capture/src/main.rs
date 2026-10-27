@@ -287,10 +287,13 @@ fn record(args: Record) -> Result<ExitCode> {
             // answer is "assume it may have", which keeps the mask from calling
             // real content noise.
             let stream_now = tap.as_mut().and_then(|tap| tap.length());
-            let (event_between, event_range) = match (stream_now, stream_at_previous_frame) {
-                (Some(now), Some(before)) => (now > before, Some((before, now))),
-                (Some(now), None) => (true, Some((0, now))),
-                (None, _) => (true, None),
+            // The range alone carries the answer: `frame_from_screen` reads "grew" as
+            // "the program reported something", "did not grow" as "it reported
+            // nothing", and "no range at all" as "nobody can say".
+            let event_range = match (stream_now, stream_at_previous_frame) {
+                (Some(now), Some(before)) => Some((before, now)),
+                (Some(now), None) => Some((0, now)),
+                (None, _) => None,
             };
             // What the application said between the last frame and this one, by its
             // own labels. Only meaningful with a range; without one there is nothing
@@ -304,11 +307,12 @@ fn record(args: Record) -> Result<ExitCode> {
                 &mut writer,
                 &mut quiescer,
                 &mut previous,
-                typed_since_frame,
-                event_between,
-                event_range,
-                Some(started.elapsed().as_millis().min(u128::from(u64::MAX)) as u64),
-                event_kinds,
+                FrameNote {
+                    keystroke_between: typed_since_frame,
+                    acp_event_range: event_range,
+                    at_ms: Some(started.elapsed().as_millis().min(u128::from(u64::MAX)) as u64),
+                    event_kinds,
+                },
             )?;
             if let Some(now) = stream_now {
                 stream_at_previous_frame = Some(now);
@@ -470,26 +474,33 @@ impl Ended {
 /// right: there is no frame before it, so `previous` stays `None` for the first
 /// append and the diff below is against [`Frame::empty`], which is what makes every
 /// row of a first screen new content.
+/// What the frame about to be written should say besides what is on screen.
+struct FrameNote {
+    /// Whether the recorder sent the program a keystroke since the last frame.
+    keystroke_between: bool,
+    /// The stretch of the event stream this frame sits at the end of.
+    acp_event_range: Option<(u64, u64)>,
+    /// Milliseconds since the session started.
+    at_ms: Option<u64>,
+    /// The application's own labels for the events in that stretch.
+    event_kinds: Vec<String>,
+}
+
 fn emit_frame(
     driver: &Driver,
     writer: &mut SessionWriter,
     quiescer: &mut Quiescer,
     previous: &mut Option<Frame>,
-    keystroke_between: bool,
-    event_between: bool,
-    acp_event_range: Option<(u64, u64)>,
-    at_ms: Option<u64>,
-    event_kinds: Vec<String>,
+    note: FrameNote,
 ) -> Result<()> {
     let frame = frame_from_screen(
         driver.screen(),
         quiescer.take_seq(),
         previous.as_ref(),
-        keystroke_between,
-        event_between,
-        acp_event_range,
-        at_ms,
-        event_kinds,
+        note.keystroke_between,
+        note.acp_event_range,
+        note.at_ms,
+        note.event_kinds,
     );
     writer
         .append(&frame)
