@@ -13,15 +13,26 @@ This repository is the first component only — **the instrument, not the model*
 | `crates/validate` | `ui-lm-validate` — compares recorded frames against the application's own draw buffer (the K5 check) |
 | `crates/pages` | The first IR: a frame becomes an A2UI `createSurface` message using the `moreweb.terminal/v1` catalogue |
 
-The page slice is deliberately minimal. It finds blocks — runs of non-blank rows — and emits
-one `Block` per block with its row span, its lines, a role, and the styling of each line as
-per-span attributes (`bold`, `italic`, `underline`, `reverse`, and colours as `indexed:N` or
-`rgb:R,G,B`), every component marked `source: "seen"`. Per-span attributes are the gap every
-surveyed standard has and the thing a `Diff` will be built from. There is no `Diff`, `Table`,
-`Meter`, `ToolCall` or `Thought` yet, no actions, and no `guessed` provenance, because
-nothing has been reconstructed. A block's id is derived from its own text rather than its
-position, so a block that scrolls keeps its id, and describing a whole session marks a block
-`carried` once it has already appeared. Role detection reads only a block's first line, so a
+The page slice is deliberately minimal but no longer trivial. It finds blocks — runs of
+non-blank rows — splits a transcript at its tool lines, and emits one component per thing it
+can honestly name:
+
+- **`Block`** — a run of rows that reads as one thing, with a role, its lines, and the styling
+  of each line as per-span attributes (`bold`, `italic`, `underline`, `reverse`, and colours
+  as `indexed:N` or `rgb:R,G,B`). Per-span attributes are the gap every surveyed standard has.
+- **`ToolCall`** — a run of `♦`-prefixed lines, each with its tool (`Read`, `Edited`), its
+  target, a `status`, and for an edit the `+A -R` counts the application prints.
+- **`Meter`** — a line reporting a quantity against a limit (`1.3K / 500K │ [Dashboard]`),
+  keeping the drawn figures and computing the fraction beside them.
+- **`Diff`** — a block carrying both a `+` and a `-` line, with a per-line kind. No screen in
+  the corpus has drawn one yet: with auto-approval on, an edit is reported as a `ToolCall`
+  line, which is why the detector is tested against the shape rather than a capture.
+
+Every component carries `source: "seen"`, and describing a whole session marks one
+`carried` once it has already appeared. There is no `Table` or `Thought` yet, no actions, and
+no `guessed` provenance, because nothing has been reconstructed. A component's id is derived
+from its own text rather than its position, so it keeps its id when it scrolls. Role detection
+reads only a block's first line, so a
 turn whose prompt line sits below other text is reported as `text`.
 
 Plus two operator scripts: `scripts/capture-w1.ps1` (a scripted capture session) and `scripts/k5-dump.md` (how to build a throwaway patched fork that dumps its draw buffer, and how to compare).
@@ -30,7 +41,7 @@ Plus two operator scripts: `scripts/capture-w1.ps1` (a scripted capture session)
 
 ```bash
 cargo build --workspace
-cargo test --workspace        # 102 tests
+cargo test --workspace        # 133 tests
 ```
 
 Record a session of any terminal application:
