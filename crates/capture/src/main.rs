@@ -117,8 +117,16 @@ struct DatasetArgs {
     /// The JSON Lines file to write: one pair per line, `input` and `target`.
     #[arg(long, value_name = "FILE")]
     out: PathBuf,
-}
 
+    /// Replace the account name, home directory and session identifiers in each pair.
+    ///
+    /// The frames are left as recorded, because they are evidence. The pair is what gets
+    /// copied and shared, so it is the pair that gets redacted, visibly: `<home>`,
+    /// `<user>`, `<id>`. What it does not do is hide the shape of a directory tree, so a
+    /// redacted pair is not automatically safe to publish.
+    #[arg(long)]
+    scrub: bool,
+}
 /// What to draw, and where to put it.
 #[derive(Debug, Args)]
 struct RenderArgs {
@@ -304,6 +312,29 @@ fn dataset(args: &DatasetArgs) -> Result<ExitCode> {
             "none of the {} session(s) holds a screen with anything on it",
             args.sessions.len()
         );
+    }
+
+    if args.scrub {
+        let scrubber = ui_lm_capture::scrub::Scrubber::for_this_machine();
+        pairs = pairs
+            .into_iter()
+            .map(|(input, target)| (scrubber.apply(&input), scrubber.apply(&target)))
+            .collect();
+    } else {
+        let personal = pairs
+            .iter()
+            .filter(|(input, target)| {
+                ui_lm_capture::scrub::mentions_account(input)
+                    || ui_lm_capture::scrub::mentions_account(target)
+            })
+            .count();
+        if personal > 0 {
+            eprintln!(
+                "warning: {personal} of {} pair(s) name this machine's account; pass \
+                 --scrub before sharing them",
+                pairs.len()
+            );
+        }
     }
     use std::io::Write as _;
     let mut out = std::fs::File::create(&args.out)

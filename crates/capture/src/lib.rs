@@ -11,6 +11,7 @@ pub mod events;
 pub mod mask;
 pub mod quiesce;
 pub mod screen;
+pub mod scrub;
 pub mod summary;
 
 pub use driver::{added_environment, child_environment, Driver, SessionConfig, DEFAULT_ENV};
