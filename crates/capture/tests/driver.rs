@@ -439,13 +439,23 @@ fn reported_directory(screen: &str) -> &str {
 /// Windows reports a path in whatever case it likes, with either separator, and
 /// `std::fs::canonicalize` would add a `\\?\` prefix the child never prints — so
 /// neither a byte comparison nor the canonical form is the right test.
+///
+/// This helper is duplicated in `tests/cli.rs`; the two must stay in step, and a
+/// macOS `/var` to `/private/var` mismatch in one of them has already broken CI
+/// once while the other passed.
 fn comparable(path: &str) -> String {
     let trimmed = path.trim();
     let trimmed = trimmed.strip_prefix(r"\\?\").unwrap_or(trimmed);
     if cfg!(windows) {
         trimmed.replace('/', "\\").to_lowercase()
     } else {
-        trimmed.to_owned()
+        // macOS puts a temporary directory behind the `/var` to `/private/var`
+        // symlink, so the directory the test made and the directory the child
+        // reports are the same place spelled two ways. Resolving both compares
+        // what the filesystem says rather than how it is spelled.
+        std::fs::canonicalize(trimmed)
+            .map(|resolved| resolved.to_string_lossy().into_owned())
+            .unwrap_or_else(|_| trimmed.to_owned())
     }
 }
 

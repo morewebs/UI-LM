@@ -171,6 +171,10 @@ fn reported_directory(screen: &str) -> String {
 /// Windows reports a path in whatever case it likes, with either separator, and
 /// `std::fs::canonicalize` would add a `\\?\` prefix the child never prints — so
 /// neither a byte comparison nor the canonical form is the right test.
+///
+/// This helper is duplicated in `tests/driver.rs`; the two must stay in step. A
+/// macOS `/var` to `/private/var` mismatch fixed in only one of them has already
+/// broken CI once.
 fn comparable(path: &str) -> String {
     let trimmed = path.trim();
     let trimmed = trimmed.strip_prefix(r"\\?\").unwrap_or(trimmed);
