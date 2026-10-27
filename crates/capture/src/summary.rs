@@ -145,6 +145,21 @@ pub struct Violation {
     pub problem: String,
 }
 
+/// The pages one session directory describes, in frame order.
+///
+/// A killed capture is included here for the same reason it is summarised: its frames
+/// are real screens, and refusing to score them would quietly narrow the corpus.
+pub fn session_pages(dir: &Path) -> std::io::Result<Vec<ui_lm_pages::Envelope>> {
+    let frames = match read_frames(dir) {
+        Ok((_, frames)) => frames,
+        Err(_) => read_orphaned_frames(dir)?,
+    };
+    let surface = dir
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "session".to_owned());
+    Ok(ui_lm_pages::pages(&frames, &surface))
+}
 /// Checks the pages a corpus describes against the promises the page model makes.
 ///
 /// The mask is audited from the frames; this audits what the frames are turned into.

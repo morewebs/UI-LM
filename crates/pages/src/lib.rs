@@ -33,6 +33,14 @@
 //! A component's id is derived from its own text, not from its position, because the
 //! plan requires ids that survive a scroll (D15, and metric M5 is impossible
 //! without them). A block that is still on screen after scrolling keeps its id.
+//!
+//! ## Scoring a page against another
+//!
+//! [`compare`] is the evaluation primitive: it scores one page against a reference and
+//! reports what matched, separately for structure and for text. It exists so that a
+//! future predictor has something to be measured with, and so that today's model has a
+//! reference to score against — an identical page scores 1.0, and a page that splits a
+//! block in two loses structural credit while keeping every character.
 
 use std::collections::HashSet;
 
@@ -219,6 +227,114 @@ pub fn render_text(page: &Envelope) -> Vec<String> {
         screen[usize::from(row)] = text.to_owned();
     }
     screen
+}
+
+/// How well one page describes the same screen as another.
+///
+/// Structure and text are scored apart on purpose: a predictor that reproduces every
+/// character but puts it in the wrong component is a different failure from one that
+/// gets the structure and loses a glyph, and a single number would hide which one
+/// happened.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Score {
+    /// Components in the reference, excluding the root container.
+    pub components: usize,
+    /// Reference components the other page also has, by kind and content.
+    pub matched: usize,
+    /// Rows of text in the reference.
+    pub rows: usize,
+    /// Rows whose text is identical in both pages.
+    pub rows_matched: usize,
+}
+
+impl Score {
+    /// The share of reference components the other page reproduced.
+    pub fn structure(&self) -> f64 {
+        ratio(self.matched, self.components)
+    }
+
+    /// The share of rows whose text is identical.
+    pub fn text(&self) -> f64 {
+        ratio(self.rows_matched, self.rows)
+    }
+
+    /// A page that reproduced everything.
+    pub fn is_perfect(&self) -> bool {
+        self.matched == self.components && self.rows_matched == self.rows
+    }
+}
+
+/// A share, with an empty reference counted as fully matched.
+///
+/// Nothing to reproduce is not a failure to reproduce it: a blank screen scored against
+/// a blank screen is a perfect answer, and treating 0/0 as zero would punish a
+/// predictor for being right.
+fn ratio(matched: usize, total: usize) -> f64 {
+    if total == 0 {
+        1.0
+    } else {
+        matched as f64 / total as f64
+    }
+}
+
+/// Scores `page` against `reference`, which describes the same screen.
+///
+/// A component matches when the other page has one of the same kind whose text is the
+/// same — ids are derived from text, so this is the same test stated without depending
+/// on ids matching exactly. Every reference component can be matched at most once, so
+/// repeating a component does not earn credit twice.
+pub fn compare(reference: &Envelope, page: &Envelope) -> Score {
+    let reference_text = render_text(reference);
+    let page_text = render_text(page);
+    let mut score = Score {
+        components: reference
+            .create_surface
+            .components
+            .iter()
+            .filter(|component| component.component != "Column")
+            .count(),
+        rows: reference_text.len(),
+        ..Score::default()
+    };
+
+    let mut used = vec![false; page.create_surface.components.len()];
+    for wanted in &reference.create_surface.components {
+        if wanted.component == "Column" {
+            continue;
+        }
+        let wanted_text = component_text(&wanted.body);
+        for (index, candidate) in page.create_surface.components.iter().enumerate() {
+            if used[index] || candidate.component != wanted.component {
+                continue;
+            }
+            if component_text(&candidate.body) == wanted_text {
+                used[index] = true;
+                score.matched += 1;
+                break;
+            }
+        }
+    }
+
+    for (row, wanted) in reference_text.iter().enumerate() {
+        if page_text.get(row) == Some(wanted) {
+            score.rows_matched += 1;
+        }
+    }
+    score
+}
+
+/// The text a component carries, whatever kind it is.
+fn component_text(body: &Body) -> Vec<String> {
+    match body {
+        Body::Column { .. } => Vec::new(),
+        Body::Block { lines, .. } => lines.clone(),
+        Body::Diff { lines, .. } => lines.iter().map(|line| line.text.clone()).collect(),
+        Body::ToolCall { calls, .. } => calls
+            .iter()
+            .map(|call| call.text.clone())
+            .collect::<Vec<_>>(),
+        Body::Meter { text, .. } => vec![text.clone()],
+    }
 }
 
 /// Where a component's content came from.
@@ -1362,5 +1478,49 @@ mod tests {
     fn a_blank_screen_renders_as_nothing() {
         let page = page_from_frame(&frame_of(&["", ""], 5), "s");
         assert!(render_text(&page).is_empty());
+    }
+
+    #[test]
+    fn a_page_scored_against_itself_is_perfect() {
+        let page = page_from_frame(&frame_of(&["one", "", "two", "three"], 20), "s");
+        let score = compare(&page, &page);
+        assert!(score.is_perfect(), "{score:?}");
+        assert_eq!(score.structure(), 1.0);
+        assert_eq!(score.text(), 1.0);
+    }
+
+    #[test]
+    fn a_split_block_keeps_its_text_and_loses_its_structure() {
+        // The failure the two scores exist to tell apart: the same characters, put in
+        // two components instead of one.
+        let whole = page_from_frame(&frame_of(&["one", "two"], 20), "s");
+        let split = page_from_frame(&frame_of(&["one", "", "two"], 20), "s");
+        let score = compare(&whole, &split);
+        assert_eq!(score.components, 1);
+        assert_eq!(
+            score.matched, 0,
+            "a split block is not the block: {score:?}"
+        );
+        assert_eq!(score.structure(), 0.0);
+        assert!(score.text() < 1.0, "a shifted row is not the same row");
+        assert_eq!(score.rows_matched, 1, "the first row still matches");
+    }
+
+    #[test]
+    fn a_repeated_component_does_not_earn_credit_twice() {
+        // Two identical blocks in the answer can only match the one in the reference.
+        let reference = page_from_frame(&frame_of(&["only"], 20), "s");
+        let mut doubled = reference.clone();
+        let block = doubled.create_surface.components[1].clone();
+        doubled.create_surface.components.push(block);
+        let score = compare(&reference, &doubled);
+        assert_eq!(score.matched, 1);
+        assert_eq!(score.components, 1);
+    }
+
+    #[test]
+    fn an_empty_reference_is_a_perfect_match() {
+        let blank = page_from_frame(&frame_of(&["", ""], 5), "s");
+        assert!(compare(&blank, &blank).is_perfect());
     }
 }

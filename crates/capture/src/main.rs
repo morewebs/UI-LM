@@ -95,6 +95,24 @@ enum Command {
     Audit(Summarize),
     /// Print the page a recorded frame describes, as an A2UI message.
     Page(PageArgs),
+    /// Score one recorded session's pages against another's.
+    ///
+    /// The use this exists for: record the same deterministic scenario twice and see
+    /// whether the pages agree. A dataset whose structure changes between identical
+    /// captures cannot support a claim about a model.
+    Compare(CompareArgs),
+}
+
+/// The two sessions to score against each other.
+#[derive(Debug, Args)]
+struct CompareArgs {
+    /// The session taken as the reference.
+    #[arg(long, value_name = "DIR")]
+    left: PathBuf,
+
+    /// The session scored against it.
+    #[arg(long, value_name = "DIR")]
+    right: PathBuf,
 }
 
 /// Which frame to describe.
@@ -215,7 +233,45 @@ fn run(command: Command) -> Result<ExitCode> {
         Command::Summarize(args) => summarise(&args.sessions),
         Command::Audit(args) => audit(&args.sessions),
         Command::Page(args) => page(&args),
+        Command::Compare(args) => compare(&args),
     }
+}
+
+/// Scores one session's pages against another's, reporting both kinds of agreement.
+fn compare(args: &CompareArgs) -> Result<ExitCode> {
+    let left = ui_lm_capture::summary::session_pages(&args.left)
+        .with_context(|| format!("failed to read the session {}", args.left.display()))?;
+    let right = ui_lm_capture::summary::session_pages(&args.right)
+        .with_context(|| format!("failed to read the session {}", args.right.display()))?;
+    if left.is_empty() || right.is_empty() {
+        bail!("both sessions need at least one frame to be compared");
+    }
+
+    // Frames are aligned by position: two captures of one scenario should settle the
+    // same screens in the same order, so the nth screen of one is the nth of the other.
+    // A differing count is reported rather than hidden inside an average.
+    let paired = left.len().min(right.len());
+    let (mut structure, mut text) = (0.0, 0.0);
+    for index in 0..paired {
+        let score = ui_lm_pages::compare(&left[index], &right[index]);
+        structure += score.structure();
+        text += score.text();
+    }
+    let counted = paired as f64;
+    println!(
+        "compared {paired} frame(s): structure {:.1}%, text {:.1}%",
+        structure / counted * 100.0,
+        text / counted * 100.0
+    );
+    if left.len() != right.len() {
+        println!(
+            "note: {} frame(s) on the left, {} on the right; only the first {paired} were \
+             compared",
+            left.len(),
+            right.len()
+        );
+    }
+    Ok(ExitCode::SUCCESS)
 }
 
 /// Prints the page one recorded frame describes.
