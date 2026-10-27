@@ -156,13 +156,28 @@ mod tests {
     fn roundtrip_preserves_wide_tail() {
         // The continuation column of a full-width glyph is a space that is *not*
         // an ordinary blank; the codec has to carry that distinction.
-        let mut g = vec![vec![StyledCell::blank(); 2]];
+        //
+        // The second and third cells below are adjacent and identical in `ch` and
+        // `style`: they differ only in `wide_tail`. If the run-merging rule
+        // compared anything less than the whole cell, those two would collapse
+        // into one run and the ordinary blank would come back as a wide-glyph
+        // continuation, so this grid is what makes the flag's participation in
+        // the equality rule observable.
+        let mut g = vec![vec![StyledCell::blank(); 3]];
         g[0][0] = StyledCell::new('界');
         g[0][1].wide_tail = true;
 
         let runs = encode_grid(&g);
-        let back = decode_grid(&runs, 1, 2);
+        let back = decode_grid(&runs, 1, 3);
+        assert_eq!(back, g, "wide-tail flag must survive the round trip");
+        assert_eq!(
+            runs.len(),
+            3,
+            "blanks differing only in wide_tail must not merge"
+        );
         assert!(back[0][1].wide_tail, "wide-tail flag must survive encoding");
+        assert!(!back[0][2].wide_tail, "an ordinary blank stays ordinary");
         assert_ne!(back[0][1], StyledCell::blank());
+        assert_eq!(back[0][2], StyledCell::blank());
     }
 }

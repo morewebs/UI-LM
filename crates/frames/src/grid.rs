@@ -107,6 +107,10 @@ mod tests {
             assert_eq!(back, c, "{json}");
         }
         assert_eq!(
+            serde_json::to_string(&Color::Default).unwrap(),
+            r#"{"kind":"default"}"#
+        );
+        assert_eq!(
             serde_json::to_string(&Color::Indexed(17)).unwrap(),
             r#"{"kind":"indexed","value":17}"#
         );
