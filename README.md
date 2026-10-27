@@ -109,6 +109,7 @@ The design and the decisions behind it are in the repo:
 - [Glossary](GLOSSARY.md) — frame, page, surface, provenance, patch, and the words to avoid
 - [ADR 0001: the cell grid is the model's input, not the event stream](docs/adr/0001-cell-grid-as-model-input.md)
 - [ADR 0002: A2UI's envelope, our catalogue](docs/adr/0002-a2ui-envelope-custom-catalogue.md)
+- [The catalogue reference](docs/catalogue/moreweb.terminal-v1.md) — every component, what each guarantees, and which have been seen on a recorded screen
 
 ## Licence
 
