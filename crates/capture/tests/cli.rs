@@ -177,7 +177,15 @@ fn comparable(path: &str) -> String {
     if cfg!(windows) {
         trimmed.replace('/', "\\").to_lowercase()
     } else {
-        trimmed.to_owned()
+        // macOS puts a temporary directory behind the `/var` to `/private/var`
+        // symlink, so the directory this test made and the directory the child
+        // reports are the same place spelled two ways. Resolving both compares
+        // what the filesystem says rather than how it is spelled. Windows keeps
+        // the plain comparison above because canonicalising there adds a `\\?\`
+        // prefix the child never prints.
+        std::fs::canonicalize(trimmed)
+            .map(|resolved| resolved.to_string_lossy().into_owned())
+            .unwrap_or_else(|_| trimmed.to_owned())
     }
 }
 
@@ -326,24 +334,20 @@ fn a_child_that_switches_to_the_alternate_screen_is_recorded() {
         );
     }
 
-    // On Windows the pty host is ConPTY, and ConPTY does not forward the switch: it
-    // keeps the application's buffer itself and re-renders the delta to the client.
-    // Measured from a bare pty, the bytes a child's `ESC [ ? 1049 h` produces
-    // downstream are `ESC [ 25 l ESC [ H ESC [ K CRLF …` — a repaint of a cleared
-    // buffer — and never the switch, so `vt100::Screen::alternate_screen()` cannot be
-    // true for any child. That is also why the 35 W1 sessions have zero
-    // alternate-screen frames even in the three that ran with `--fullscreen`.
-    // `portable-pty` 0.9 knows the flag that would change this
-    // (`PSEUDOCONSOLE_PASSTHROUGH_MODE`) and does not use it; until something does,
-    // this is a fact about the rig's platform, not about this test.
-    if cfg!(windows) {
-        assert!(
-            !last.alt_screen,
-            "ConPTY is expected to consume the switch, so no frame here can be on the \
-             alternate screen; an `alt_screen: true` frame means the host started \
-             forwarding it and this test's platform note is out of date"
-        );
-    }
+    // On Windows the pty host is ConPTY, and whether it forwards the switch is the
+    // host's decision rather than the emulator's. Both outcomes have now been
+    // observed: a development machine's conhost consumes `ESC [ ? 1049 h` and
+    // re-renders the delta (the bytes a child's switch produces downstream are
+    // `ESC [ 25 l ESC [ H ESC [ K CRLF …`, never the switch), while a
+    // `windows-latest` runner forwarded it and the frame recorded `alt_screen:
+    // true`. `portable-pty` 0.9 knows the flag that would decide this
+    // (`PSEUDOCONSOLE_PASSTHROUGH_MODE`) and does not use it.
+    //
+    // So there is no assertion here: what the frame says is what the host did, and
+    // the checks above already prove the switch reached a terminal rather than
+    // being drawn as text. The Unix arm above is where the plumbing itself is
+    // pinned.
+    let _host_decided_the_alternate_screen = last.alt_screen;
 }
 
 #[test]

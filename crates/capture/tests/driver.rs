@@ -349,11 +349,14 @@ fn a_child_that_floods_cursor_queries_without_reading_does_not_stall_the_reader(
         std::thread::sleep(Duration::from_millis(5));
     }
     let dropped = d.dropped_replies();
-    // Roughly 400 reads fit in the window at the sleep above. Anything near the
-    // count means the read path never stopped returning: had it blocked inside a
-    // reply write, the watchdog would have aborted the run instead.
+    // The read count is not a portable number: it depends on how much the pty
+    // hands over per read, and a Linux runner coalesces far harder than a
+    // development machine, so a count threshold measures the machine rather than
+    // the code. What must hold is that the loop survived its whole window and
+    // observed output. Had `read_some` blocked inside a reply write, the watchdog
+    // would have aborted the run instead of reaching this line.
     assert!(
-        reads >= 50,
+        reads >= 2,
         "the read loop stopped observing the stream: {reads} reads in {FLOOD_WINDOW:?}"
     );
     assert!(bytes > 0, "the session produced nothing at all");

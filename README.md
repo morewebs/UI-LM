@@ -39,7 +39,12 @@ A frame exists only at a **settled** point — 150 ms of quiet. An animating scr
 **Not proven, and not claimed:**
 
 - **Volatile-span masking is inert.** The classifier is implemented and tested, but no event stream is wired into the recorder, so every recorded frame carries `volatile: []`. Spinner and clock changes are recorded as content. Any dataset built from these frames needs the mask wired first.
-- **Alt-screen frames cannot be recorded on Windows.** ConPTY consumes `ESC[?1049h` and re-renders a delta, so the switch never reaches the emulator. Real alt-screen data needs a passthrough PTY or a Unix capture.
+- **Alt-screen frames depend on the pty host, not the emulator.** Whether a child's
+  `ESC[?1049h` reaches the rig is decided by the host: one Windows conhost consumed
+  the switch and re-rendered a delta, while a GitHub `windows-latest` runner
+  forwarded it. Unix ptys hand the bytes over unchanged. `portable-pty` 0.9 knows
+  the flag that would make this deterministic (`PSEUDOCONSOLE_PASSTHROUGH_MODE`) and
+  does not use it.
 - **No IR, no model, no runtime.** The page representation, the GUI renderer and the model are later components.
 - **Cost is not recorded.** The TUI stream carries no usage events, so `SessionRecord.cost` is `null`.
 
