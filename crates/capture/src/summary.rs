@@ -290,6 +290,11 @@ fn frame_problems(frame: &Frame) -> Vec<String> {
 /// Right-trimmed for the same reason a block's lines are: trailing blanks are the
 /// absence of content, not content, and a comparison that counted them would fail on
 /// every screen.
+/// The text of a screen, one entry per row.
+pub fn frame_text(frame: &Frame) -> String {
+    screen_text(frame).join("\n")
+}
+
 fn screen_text(frame: &Frame) -> Vec<String> {
     decode_grid(&frame.runs, frame.rows, frame.cols)
         .iter()

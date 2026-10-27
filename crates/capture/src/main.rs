@@ -95,6 +95,8 @@ enum Command {
     Audit(Summarize),
     /// Print the page a recorded frame describes, as an A2UI message.
     Page(PageArgs),
+    /// Score a page built from text alone against the pages the recorder produces.
+    Baseline(BaselineArgs),
     /// Write the training pairs a recording holds: the screen's text, and its page.
     Dataset(DatasetArgs),
     /// Draw recorded pages as one standalone HTML file you can open in a browser.
@@ -105,6 +107,14 @@ enum Command {
     /// whether the pages agree. A dataset whose structure changes between identical
     /// captures cannot support a claim about a model.
     Compare(CompareArgs),
+}
+
+/// Which recording to measure the floor on.
+#[derive(Debug, Args)]
+struct BaselineArgs {
+    /// A session directory holding frames.
+    #[arg(long = "session", value_name = "DIR", required = true)]
+    sessions: Vec<PathBuf>,
 }
 
 /// Which recording to export, and where to put the pairs.
@@ -288,9 +298,49 @@ fn run(command: Command) -> Result<ExitCode> {
         Command::Audit(args) => audit(&args.sessions),
         Command::Page(args) => page(&args),
         Command::Compare(args) => compare(&args),
+        Command::Baseline(args) => baseline(&args),
         Command::Dataset(args) => dataset(&args),
         Command::Render(args) => render(&args),
     }
+}
+
+/// Scores the do-nothing converter: text in, paragraphs out.
+///
+/// The number this prints is the floor. Anything that claims to understand a screen — a
+/// model, a better set of rules — has to beat it, and without it "the model works" is a
+/// feeling rather than a measurement.
+fn baseline(args: &BaselineArgs) -> Result<ExitCode> {
+    let mut structure = (0.0f64, 0usize);
+    let mut text = (0.0f64, 0usize);
+    for session in &args.sessions {
+        let path = session.as_path();
+        let frames = match ui_lm_frames::read_frames(path) {
+            Ok((_, frames)) => frames,
+            Err(_) => ui_lm_frames::read_orphaned_frames(path)?,
+        };
+        for frame in &frames {
+            let surface = format!("frame-{}", frame.seq);
+            let text_of_screen = ui_lm_capture::summary::frame_text(frame);
+            let naive = ui_lm_pages::page_from_text(&text_of_screen, &surface);
+            let real = ui_lm_pages::page_from_frame(frame, &surface);
+            let score = ui_lm_pages::compare(&real, &naive);
+            structure.0 += score.structure();
+            structure.1 += 1;
+            text.0 += score.text();
+            text.1 += 1;
+        }
+    }
+    if structure.1 == 0 {
+        bail!("no frames to measure in {} session(s)", args.sessions.len());
+    }
+    let count = structure.1 as f64;
+    println!(
+        "floor over {} frame(s): structure {:.1}%, text {:.1}%",
+        structure.1,
+        structure.0 / count * 100.0,
+        text.0 / count * 100.0
+    );
+    Ok(ExitCode::SUCCESS)
 }
 
 /// Writes the training pairs a recording holds.

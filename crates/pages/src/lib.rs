@@ -1414,6 +1414,80 @@ fn block_id(lines: &[String]) -> String {
     format!("block-{hash:016x}")
 }
 
+/// A page built from the text of a screen, with no understanding of it.
+///
+/// This is the floor a model has to beat, and it exists to be measured rather than used:
+/// it splits the screen into paragraphs and calls each one a block of text. It has no idea
+/// that a row of `♦ Read notes.txt` is a tool call, or that `1.2K / 500K` is a meter, or
+/// that a bordered box is an input. Whatever a model scores above this, it earned.
+///
+/// Keeping it here — rather than in a test — is what makes the comparison repeatable: the
+/// floor moves when the page model moves, and that is a fact worth being able to see.
+pub fn page_from_text(text: &str, surface: &str) -> Envelope {
+    let mut groups: Vec<Vec<String>> = Vec::new();
+    let mut current: Vec<String> = Vec::new();
+    for line in text.lines() {
+        if line.trim().is_empty() {
+            if !current.is_empty() {
+                groups.push(std::mem::take(&mut current));
+            }
+        } else {
+            current.push(line.trim_end().to_owned());
+        }
+    }
+    if !current.is_empty() {
+        groups.push(current);
+    }
+
+    let mut children = Vec::new();
+    let mut components = Vec::new();
+    for (index, lines) in groups.iter().enumerate() {
+        let id = format!("{surface}-text-{index}");
+        children.push(id.clone());
+        components.push(Component {
+            id,
+            component: "Block".to_owned(),
+            source: Provenance::Seen,
+            body: Body::Block {
+                role: "text".to_owned(),
+                // A paragraph starts on the row after the one before it finished: blocks
+                // that all claim row zero describe a screen where every block is drawn on
+                // top of every other, and the text score would be a lie.
+                rows: {
+                    let start: u16 = groups[..index]
+                        .iter()
+                        .map(|group| u16::try_from(group.len()).unwrap_or(0) + 1)
+                        .sum();
+                    let end = u16::try_from(lines.len()).unwrap_or(u16::MAX);
+                    [start, start.saturating_add(end)]
+                },
+                lines: lines.clone(),
+                spans: vec![Vec::new(); lines.len()],
+                tabs: Vec::new(),
+                shortcuts: Vec::new(),
+                properties: Vec::new(),
+            },
+        });
+    }
+
+    let root = format!("{surface}-root");
+    let mut all = vec![Component {
+        id: root.clone(),
+        component: "Column".to_owned(),
+        source: Provenance::Seen,
+        body: Body::Column { children },
+    }];
+    all.extend(components);
+    Envelope {
+        version: ENVELOPE_VERSION.to_owned(),
+        create_surface: Surface {
+            surface_id: surface.to_owned(),
+            catalog_id: CATALOGUE_ID.to_owned(),
+            root,
+            components: all,
+        },
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
