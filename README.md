@@ -37,6 +37,20 @@ turn whose prompt line sits below other text is reported as `text`.
 
 Plus two operator scripts: `scripts/capture-w1.ps1` (a scripted capture session) and `scripts/k5-dump.md` (how to build a throwaway patched fork that dumps its draw buffer, and how to compare).
 
+## Download
+
+Binaries for Windows, Linux and macOS are attached to the [latest
+release](https://github.com/morewebs/UI-LM/releases/latest). Download the archive for your
+platform, unpack it, and run:
+
+```
+ui-lm-capture --help
+```
+
+Three programs come in each archive: `ui-lm-capture` records and describes, `ui-lm-serve`
+serves a live view, and `ui-lm-validate` compares a recording against an application's own
+draw buffer. No Rust toolchain, nothing to install.
+
 ## Quickstart
 
 ```bash

@@ -762,13 +762,30 @@ fn record(args: Record) -> Result<ExitCode> {
         }
         if let Some(code) = status {
             if code != 0 {
-                eprintln!("warning: {:?} exited with status {code}", cfg.command);
+                eprintln!("{}", exit_warning(std::slice::from_ref(&cfg.command), code));
             }
         }
     }
     Ok(ExitCode::SUCCESS)
 }
 
+/// How the child's own exit is reported on stderr.
+///
+/// The status is whatever the system reported, including the cases that are not an exit
+/// code at all. On Windows a console child can be terminated by a console control event
+/// and then reports `0xC000013A` — which is how a `cmd /c "… & exit 3"` occasionally ended
+/// on a loaded machine, and which a person reading the warning deserves to have named
+/// rather than decoded.
+fn exit_warning(command: &[String], code: i32) -> String {
+    // -1073741510 is 0xC000013A as a signed 32-bit integer: STATUS_CONTROL_C_EXIT.
+    if code == -1073741510 {
+        return format!(
+            "warning: {command:?} was terminated by a console control event rather than \
+             exiting with a status of its own"
+        );
+    }
+    format!("warning: {command:?} exited with status {code}")
+}
 /// Why the record loop stopped.
 #[derive(Clone, Copy, Debug)]
 enum Ended {
@@ -1181,5 +1198,28 @@ mod tests {
         // A `\x` that is not two hex digits is literal, including what it swallowed.
         assert_eq!(unescape(r"\x2"), b"\\x2");
         assert_eq!(unescape(r"\xzz"), br"\xzz");
+    }
+}
+#[cfg(test)]
+mod warning_tests {
+    use super::exit_warning;
+
+    #[test]
+    fn an_exit_code_is_named_as_one() {
+        let command = vec!["cmd".to_owned(), "/c".to_owned(), "exit 3".to_owned()];
+        assert_eq!(
+            exit_warning(&command, 3),
+            "warning: [\"cmd\", \"/c\", \"exit 3\"] exited with status 3"
+        );
+    }
+
+    #[test]
+    fn the_control_event_code_is_named_in_words() {
+        // A console child killed by a control event reports 0xC000013A, which as a signed
+        // integer is this number. Printing the number alone would leave a reader to look
+        // it up, and the reader of a warning is usually mid-triage.
+        let command = vec!["cmd".to_owned()];
+        let warning = exit_warning(&command, -1073741510);
+        assert!(warning.contains("console control event"), "{warning}");
     }
 }
