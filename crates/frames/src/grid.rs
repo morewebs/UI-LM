@@ -89,15 +89,40 @@ pub type Grid = Vec<Vec<StyledCell>>;
 ///
 /// A cell the screen does not have becomes a blank, so the grid is always exactly
 /// the declared shape and no geometry mistakes here reach the recorded frame.
+///
+/// A wide glyph's continuation column inherits the style of the glyph on its left:
+/// `vt100` clears the continuation cell's attributes, so the emulator records the
+/// colour on the leading column only, while the buffer the application draws into
+/// gives both columns the glyph's style. Inheriting makes our frame agree with that
+/// buffer rather than inventing a disagreement the comparison would have to ignore.
 pub fn grid_from_screen(screen: &vt100::Screen, cols: u16) -> Grid {
     let rows = screen.size().0;
     (0..rows)
-        .map(|row| {
-            (0..cols)
-                .map(|col| styled_cell(screen.cell(row, col)))
-                .collect()
-        })
+        .map(|row| row_from_screen(screen, row, cols))
         .collect()
+}
+
+/// One row of the grid, read cell by cell and then repaired for wide glyphs.
+fn row_from_screen(screen: &vt100::Screen, row: u16, cols: u16) -> Vec<StyledCell> {
+    let mut cells: Vec<StyledCell> = (0..cols)
+        .map(|col| styled_cell(screen.cell(row, col)))
+        .collect();
+    inherit_tail_styles(&mut cells);
+    cells
+}
+
+/// Gives every wide-glyph continuation cell the style of the cell immediately to
+/// its left on the same row.
+///
+/// Starting at the second column is the whole of the column-0 rule: a continuation
+/// cell there has nothing to its left on this row and keeps the style the emulator
+/// reported. Left to right, so a run of continuation cells settles from its head.
+fn inherit_tail_styles(cells: &mut [StyledCell]) {
+    for col in 1..cells.len() {
+        if cells[col].wide_tail {
+            cells[col].style = cells[col - 1].style.clone();
+        }
+    }
 }
 
 /// One emulator cell as a grid cell; a missing cell (past the screen's edge) is a
@@ -221,6 +246,21 @@ mod vt_tests {
         assert!(g[0][3].wide_tail);
         assert_eq!(g[0][4].ch, 'x');
         assert_eq!(g[0].len(), 6);
+    }
+
+    #[test]
+    fn a_coloured_wide_glyph_gives_its_style_to_the_continuation_column() {
+        // vt100 clears the continuation cell's attributes (`Attrs::default()`), so
+        // the emulator records the colour on the glyph's column and nothing on the
+        // column after it. ratatui's buffer, which K5 compares us against, gives
+        // the tail the glyph's style. A tail that keeps `Default` therefore
+        // mismatches on one column of every coloured wide glyph.
+        let g = feed("\x1b[31m\u{4f60}\x1b[0m".as_bytes(), 1, 4);
+        assert_eq!(g[0][0].ch, '\u{4f60}');
+        assert_eq!(g[0][0].style.fg, Color::Indexed(1));
+        assert!(g[0][1].wide_tail);
+        assert_eq!(g[0][1].style.fg, Color::Indexed(1));
+        assert_eq!(g[0][1].ch, ' ');
     }
 
     #[test]
