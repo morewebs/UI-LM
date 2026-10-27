@@ -110,9 +110,9 @@ enum Command {
 /// Which recording to export, and where to put the pairs.
 #[derive(Debug, Args)]
 struct DatasetArgs {
-    /// The session directory holding the frames.
-    #[arg(long, value_name = "DIR")]
-    session: PathBuf,
+    /// A session directory holding frames. Repeat it to export several at once.
+    #[arg(long = "session", value_name = "DIR", required = true)]
+    sessions: Vec<PathBuf>,
 
     /// The JSON Lines file to write: one pair per line, `input` and `target`.
     #[arg(long, value_name = "FILE")]
@@ -287,12 +287,22 @@ fn run(command: Command) -> Result<ExitCode> {
 
 /// Writes the training pairs a recording holds.
 fn dataset(args: &DatasetArgs) -> Result<ExitCode> {
-    let pairs = ui_lm_capture::summary::training_pairs(&args.session)
-        .with_context(|| format!("failed to read the session {}", args.session.display()))?;
+    let mut pairs = Vec::new();
+    for session in &args.sessions {
+        let found = ui_lm_capture::summary::training_pairs(session)
+            .with_context(|| format!("failed to read the session {}", session.display()))?;
+        if found.is_empty() {
+            eprintln!(
+                "warning: {} holds no screen with anything on it",
+                session.display()
+            );
+        }
+        pairs.extend(found);
+    }
     if pairs.is_empty() {
         bail!(
-            "the session {} holds no screen with anything on it",
-            args.session.display()
+            "none of the {} session(s) holds a screen with anything on it",
+            args.sessions.len()
         );
     }
     use std::io::Write as _;
