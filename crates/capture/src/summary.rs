@@ -145,6 +145,38 @@ pub struct Violation {
     pub problem: String,
 }
 
+/// Checks the pages a corpus describes against the promises the page model makes.
+///
+/// The mask is audited from the frames; this audits what the frames are turned into.
+/// A page that names a component the catalogue does not define, loses a child, repeats
+/// an id, or puts a span past the end of its line is describable content that no
+/// renderer could draw, and finding one here is cheaper than finding it in a renderer.
+pub fn audit_pages(roots: &[PathBuf]) -> std::io::Result<Vec<Violation>> {
+    let mut violations = Vec::new();
+    for root in roots {
+        for dir in session_dirs(root)? {
+            let frames = match read_frames(&dir) {
+                Ok((_, frames)) => frames,
+                Err(_) => read_orphaned_frames(&dir)?,
+            };
+            let surface = dir
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "session".to_owned());
+            for (index, page) in ui_lm_pages::pages(&frames, &surface).iter().enumerate() {
+                for problem in ui_lm_pages::audit(page) {
+                    violations.push(Violation {
+                        session: dir.display().to_string(),
+                        seq: u32::try_from(index).unwrap_or(u32::MAX),
+                        problem,
+                    });
+                }
+            }
+        }
+    }
+    Ok(violations)
+}
+
 /// Checks a corpus against the properties the mask promises, and returns what fails.
 ///
 /// The mask's whole claim is that it marks change *nothing* accounts for. That claim

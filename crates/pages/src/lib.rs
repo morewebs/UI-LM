@@ -45,8 +45,128 @@ use ui_lm_frames::{decode_grid, Color, Frame, Style, StyledCell};
 /// bump must not silently move the terminal vocabulary (ADR 0002).
 pub const ENVELOPE_VERSION: &str = "v0.9.1";
 
-/// The catalogue the components belong to.
+/// The catalogue the components this crate writes are drawn from.
 pub const CATALOGUE_ID: &str = "moreweb.terminal/v1";
+
+/// Every component name `moreweb.terminal/v1` defines so far.
+///
+/// A page naming anything else describes something no renderer of this catalogue can
+/// draw, so it is a fault rather than an extension — an unknown component is what the
+/// degradation rule in the spec handles at *render* time, and a page this crate emits
+/// has no business relying on it.
+pub const COMPONENTS: [&str; 5] = ["Column", "Block", "ToolCall", "Meter", "Diff"];
+
+/// What is wrong with a page, in terms of the promises the page model makes.
+///
+/// The same idea as the frame audit: the model claims its components are reachable
+/// from the root, uniquely identified, inside the screen they describe, and drawn
+/// from one catalogue. All of that is checkable from the page alone, and until this
+/// existed it had only been asserted by the code that produces it.
+pub fn audit(page: &Envelope) -> Vec<String> {
+    let mut problems = Vec::new();
+    let surface = &page.create_surface;
+    if page.version != ENVELOPE_VERSION {
+        problems.push(format!(
+            "envelope version is {:?}, not {ENVELOPE_VERSION:?}",
+            page.version
+        ));
+    }
+    if surface.catalog_id != CATALOGUE_ID {
+        problems.push(format!(
+            "catalogue is {:?}, not {CATALOGUE_ID:?}",
+            surface.catalog_id
+        ));
+    }
+
+    let mut ids = HashSet::new();
+    for component in &surface.components {
+        if !ids.insert(component.id.as_str()) {
+            problems.push(format!("two components share the id {:?}", component.id));
+        }
+        if !COMPONENTS.contains(&component.component.as_str()) {
+            problems.push(format!(
+                "component {:?} names {:?}, which the catalogue does not define",
+                component.id, component.component
+            ));
+        }
+        match &component.body {
+            Body::Column { children } => {
+                for child in children {
+                    if !surface
+                        .components
+                        .iter()
+                        .any(|component| &component.id == child)
+                    {
+                        problems.push(format!(
+                            "component {:?} lists the child {child:?}, which is not in the page",
+                            component.id
+                        ));
+                    }
+                }
+            }
+            Body::Block {
+                lines, spans, rows, ..
+            } => {
+                if lines.len() != spans.len() {
+                    problems.push(format!(
+                        "component {:?} has {} line(s) and {} span list(s)",
+                        component.id,
+                        lines.len(),
+                        spans.len()
+                    ));
+                }
+                for (line, line_spans) in lines.iter().zip(spans) {
+                    let width = line.chars().count();
+                    for span in line_spans {
+                        if span.start >= span.end || usize::from(span.end) > width {
+                            problems.push(format!(
+                                "component {:?} has a span {}..{} in a line of {width} \
+                                 character(s)",
+                                component.id, span.start, span.end
+                            ));
+                        }
+                    }
+                }
+                check_rows(&mut problems, &component.id, rows);
+            }
+            Body::Diff { lines, rows } => {
+                for line in lines {
+                    let width = line.text.chars().count();
+                    for span in &line.spans {
+                        if span.start >= span.end || usize::from(span.end) > width {
+                            problems.push(format!(
+                                "component {:?} has a span {}..{} in a diff line of {width} \
+                                 character(s)",
+                                component.id, span.start, span.end
+                            ));
+                        }
+                    }
+                }
+                check_rows(&mut problems, &component.id, rows);
+            }
+            Body::ToolCall { rows, .. } | Body::Meter { rows, .. } => {
+                check_rows(&mut problems, &component.id, rows);
+            }
+        }
+    }
+
+    if !surface.components.iter().any(|c| c.id == surface.root) {
+        problems.push(format!(
+            "the root {:?} is not one of the page's components",
+            surface.root
+        ));
+    }
+    problems
+}
+
+/// Records a row range that covers nothing, which no component should describe.
+fn check_rows(problems: &mut Vec<String>, id: &str, rows: &[u16; 2]) {
+    if rows[0] >= rows[1] {
+        problems.push(format!(
+            "component {id:?} covers the empty row range {rows:?}"
+        ));
+    }
+}
 
 /// Where a component's content came from.
 ///
@@ -1066,6 +1186,87 @@ mod tests {
                 .iter()
                 .all(|component| component.component != "Meter"),
             "a path must not become a meter: {page:?}"
+        );
+    }
+
+    #[test]
+    fn a_page_this_crate_produces_passes_its_own_audit() {
+        let page = page_from_frame(&frame_of(&["hello", "", "  > a prompt", "plain"], 40), "s");
+        let problems = audit(&page);
+        assert!(
+            problems.is_empty(),
+            "a produced page must be sound: {problems:?}"
+        );
+    }
+
+    #[test]
+    fn a_dangling_child_and_a_missing_root_are_both_reported() {
+        let page = Envelope {
+            version: ENVELOPE_VERSION.to_owned(),
+            create_surface: Surface {
+                surface_id: "bad".to_owned(),
+                catalog_id: CATALOGUE_ID.to_owned(),
+                root: "nowhere".to_owned(),
+                components: vec![Component {
+                    id: "root".to_owned(),
+                    component: "Column".to_owned(),
+                    source: Provenance::Seen,
+                    body: Body::Column {
+                        children: vec!["ghost".to_owned()],
+                    },
+                }],
+            },
+        };
+        let problems = audit(&page);
+        assert!(
+            problems.iter().any(|problem| problem.contains("ghost")),
+            "a child that does not exist must be reported: {problems:?}"
+        );
+        assert!(
+            problems.iter().any(|problem| problem.contains("nowhere")),
+            "a root that does not exist must be reported: {problems:?}"
+        );
+    }
+
+    #[test]
+    fn a_span_past_the_end_of_its_line_is_reported() {
+        let page = Envelope {
+            version: ENVELOPE_VERSION.to_owned(),
+            create_surface: Surface {
+                surface_id: "bad".to_owned(),
+                catalog_id: CATALOGUE_ID.to_owned(),
+                root: "root".to_owned(),
+                components: vec![
+                    Component {
+                        id: "root".to_owned(),
+                        component: "Column".to_owned(),
+                        source: Provenance::Seen,
+                        body: Body::Column {
+                            children: vec!["b".to_owned()],
+                        },
+                    },
+                    Component {
+                        id: "b".to_owned(),
+                        component: "Block".to_owned(),
+                        source: Provenance::Seen,
+                        body: Body::Block {
+                            role: "text".to_owned(),
+                            rows: [0, 1],
+                            lines: vec!["ab".to_owned()],
+                            spans: vec![vec![InlineSpan {
+                                start: 0,
+                                end: 9,
+                                style: Emphasis::default(),
+                            }]],
+                        },
+                    },
+                ],
+            },
+        };
+        let problems = audit(&page);
+        assert!(
+            problems.iter().any(|problem| problem.contains("span 0..9")),
+            "a span past the line must be reported: {problems:?}"
         );
     }
 }

@@ -248,10 +248,12 @@ fn page(args: &PageArgs) -> Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
-/// Checks a corpus against the mask's own promises, and fails if any frame breaks one.
+/// Checks a corpus against the promises the frames and the pages make, and fails if
+/// either breaks one.
 fn audit(sessions: &[PathBuf]) -> Result<ExitCode> {
-    let violations = ui_lm_capture::summary::audit(sessions)
-        .with_context(|| format!("failed to read the sessions under {sessions:?}"))?;
+    let context = || format!("failed to read the sessions under {sessions:?}");
+    let mut violations = ui_lm_capture::summary::audit(sessions).with_context(context)?;
+    violations.extend(ui_lm_capture::summary::audit_pages(sessions).with_context(context)?);
     if violations.is_empty() {
         println!("audit: no violations");
         return Ok(ExitCode::SUCCESS);
