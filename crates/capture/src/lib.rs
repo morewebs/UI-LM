@@ -5,5 +5,7 @@
 //! them. The command line arrives in a later task.
 
 pub mod driver;
+pub mod quiesce;
 
 pub use driver::{Driver, SessionConfig};
+pub use quiesce::Quiescer;
