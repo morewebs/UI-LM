@@ -134,6 +134,82 @@ fn session_dirs(root: &Path) -> std::io::Result<Vec<PathBuf>> {
     Ok(found)
 }
 
+/// One way a frame disagrees with itself.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Violation {
+    /// Which session directory the frame was read from.
+    pub session: String,
+    /// The frame's sequence number within that session.
+    pub seq: u32,
+    /// What is wrong with it.
+    pub problem: String,
+}
+
+/// Checks a corpus against the properties the mask promises, and returns what fails.
+///
+/// The mask's whole claim is that it marks change *nothing* accounts for. That claim
+/// is checkable from the frames alone, and until this existed it had only ever been
+/// argued:
+///
+/// - a span must lie inside the frame's own grid, or it describes cells that do not
+///   exist;
+/// - a span must sit on a row the frame reported as changed, or the mask is pointing
+///   at content that did not move;
+/// - a frame carrying spans must not have an event range that *grew*, because that is
+///   a change the application reported, and masking it would be the failure the mask
+///   exists to prevent.
+pub fn audit(roots: &[PathBuf]) -> std::io::Result<Vec<Violation>> {
+    let mut violations = Vec::new();
+    for root in roots {
+        for dir in session_dirs(root)? {
+            let frames = match read_frames(&dir) {
+                Ok((_, frames)) => frames,
+                Err(_) => read_orphaned_frames(&dir)?,
+            };
+            for frame in &frames {
+                for problem in frame_problems(frame) {
+                    violations.push(Violation {
+                        session: dir.display().to_string(),
+                        seq: frame.seq,
+                        problem,
+                    });
+                }
+            }
+        }
+    }
+    Ok(violations)
+}
+
+/// What is wrong with one frame, if anything.
+fn frame_problems(frame: &Frame) -> Vec<String> {
+    let mut problems = Vec::new();
+    let grew = matches!(frame.acp_event_range, Some((from, to)) if to > from);
+    if !frame.volatile.is_empty() && grew {
+        problems.push(format!(
+            "{} masked span(s) while the event stream grew: {:?} reported something \
+             behind this change",
+            frame.volatile.len(),
+            frame.acp_event_range
+        ));
+    }
+    for span in &frame.volatile {
+        let ends = u32::from(span.col) + u32::from(span.len);
+        if span.row >= frame.rows || ends > u32::from(frame.cols) || span.len == 0 {
+            problems.push(format!(
+                "span at row {} col {} len {} does not fit a {}x{} screen",
+                span.row, span.col, span.len, frame.rows, frame.cols
+            ));
+        }
+        if !frame.changed_rows.contains(&span.row) {
+            problems.push(format!(
+                "span at row {} is not on a row this frame reported as changed",
+                span.row
+            ));
+        }
+    }
+    problems
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -201,5 +277,69 @@ mod tests {
         let text = summary.render();
         assert!(text.contains("1 frame(s)"), "{text}");
         assert!(text.contains("events labelled: none"), "{text}");
+    }
+
+    #[test]
+    fn a_masked_change_with_an_event_behind_it_is_a_violation() {
+        // The failure the mask exists to prevent, stated as an assertion: a span
+        // says "nothing explains this", so a range that grew contradicts it.
+        let mut frame = frame(0, "ab");
+        frame.acp_event_range = Some((0, 50));
+        frame.changed_rows = vec![0];
+        frame.volatile = vec![Span {
+            row: 0,
+            col: 0,
+            len: 2,
+            reason: MaskReason::NoSemanticChange,
+        }];
+        let problems = frame_problems(&frame);
+        assert_eq!(problems.len(), 1, "{problems:?}");
+        assert!(problems[0].contains("event stream grew"), "{problems:?}");
+    }
+
+    #[test]
+    fn a_span_off_the_changed_rows_is_a_violation() {
+        let mut frame = frame(0, "ab");
+        frame.acp_event_range = Some((10, 10));
+        frame.changed_rows = vec![];
+        frame.volatile = vec![Span {
+            row: 0,
+            col: 0,
+            len: 2,
+            reason: MaskReason::NoSemanticChange,
+        }];
+        let problems = frame_problems(&frame);
+        assert_eq!(problems.len(), 1, "{problems:?}");
+        assert!(problems[0].contains("not on a row"), "{problems:?}");
+    }
+
+    #[test]
+    fn a_span_that_does_not_fit_the_screen_is_a_violation() {
+        let mut frame = frame(0, "ab");
+        frame.acp_event_range = Some((10, 10));
+        frame.changed_rows = vec![0];
+        frame.volatile = vec![Span {
+            row: 0,
+            col: 1,
+            len: 5,
+            reason: MaskReason::NoSemanticChange,
+        }];
+        let problems = frame_problems(&frame);
+        assert_eq!(problems.len(), 1, "{problems:?}");
+        assert!(problems[0].contains("does not fit"), "{problems:?}");
+    }
+
+    #[test]
+    fn a_frame_that_agrees_with_itself_has_no_violations() {
+        let mut frame = frame(0, "ab");
+        frame.acp_event_range = Some((10, 10));
+        frame.changed_rows = vec![0];
+        frame.volatile = vec![Span {
+            row: 0,
+            col: 0,
+            len: 2,
+            reason: MaskReason::NoSemanticChange,
+        }];
+        assert!(frame_problems(&frame).is_empty());
     }
 }

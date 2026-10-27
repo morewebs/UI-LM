@@ -32,6 +32,26 @@ Each settled screen becomes one line of `frames.jsonl`: run-length cells with ch
 
 A frame exists only at a **settled** point — 150 ms of quiet. An animating screen produces frames at its pauses, not continuously.
 
+Read back what a corpus holds:
+
+```bash
+ui-lm-capture summarize -- sessions/
+```
+
+```
+1 session(s), 20 frame(s), 18 distinct screen(s)
+20.1 s of recorded wall clock
+masked cells: 36; frames naming an event range: 16; frames carrying kinds: 5
+events labelled by the application:
+  agent_message_chunk: 1
+  hook_execution: 5
+  tool_call: 2
+  tool_call_update: 4
+  turn_completed: 1
+```
+
+Killed captures are included: their frames are real screens, so leaving them out would understate the corpus.
+
 ## What is proven, and what is not
 
 **Proven.** The rig's VT100 emulator reproduces the application's own draw buffer exactly: 8000/8000 cells, styles included, on every like-for-like pair measured across three scenarios, one containing a styled full-width glyph. See [the K5 measurement](docs/reports/2026-10-27-k5-measurement.md). A real capture of 35 sessions / 526 frames / 436 distinct screens against Grok Build is described in [the W1 capture report](docs/reports/2026-10-27-w1-capture.md).

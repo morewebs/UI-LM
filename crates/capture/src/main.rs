@@ -91,6 +91,8 @@ enum Command {
     Record(Record),
     /// Report what a set of recorded sessions contains.
     Summarize(Summarize),
+    /// Check a corpus against the promises the volatile mask makes.
+    Audit(Summarize),
 }
 
 /// What the corpus reader is asked about.
@@ -176,7 +178,26 @@ fn run(command: Command) -> Result<ExitCode> {
     match command {
         Command::Record(args) => record(args),
         Command::Summarize(args) => summarise(&args.sessions),
+        Command::Audit(args) => audit(&args.sessions),
     }
+}
+
+/// Checks a corpus against the mask's own promises, and fails if any frame breaks one.
+fn audit(sessions: &[PathBuf]) -> Result<ExitCode> {
+    let violations = ui_lm_capture::summary::audit(sessions)
+        .with_context(|| format!("failed to read the sessions under {sessions:?}"))?;
+    if violations.is_empty() {
+        println!("audit: no violations");
+        return Ok(ExitCode::SUCCESS);
+    }
+    for violation in &violations {
+        println!(
+            "{}: frame {}: {}",
+            violation.session, violation.seq, violation.problem
+        );
+    }
+    println!("audit: {} violation(s)", violations.len());
+    Ok(ExitCode::FAILURE)
 }
 
 /// Prints what the given sessions hold.
