@@ -1,7 +1,7 @@
-pub fn crate_ready() -> bool { true }
+//! Frames for the UI-LM capture rig: a styled cell grid and its wire codec.
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn workspace_builds() { assert!(super::crate_ready()); }
-}
+pub mod grid;
+pub mod rle;
+
+pub use grid::{Color, Grid, Style, StyledCell};
+pub use rle::{decode_grid, encode_grid, CellRun};
