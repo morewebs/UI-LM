@@ -415,6 +415,16 @@ pub enum Body {
         /// largest gap in every surveyed standard, and they are what a `Diff` or an
         /// inline emphasis will be built from.
         spans: Vec<Vec<InlineSpan>>,
+        /// The names along a panel's tab strip, when the block is one.
+        ///
+        /// Read off a recorded overlay: `Context usage  Usage limit  Session info`
+        /// above a full-width rule, which is a tab strip rather than a table's column
+        /// headers — the words name views, and nothing lines up beneath them. It
+        /// belongs to the `Block` because the spec calls a block a generic container
+        /// with a role, and inventing a seventh catalogue component for it would
+        /// version the vocabulary on the strength of one screen.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        tabs: Vec<String>,
     },
     /// A block that reads as an edit to a file.
     ///
@@ -651,6 +661,7 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
                         rows,
                         lines: text.to_vec(),
                         spans: segment_spans,
+                        tabs: tabs_of(text),
                     },
                 )
             };
@@ -985,6 +996,69 @@ fn blocks(lines: &[String]) -> Vec<(usize, usize)> {
     found
 }
 
+/// The tab strip a panel's block carries, or nothing when it has none.
+///
+/// A tab strip is a line of two or more names separated by wide gaps, sitting directly
+/// above a rule that spans the panel. Requiring the rule is what separates it from two
+/// columns of content: the rule is the thing that says "these are views, and what is
+/// below is what the selected one shows".
+fn tabs_of(lines: &[String]) -> Vec<String> {
+    let Some(rule) = lines.iter().position(|line| is_rule(line)) else {
+        return Vec::new();
+    };
+    let Some(names) = rule.checked_sub(1).map(|above| &lines[above]) else {
+        return Vec::new();
+    };
+    let fields = fields_of(names);
+    if fields.len() < 2 {
+        return Vec::new();
+    }
+    fields
+}
+
+/// Whether a line is a horizontal rule drawn across a panel.
+///
+/// Only the box-drawing characters a terminal uses for one, after the surrounding
+/// borders are removed: a line of dashes in prose is not a rule.
+fn is_rule(line: &str) -> bool {
+    let trimmed = line
+        .trim()
+        .trim_matches(|character| character == '│' || character == '┃');
+    let trimmed = trimmed.trim();
+    !trimmed.is_empty() && trimmed.chars().all(|character| "─━═".contains(character))
+}
+
+/// A line split into fields at gaps of two or more spaces.
+///
+/// Single spaces belong to a field (`Context usage` is one name), which is why this is
+/// not `split_whitespace`: that would turn one tab into two.
+fn fields_of(line: &str) -> Vec<String> {
+    let trimmed = line
+        .trim()
+        .trim_matches(|character| character == '│' || character == '┃');
+    let mut fields = Vec::new();
+    let mut current = String::new();
+    let mut spaces = 0;
+    for character in trimmed.chars() {
+        if character == ' ' {
+            spaces += 1;
+            continue;
+        }
+        if spaces >= 2 && !current.trim().is_empty() {
+            fields.push(current.trim().to_owned());
+            current.clear();
+        } else {
+            current.push_str(&" ".repeat(spaces));
+        }
+        spaces = 0;
+        current.push(character);
+    }
+    if !current.trim().is_empty() {
+        fields.push(current.trim().to_owned());
+    }
+    fields
+}
+
 /// A role, from what the block's own text says about itself.
 ///
 /// Only roles the text can prove are named; everything else is `text` rather than a
@@ -992,6 +1066,9 @@ fn blocks(lines: &[String]) -> Vec<(usize, usize)> {
 fn role_of(lines: &[String]) -> &'static str {
     if is_composer(lines) {
         return "composer";
+    }
+    if is_panel(lines) {
+        return "panel";
     }
     let first = lines.first().map(String::as_str).unwrap_or_default();
     let trimmed = first.trim_start();
@@ -1002,6 +1079,22 @@ fn role_of(lines: &[String]) -> &'static str {
     } else {
         "text"
     }
+}
+
+/// Whether a block is a bordered container rather than a stretch of text.
+///
+/// A panel opens with a corner rule and closes with one, which is how an application
+/// draws an overlay or a card. It is a role rather than a component because the spec's
+/// `Block` is "a generic container with a role", and because a panel and a paragraph
+/// differ in what a renderer would draw, not in what the cells say.
+fn is_panel(lines: &[String]) -> bool {
+    let opens = lines
+        .first()
+        .is_some_and(|line| line.trim_start().starts_with(['╭', '┌']));
+    let closes = lines
+        .last()
+        .is_some_and(|line| line.trim_start().starts_with(['╰', '└']));
+    opens && closes && lines.len() >= 3
 }
 
 /// Whether a block is the application's input box.
@@ -1077,6 +1170,7 @@ mod tests {
                 role: "text".to_owned(),
                 rows: [0, 1],
                 lines: vec!["one".to_owned()],
+                tabs: Vec::new(),
                 spans: vec![Vec::new()],
             }
         );
@@ -1086,6 +1180,7 @@ mod tests {
                 role: "text".to_owned(),
                 rows: [2, 4],
                 lines: vec!["two".to_owned(), "three".to_owned()],
+                tabs: Vec::new(),
                 spans: vec![Vec::new(), Vec::new()],
             }
         );
@@ -1461,6 +1556,7 @@ mod tests {
                             role: "text".to_owned(),
                             rows: [0, 1],
                             lines: vec!["ab".to_owned()],
+                            tabs: Vec::new(),
                             spans: vec![vec![InlineSpan {
                                 start: 0,
                                 end: 9,
@@ -1576,7 +1672,7 @@ mod tests {
     }
 
     #[test]
-    fn a_rounded_panel_without_a_prompt_is_not_a_composer() {
+    fn a_rounded_panel_is_a_panel_not_a_composer() {
         // Structure alone is not enough: a box that holds text but no input is a panel.
         let page = page_from_frame(
             &frame_of(&["  ╭─────────╭", "  │ changelog │", "  ╰─────────╰"], 24),
@@ -1591,6 +1687,65 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(roles, vec!["text"], "{page:?}");
+        assert_eq!(roles, vec!["panel"], "{page:?}");
+    }
+
+    #[test]
+    fn a_panel_reports_the_names_along_its_tab_strip() {
+        // The shape a recorded overlay draws: three view names above a rule that spans
+        // the panel. Context usage is one name, which is why fields split on wide gaps
+        // rather than on whitespace.
+        let page = page_from_frame(
+            &frame_of(
+                &[
+                    "  ┌────────────────────┌",
+                    "  │ Context usage  Usage limit  Session info │",
+                    "  │───────────────────────────│",
+                    "  │ Usage limits are managed by your team. │",
+                    "  └────────────────────└",
+                ],
+                60,
+            ),
+            "s",
+        );
+        let block = page
+            .create_surface
+            .components
+            .iter()
+            .find_map(|component| match &component.body {
+                Body::Block { tabs, role, .. } => Some((role.clone(), tabs.clone())),
+                _ => None,
+            })
+            .expect("the overlay must be a block");
+        assert_eq!(block.0, "panel");
+        assert_eq!(
+            block.1,
+            vec![
+                "Context usage".to_owned(),
+                "Usage limit".to_owned(),
+                "Session info".to_owned()
+            ]
+        );
+    }
+
+    #[test]
+    fn prose_without_a_rule_reports_no_tabs() {
+        let page = page_from_frame(
+            &frame_of(&["Context usage  Usage limit", "and then a sentence"], 40),
+            "s",
+        );
+        let tabs = page
+            .create_surface
+            .components
+            .iter()
+            .find_map(|component| match &component.body {
+                Body::Block { tabs, .. } => Some(tabs.clone()),
+                _ => None,
+            })
+            .expect("the prose must be a block");
+        assert!(
+            tabs.is_empty(),
+            "a rule is what makes a tab strip: {tabs:?}"
+        );
     }
 }
