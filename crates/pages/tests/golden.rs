@@ -15,7 +15,6 @@
 
 use std::path::PathBuf;
 
-use ui_lm_frames::Frame;
 use ui_lm_pages::page_from_frame;
 
 /// The screen the golden describes: a short exchange, a blank separator, and a
