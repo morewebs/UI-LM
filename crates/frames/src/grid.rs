@@ -90,11 +90,10 @@ pub type Grid = Vec<Vec<StyledCell>>;
 /// A cell the screen does not have becomes a blank, so the grid is always exactly
 /// the declared shape and no geometry mistakes here reach the recorded frame.
 ///
-/// A wide glyph's continuation column inherits the style of the glyph on its left:
-/// `vt100` clears the continuation cell's attributes, so the emulator records the
-/// colour on the leading column only, while the buffer the application draws into
-/// gives both columns the glyph's style. Inheriting makes our frame agree with that
-/// buffer rather than inventing a disagreement the comparison would have to ignore.
+/// A wide glyph's continuation column keeps the style the emulator reports for it,
+/// which is `Default`: ratatui's buffer, which K5 compares us against, stores that
+/// cell as `symbol=""` with `fg=Reset, bg=Reset`, so inheriting the head cell's
+/// style here would manufacture a style the application never drew.
 pub fn grid_from_screen(screen: &vt100::Screen, cols: u16) -> Grid {
     let rows = screen.size().0;
     (0..rows)
@@ -102,27 +101,11 @@ pub fn grid_from_screen(screen: &vt100::Screen, cols: u16) -> Grid {
         .collect()
 }
 
-/// One row of the grid, read cell by cell and then repaired for wide glyphs.
+/// One row of the grid, read cell by cell.
 fn row_from_screen(screen: &vt100::Screen, row: u16, cols: u16) -> Vec<StyledCell> {
-    let mut cells: Vec<StyledCell> = (0..cols)
+    (0..cols)
         .map(|col| styled_cell(screen.cell(row, col)))
-        .collect();
-    inherit_tail_styles(&mut cells);
-    cells
-}
-
-/// Gives every wide-glyph continuation cell the style of the cell immediately to
-/// its left on the same row.
-///
-/// Starting at the second column is the whole of the column-0 rule: a continuation
-/// cell there has nothing to its left on this row and keeps the style the emulator
-/// reported. Left to right, so a run of continuation cells settles from its head.
-fn inherit_tail_styles(cells: &mut [StyledCell]) {
-    for col in 1..cells.len() {
-        if cells[col].wide_tail {
-            cells[col].style = cells[col - 1].style.clone();
-        }
-    }
+        .collect()
 }
 
 /// One emulator cell as a grid cell; a missing cell (past the screen's edge) is a
@@ -249,18 +232,53 @@ mod vt_tests {
     }
 
     #[test]
-    fn a_coloured_wide_glyph_gives_its_style_to_the_continuation_column() {
-        // vt100 clears the continuation cell's attributes (`Attrs::default()`), so
-        // the emulator records the colour on the glyph's column and nothing on the
-        // column after it. ratatui's buffer, which K5 compares us against, gives
-        // the tail the glyph's style. A tail that keeps `Default` therefore
-        // mismatches on one column of every coloured wide glyph.
+    fn a_coloured_wide_glyph_leaves_its_continuation_column_unstyled() {
+        // Measured, not assumed (K5, 2026-10-27): ratatui stores a wide glyph's
+        // continuation cell as `symbol=""` with `fg=Reset, bg=Reset` — the head
+        // cell's style is *not* carried onto the column after it. This adapter
+        // must say the same thing, or every coloured wide glyph records a style
+        // the application never drew on its tail column. The flag and the forced
+        // space are structure and stay; the style is not and goes.
         let g = feed("\x1b[31m\u{4f60}\x1b[0m".as_bytes(), 1, 4);
         assert_eq!(g[0][0].ch, '\u{4f60}');
         assert_eq!(g[0][0].style.fg, Color::Indexed(1));
+        assert!(g[0][1].wide_tail, "the tail is still a continuation column");
+        assert_eq!(g[0][1].ch, ' ', "the tail still holds a space");
+        assert_eq!(
+            g[0][1].style,
+            Style::default(),
+            "a continuation cell keeps `Default` style, as ratatui's buffer does"
+        );
+    }
+
+    #[test]
+    fn a_wide_glyph_on_a_coloured_background_leaves_the_tail_unstyled() {
+        // The same rule under a background colour rather than a foreground one: a
+        // tail that inherited either channel would disagree with ratatui there, so
+        // both channels are asserted, not just the one the first test happens to
+        // set.
+        let g = feed("\x1b[41m\u{4f60}\x1b[0m".as_bytes(), 1, 4);
+        assert_eq!(g[0][0].style.bg, Color::Indexed(1));
         assert!(g[0][1].wide_tail);
-        assert_eq!(g[0][1].style.fg, Color::Indexed(1));
+        assert_eq!(g[0][1].style, Style::default());
+    }
+
+    #[test]
+    fn a_truecolour_wide_glyph_leaves_the_tail_unstyled() {
+        // The concrete case K5 measured: the prompt box drew `你好` at
+        // `fg=rgb(225,225,225)` on `bg=rgb(64,64,64)` and left both continuation
+        // cells at `reset/reset`. The palette tests above prove the rule; this one
+        // proves it on the colour form the failing screen actually used.
+        let g = feed(
+            "\x1b[38;2;225;225;225m\x1b[48;2;64;64;64m\u{4f60}\x1b[0m".as_bytes(),
+            1,
+            4,
+        );
+        assert_eq!(g[0][0].style.fg, Color::Rgb(225, 225, 225));
+        assert_eq!(g[0][0].style.bg, Color::Rgb(64, 64, 64));
+        assert!(g[0][1].wide_tail);
         assert_eq!(g[0][1].ch, ' ');
+        assert_eq!(g[0][1].style, Style::default());
     }
 
     #[test]

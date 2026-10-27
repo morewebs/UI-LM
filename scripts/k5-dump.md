@@ -261,11 +261,13 @@ root**, which is what `$PWD`, `sessions/` and `target/` in them refer to.
 | 3 | plain prompt | a typed ASCII prompt in the input box | the single-width control for #2 |
 
 Scenario 2 is not optional and not interchangeable. Whether ratatui gives a wide
-glyph's continuation cell the glyph's own style, or resets it, is **unverified**; our
-adapter deliberately inherits the head cell's style onto the continuation cell, and that
-pair of cells is the one place it guesses. If K5 mismatches on a continuation column,
-Task 3's inheritance ruling is what is wrong, and the fix is decided then — never
-absorbed by widening an ignore mask.
+glyph's continuation cell the glyph's own style, or resets it, was **unverified** when
+this recipe was written; the 2026-10-27 measurement answered it, and the answer is
+**reset**: ratatui stores the continuation cell as `symbol=""` with
+`fg=Reset, bg=Reset`. Our adapter inherited the head cell's style there and was
+corrected to match (`crates/frames/src/grid.rs`), so a continuation column that
+mismatches now means something new has gone wrong — never a rounding error to absorb
+by widening an ignore mask.
 
 ### Scenario 1 — startup (the opening screen)
 
@@ -334,8 +336,9 @@ cell, in one styled run:
 ```
 
 Expected: at least `1` — that many draws contain the glyph. Then look at it: the cell
-immediately to its right must be `"symbol":""`, and both cells must carry the same
-non-`reset` `fg` (or `bg`). That is the wide-glyph question, and step 5 turns that pair
+immediately to its right must be `"symbol":""` with `"fg":"reset"` and
+`"bg":"reset"`, while the glyph's own column carries the non-`reset` colour. That is
+the wide-glyph question — a styled head and a reset tail — and step 5 turns that pair
 into a verdict.
 
 If the prompt box draws typed text in `reset` — plausible, since an input box may not
@@ -405,26 +408,77 @@ buffer is not the recorder's screen, and step 5 will refuse the pair.
 
 ## 5. Compare
 
-One command per scenario, each naming the session it is evidence about:
+`compare` takes **one screen from each side**, and choosing the two screens is the
+operator's job. There is one rule: the pair must be the same screen the application
+actually drew. Nothing else is evidence.
+
+### The last recorded frame is a post-exit repaint, and is never compared
+
+The obvious default — our last frame against the fork's last draw — is **unsound for
+this application**, and must not be used or reported. Our recorder frames the final
+settled screen when the child's output ends, and on its way out this application
+leaves the alternate screen and repaints its transcript in default style, with no
+colour at all. That exit repaint is a real recorded screen, and **no draw buffer ever
+held it**: the fork's dump stops at the last frame drawn *into* the alternate screen.
+Last-versus-last therefore compares the application's final draw with a repaint it
+never drew, and on the 2026-10-27 K5 run it reported `8000` of `8000` mismatches on all
+three sessions, down to a blank cell `0,0`. A last-vs-last result is a measurement of
+nothing: not a failure, and a zero from it would not be a pass either.
+
+### Name the pair instead
+
+`--ours-seq N` and `--theirs-seq M` name one screen by its own `seq` on each side.
+They are not an index into an aligned sequence — a session of forty draws may be
+thirty frames, and frame 12 has no principled relationship to draw 12 — and a `seq`
+the run does not have is an error rather than a fallback.
+
+Finding a pair takes two steps:
+
+1. **Drop the exit repaint from our candidates.** Census our frames by colour; the
+   trailing frames with no colour at all are the repaint and are not eligible:
+
+   ```powershell
+   Get-Content sessions/k5/k5-wide-glyph/frames.jsonl | ForEach-Object {
+     $f = $_ | ConvertFrom-Json
+     $coloured = ($f.runs | Where-Object {
+       $_.style.fg.kind -ne 'default' -or $_.style.bg.kind -ne 'default'
+     } | Measure-Object -Property len -Sum).Sum
+     "seq=$($f.seq) coloured_cells=$coloured"
+   }
+   ```
+
+2. **Try draws against a frame that has colour in it, and read `mismatched:`.** The
+   two sides are not aligned, so trial is the instrument: the draw holding that same
+   screen prints `mismatched: 0`, while a draw holding the pre-card screen or a
+   mid-repaint screen prints hundreds. A `0` on two like-for-like screens is the data
+   point; a `0` is worth nothing if either screen is the exit repaint.
+
+The six commands below are the pairs the 2026-10-27 run identified: the startup and
+plain-prompt sessions at their first styled screens, and the wide-glyph session on a
+screen that holds `你好`. A later run keeps whatever name step 4 gave it — substitute
+the name in both paths, and re-find the pair.
 
 ```powershell
 cargo build -p ui-lm-validate
 
-.\target\debug\ui-lm-validate.exe compare --ours sessions/k5/probe --theirs sessions/k5/probe-buffer.jsonl
-.\target\debug\ui-lm-validate.exe compare --ours sessions/k5/wide-glyph --theirs sessions/k5/wide-glyph-buffer.jsonl
-.\target\debug\ui-lm-validate.exe compare --ours sessions/k5/plain-prompt --theirs sessions/k5/plain-prompt-buffer.jsonl
+.\target\debug\ui-lm-validate.exe compare --ours sessions/k5/k5-startup-fullscreen `
+  --theirs sessions/k5/k5-startup-fullscreen-buffer.jsonl --ours-seq 1 --theirs-seq 0
+.\target\debug\ui-lm-validate.exe compare --ours sessions/k5/k5-startup-fullscreen `
+  --theirs sessions/k5/k5-startup-fullscreen-buffer.jsonl --ours-seq 2 --theirs-seq 13
+.\target\debug\ui-lm-validate.exe compare --ours sessions/k5/k5-startup-fullscreen `
+  --theirs sessions/k5/k5-startup-fullscreen-buffer.jsonl --ours-seq 3 --theirs-seq 14
+.\target\debug\ui-lm-validate.exe compare --ours sessions/k5/k5-plain-prompt `
+  --theirs sessions/k5/k5-plain-prompt-buffer.jsonl --ours-seq 1 --theirs-seq 0
+.\target\debug\ui-lm-validate.exe compare --ours sessions/k5/k5-plain-prompt `
+  --theirs sessions/k5/k5-plain-prompt-buffer.jsonl --ours-seq 2 --theirs-seq 13
+.\target\debug\ui-lm-validate.exe compare --ours sessions/k5/k5-wide-glyph `
+  --theirs sessions/k5/k5-wide-glyph-buffer.jsonl --ours-seq 11 --theirs-seq 27
 ```
 
-By default this compares **our last frame against the fork's last draw**. That is the
-one screen the two sides are guaranteed to share: our recorder frames the final
-settled screen when the child's output ends, and the fork's last draw is that same
-screen. It is **one strong data point per session, not a frame-by-frame sequence
-alignment** — a session of forty draws may be thirty frames, and frame 12 has no
-principled relationship to draw 12.
-
-`--ours-seq N` and `--theirs-seq M` name one screen by its own `seq` on each side
-when a specific middle screen is wanted. They are not an index into an aligned
-sequence, and a `seq` the run does not have is an error rather than a fallback.
+The recorded screens are only as new as the adapter that recorded them: `frames.jsonl`
+is the output of the adapter at capture time, so a change to the frame adapter cannot
+be measured against an older session. If the adapter changed, take the session again
+(step 4) before believing its comparison.
 
 They are also **not** a way past a damaged dump. The validator reads every line of the
 dump before it looks at `--theirs-seq` or `--ours-seq`, and an unreadable line — the
@@ -435,12 +489,12 @@ fix is to remove the dump and take the session again (the fork appends, so a re-
 would otherwise land beside the damage), never a `--theirs-seq` that steps back from
 it.
 
-Output on a clean comparison — exit code 0:
+Output on a clean like-for-like pair — exit code 0:
 
 ```
-session: grok started 2026-10-27T10:00:00Z, recorded at 50x160
-ours:   sessions/k5/probe — frame 34 of 34 (seq 33), 50x160
-theirs: sessions/k5/probe-buffer.jsonl — draw 71 of 71 (seq 70), 50x160
+session: C:\…\xai-grok-pager.exe started 2026-10-27T12:38:34Z, recorded at 50x160
+ours:   sessions/k5/k5-startup-fullscreen — frame 2 of 6 (seq 1), 50x160
+theirs: sessions/k5/k5-startup-fullscreen-buffer.jsonl — draw 1 of 16 (seq 0), 50x160
 total cells: 8000
 mismatched:  0
 K5: the emulator's screen and the draw buffer agree on all 8000 cell(s)
@@ -449,9 +503,9 @@ K5: the emulator's screen and the draw buffer agree on all 8000 cell(s)
 On a disagreement — exit code non-zero:
 
 ```
-session: grok started 2026-10-27T10:00:00Z, recorded at 50x160
-ours:   sessions/k5/probe — frame 34 of 34 (seq 33), 50x160
-theirs: sessions/k5/probe-buffer.jsonl — draw 71 of 71 (seq 70), 50x160
+session: C:\…\xai-grok-pager.exe started 2026-10-27T12:41:06Z, recorded at 50x160
+ours:   sessions/k5/k5-wide-glyph — frame 12 of 26 (seq 11), 50x160
+theirs: sessions/k5/k5-wide-glyph-buffer.jsonl — draw 28 of 43 (seq 27), 50x160
 total cells: 8000
 mismatched:  3
 first mismatch: 12,34: ours='a' theirs='b'
@@ -468,10 +522,11 @@ reason — not something the comparison silently dropped.
 
 **K5 is cleared only when this passes on at least three sessions**, each captured
 from a different scenario in the table in step 4, and **one of them must be the styled
-full-width glyph** — a run without that scenario leaves the adapter's one unverified
-guess untested, and cannot clear K5 however many other screens match. A `mismatched: 0`
-on one session is a data point; three are the criterion. Append to the session note,
-for each session:
+full-width glyph** — a run without that scenario leaves the wide-glyph adapter
+untested, and cannot clear K5 however many other screens match. A `mismatched: 0`
+on one like-for-like pair is a data point; three sessions are the criterion. Never
+report a last-vs-last comparison, and never count one: see step 5. Append to the
+session note, for each session:
 
 - the session id, the fork's commit from step 1, and the patched binary's build;
 - the scenario from the table, `--rows 50 --cols 160`, and the `--script` file used;

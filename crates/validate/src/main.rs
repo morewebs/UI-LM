@@ -8,17 +8,23 @@
 //! the recorder wrote and a dump the patched fork wrote, compares one screen from
 //! each, prints what it found, and exits non-zero when anything differs.
 //!
-//! # One screen per session, by default
+//! # The screens to compare are named, not assumed
 //!
 //! The two sides are not aligned sequences. Our recorder frames the screen whenever
 //! the child's output has been quiet for the settle gap; the fork dumps the buffer
 //! after every draw. A session of forty draws may be thirty frames, and frame 12
-//! has no principled relationship to draw 12. What *is* principled is the last
-//! screen of each: the recorder frames the final settled screen when the child's
-//! output ends, and the fork's last draw is that same screen. That end-of-session
-//! pair is the default, and it is one strong data point per session rather than a
-//! frame-by-frame alignment. `--ours-seq` and `--theirs-seq` therefore name one
-//! screen on each side by its own `seq`, not an index into an aligned sequence.
+//! has no principled relationship to draw 12. What the two sides *do* share is a
+//! screen — the same screen — and naming it on each side is the operator's job:
+//! `--ours-seq` and `--theirs-seq` name one screen by its own `seq`, not an index
+//! into an aligned sequence.
+//!
+//! Defaulting both to the last screen is **not** a safe pairing for this
+//! application and must not be reported as a K5 result. Measured on 2026-10-27: on
+//! its way out the application leaves the alternate screen and repaints its
+//! transcript in default style, so our last frame is a post-exit repaint that no
+//! draw buffer ever held, and last-vs-last reported 8000 of 8000 mismatches on
+//! screens that agree cell for cell. `scripts/k5-dump.md` §5 has the procedure and
+//! the like-for-like pairs.
 //!
 //! # A shape difference is a hard failure
 //!
@@ -32,8 +38,7 @@
 //!
 //! Nothing is masked by default. `Frame::volatile` is a statement our own recorder
 //! makes about our own frames, and letting it silence cells here would let the mask
-//! hide exactly the disagreement K5 exists to find. The comparison is against the
-//! final settled screen, where a spinner has stopped anyway.
+//! hide exactly the disagreement K5 exists to find.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -80,11 +85,14 @@ struct Compare {
     #[arg(long, value_name = "FILE")]
     theirs: PathBuf,
 
-    /// Which of our frames to compare, by its `seq`. Defaults to the last one.
+    /// Which of our frames to compare, by its `seq`. Defaults to the last one,
+    /// which is only a like-for-like screen if the application does not repaint
+    /// after its exit sequence — this one does, so name the pair.
     #[arg(long, value_name = "N")]
     ours_seq: Option<u32>,
 
-    /// Which of the fork's draws to compare, by its `seq`. Defaults to the last one.
+    /// Which of the fork's draws to compare, by its `seq`. Defaults to the last
+    /// one. Name it in a K5 run: see `scripts/k5-dump.md` §5.
     #[arg(long, value_name = "M")]
     theirs_seq: Option<u32>,
 }
@@ -191,10 +199,12 @@ fn run_compare(args: Compare) -> Result<ExitCode> {
 
 /// Picks the screen to compare: the one whose `seq` is `seq`, or the last one.
 ///
-/// The last one is the default because it is the pair the two runs are guaranteed
-/// to share — see this file's module documentation. A named `seq` is looked up in
-/// the run's own numbering, and a number the run does not have is an error listing
-/// what it does have, so a typo cannot quietly fall back to the default.
+/// The last one is the fallback, and it is only the right screen when the
+/// application's final recorded frame is one it also drew as a buffer — false for
+/// this application, whose last frame is a post-exit repaint (see this file's
+/// module documentation). A named `seq` is looked up in the run's own numbering,
+/// and a number the run does not have is an error listing what it does have, so a
+/// typo cannot quietly fall back to the default.
 fn select<'a>(screens: &'a [Frame], seq: Option<u32>, what: &str) -> Result<(usize, &'a Frame)> {
     let last = screens
         .len()
