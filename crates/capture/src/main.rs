@@ -225,6 +225,16 @@ struct Record {
     #[arg(long, value_name = "DIR")]
     events: Option<PathBuf>,
 
+    /// A file whose appended bytes are typed into the program while it runs.
+    ///
+    /// This is how something outside the recorder drives a live session: append to the
+    /// file and the program receives those bytes, as if typed. A file rather than a
+    /// socket on purpose — no port to open, nothing reachable from another machine, and
+    /// the same behaviour on every platform. The recorder forwards only what is new since
+    /// it last looked.
+    #[arg(long, value_name = "FILE")]
+    control: Option<PathBuf>,
+
     /// Stop the session after this many milliseconds, even if the program is still
     /// running.
     ///
@@ -418,6 +428,16 @@ fn record(args: Record) -> Result<ExitCode> {
         );
     }
     let (program, program_args) = split_command(&args.command)?;
+    let mut control = args
+        .control
+        .clone()
+        .map(ui_lm_capture::control::ControlFile::new);
+    if let Some(path) = &args.control {
+        println!(
+            "typing is open: bytes appended to {} are sent to the program",
+            path.display()
+        );
+    }
     let mut keystrokes = match &args.script {
         Some(path) => read_script(path)?,
         None => VecDeque::new(),
@@ -503,6 +523,7 @@ fn record(args: Record) -> Result<ExitCode> {
     // starts, which is as close to "the session began" as the recorder can know.
     let started = Instant::now();
     let stop_after = args.stop_after.map(Duration::from_millis);
+    let mut next_control_at = Instant::now();
 
     let ended = loop {
         if signal::interrupted() {
@@ -588,6 +609,47 @@ fn record(args: Record) -> Result<ExitCode> {
         // a keystroke that was never delivered, and is counted rather than retried — a
         // queue that is full means the child is not collecting what it is sent, and
         // waiting for it is the hang this design exists to avoid.
+        // Typing from outside, at whatever moment the caller appends. Checked on a short
+        // cadence rather than every pass: the loop spins fast, and a file read per spin
+        // would cost more than the frame it is driving.
+        if let Some(channel) = control.as_mut() {
+            if Instant::now() >= next_control_at {
+                next_control_at = Instant::now() + Duration::from_millis(20);
+                match channel.take() {
+                    Ok(bytes) if !bytes.is_empty() => match driver.write_input(&bytes) {
+                        Ok(()) => typed_since_frame = true,
+                        Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
+                            refused += 1;
+                            eprintln!(
+                                "warning: the pty write queue was full, so {} byte(s) typed \
+                                 into the control file were never delivered",
+                                bytes.len()
+                            );
+                        }
+                        Err(error) if error.kind() == io::ErrorKind::BrokenPipe => {
+                            eprintln!(
+                                "warning: the pty write side is closed, so typed input was \
+                                 dropped"
+                            );
+                        }
+                        Err(error) => {
+                            return Err(error).with_context(|| {
+                                "failed to send bytes from the control file".to_owned()
+                            })
+                        }
+                    },
+                    Ok(_) => {}
+                    Err(error) => eprintln!(
+                        "warning: could not read the control file {}: {error}",
+                        args.control
+                            .as_ref()
+                            .map(|p| p.display().to_string())
+                            .unwrap_or_default()
+                    ),
+                }
+            }
+        }
+
         if let Some(due) = next_keystroke_at {
             if Instant::now() >= due {
                 let step = keystrokes

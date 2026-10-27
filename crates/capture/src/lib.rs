@@ -5,6 +5,7 @@
 //! them. What the shell decides is *when* a screen is a frame; what a frame is, and
 //! how it is written to disk, lives in `ui-lm-frames`.
 
+pub mod control;
 pub mod driver;
 pub mod events;
 pub mod mask;

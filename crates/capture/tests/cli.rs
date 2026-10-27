@@ -720,3 +720,49 @@ fn render_writes_an_html_file_from_a_recorded_session() {
     assert!(html.contains("class=\"meter\""), "the meter is missing");
     assert!(html.contains("class=\"tool\""), "the tool line is missing");
 }
+/// A program that says it is waiting, then waits for input.
+fn waits_for_input() -> Vec<String> {
+    if cfg!(windows) {
+        vec!["cmd".into(), "/c".into(), "pause".into()]
+    } else {
+        vec![
+            "sh".into(),
+            "-c".into(),
+            "echo waiting for input; read line; echo got \"$line\"".into(),
+        ]
+    }
+}
+
+#[test]
+fn a_control_file_types_into_a_running_program() {
+    // The interaction primitive: something outside the recorder types, and the running
+    // program receives it. The program here waits for a key and exits when one arrives,
+    // so the session ending early is the evidence that the bytes landed.
+    let _watchdog = arm_watchdog("a_control_file_types_into_a_running_program");
+    let out = tempfile::tempdir().unwrap();
+    let channel = tempfile::tempdir().unwrap();
+    let keys = channel.path().join("keys.txt");
+
+    let mut child = recorder(out.path())
+        .args(["--stop-after", "15000", "--control"])
+        .arg(&keys)
+        .arg("--")
+        .args(waits_for_input())
+        .spawn()
+        .unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(2500));
+    assert!(
+        child.try_wait().unwrap().is_none(),
+        "the program must still be waiting when the key is typed"
+    );
+    std::fs::write(&keys, b"x\n").unwrap();
+
+    let status = child.wait().unwrap();
+    assert!(status.success(), "the recorder failed: {status}");
+
+    let (_, frames) = read_frames(out.path()).expect("the session must be finished");
+    assert!(
+        !frames.is_empty(),
+        "the waiting screen must have been recorded"
+    );
+}

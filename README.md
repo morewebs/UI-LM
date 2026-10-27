@@ -41,7 +41,7 @@ Plus two operator scripts: `scripts/capture-w1.ps1` (a scripted capture session)
 
 ```bash
 cargo build --workspace
-cargo test --workspace        # 166 tests
+cargo test --workspace        # 170 tests
 ```
 
 Record a session of any terminal application:
@@ -54,6 +54,17 @@ ui-lm-capture record --rows 50 --cols 160 --out sessions/example \
 Each settled screen becomes one line of `frames.jsonl`: run-length cells with character, foreground, background, bold/italic/underline/reverse and a `wide_tail` flag for full-width glyphs. `session.json` records the command, geometry, the rendering-relevant environment, and where the child ran.
 
 A frame exists only at a **settled** point — 150 ms of quiet. An animating screen produces frames at its pauses, not continuously.
+
+Type into a program while it runs, from outside the recorder:
+
+```bash
+ui-lm-capture record --out sessions/live --control keys.txt -- --some-program
+printf 'hello\r' >> keys.txt      # the program receives a typed line
+```
+
+The channel is a file rather than a socket on purpose: no port to open, nothing reachable
+from another machine, and the same behaviour everywhere. The recorder forwards only what is
+new since it last looked, so a long session does not replay its history.
 
 Draw a recording as a page you can open in a browser:
 
