@@ -1,13 +1,13 @@
 //! The page a recorded screen describes: UI-LM's first intermediate representation.
 //!
-//! A frame is a grid of styled cells — everything the terminal actually shows, and
+//! A frame is a grid of styled cells Ã¢â‚¬â€ everything the terminal actually shows, and
 //! nothing about what it *means*. This crate is the first step from the grid towards
 //! meaning: it reads a frame and writes an A2UI v0.9.1 `createSurface` message whose
 //! components come from the `moreweb.terminal/v1` catalogue (ADR 0002).
 //!
 //! ## What this first slice does
 //!
-//! It finds **blocks** — maximal runs of non-blank rows — and emits one `Block`
+//! It finds **blocks** Ã¢â‚¬â€ maximal runs of non-blank rows Ã¢â‚¬â€ and emits one `Block`
 //! component per block: its row span, its lines of text, and a role. That is
 //! deliberately the least interesting thing a page can be, and it is still the
 //! first time a frame has been described rather than copied.
@@ -26,6 +26,8 @@
 //! A component's id is derived from its own text, not from its position, because the
 //! plan requires ids that survive a scroll (D15, and metric M5 is impossible
 //! without them). A block that is still on screen after scrolling keeps its id.
+
+use std::collections::HashSet;
 
 use serde::Serialize;
 use ui_lm_frames::{decode_grid, Frame};
@@ -116,11 +118,39 @@ pub enum Body {
 /// The id of the surface's root container.
 const ROOT_ID: &str = "root";
 
-/// Builds the page a frame describes.
+/// Builds the page a frame describes, with every block marked `seen`.
 ///
 /// `surface_id` names the surface within a conversation; a recording usually uses
 /// its session name, so two captures of the same application stay distinguishable.
+///
+/// This is the single-frame view, where nothing can be `carried` yet because there
+/// is no earlier frame to carry from. Use [`pages`] to describe a whole session and
+/// get the provenance the vocabulary exists for.
 pub fn page_from_frame(frame: &Frame, surface_id: &str) -> Envelope {
+    let mut appeared = HashSet::new();
+    page_with(frame, surface_id, &mut appeared)
+}
+
+/// Builds one page per frame, in order, carrying provenance across them.
+///
+/// A block whose text has appeared in an earlier frame of the same session is marked
+/// `carried`: it is on screen now, unchanged, not newly drawn. Everything else is
+/// `seen`, because every character of it was read from the cells.
+///
+/// The distinction is the point of describing a sequence rather than a screen. A
+/// consumer replaying these pages can tell what actually changed between two
+/// moments without diffing the JSON, and the plan's provenance rule (D5) is
+/// satisfied by observation rather than by assertion.
+pub fn pages(frames: &[Frame], surface_id: &str) -> Vec<Envelope> {
+    let mut appeared = HashSet::new();
+    frames
+        .iter()
+        .map(|frame| page_with(frame, surface_id, &mut appeared))
+        .collect()
+}
+
+/// Builds one page, recording which block ids have appeared so far.
+fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) -> Envelope {
     let grid = decode_grid(&frame.runs, frame.rows, frame.cols);
     let lines: Vec<String> = grid
         .iter()
@@ -149,7 +179,13 @@ pub fn page_from_frame(frame: &Frame, surface_id: &str) -> Envelope {
         components.push(Component {
             id,
             component: "Block".to_owned(),
-            source: Provenance::Seen,
+            // `insert` is the whole provenance rule: the first frame to show this
+            // block read it from the cells, every later one carried it forward.
+            source: if appeared.insert(block_id(text)) {
+                Provenance::Seen
+            } else {
+                Provenance::Carried
+            },
             body: Body::Block {
                 role: role_of(text).to_owned(),
                 rows: [
@@ -347,5 +383,35 @@ mod tests {
             &page.create_surface.components[0].body,
             Body::Column { children } if children.is_empty()
         ));
+    }
+
+    #[test]
+    fn a_block_on_screen_twice_is_carried_the_second_time() {
+        // The page sequence is where `carried` earns its place: the same block in
+        // two frames is read once and carried after that, while a block that only
+        // exists in the later frame was seen there.
+        let first = frame_of(&["keep", "", "also"], 12);
+        let second = frame_of(&["keep", "", "also", "", "new"], 12);
+        let described = pages(&[first, second], "s");
+        let source_of = |page: &Envelope, prefix: &str| {
+            page.create_surface
+                .components
+                .iter()
+                .find_map(|component| match &component.body {
+                    Body::Block { lines, .. } if lines[0].starts_with(prefix) => {
+                        Some(component.source)
+                    }
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("no block starting {prefix:?} in {page:?}"))
+        };
+        assert_eq!(source_of(&described[0], "keep"), Provenance::Seen);
+        assert_eq!(source_of(&described[1], "keep"), Provenance::Carried);
+        assert_eq!(source_of(&described[1], "also"), Provenance::Carried);
+        assert_eq!(
+            source_of(&described[1], "new"),
+            Provenance::Seen,
+            "a block that only exists in the later frame cannot have been carried"
+        );
     }
 }

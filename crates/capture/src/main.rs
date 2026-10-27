@@ -111,6 +111,11 @@ struct PageArgs {
     /// The surface id to write. Defaults to the session directory's own name.
     #[arg(long, value_name = "ID")]
     surface: Option<String>,
+
+    /// Describe every frame in order, one page per line, carrying provenance across
+    /// them. Without this, one frame is described and every block in it is `seen`.
+    #[arg(long)]
+    all: bool,
 }
 
 /// What the corpus reader is asked about.
@@ -226,6 +231,16 @@ fn page(args: &PageArgs) -> Result<ExitCode> {
             .map(|name| name.to_string_lossy().into_owned())
             .unwrap_or_else(|| "session".to_owned())
     });
+    // A whole session is printed as JSON lines, one page per frame: it is a stream
+    // to be read in order, and indenting every page in a stream only costs bytes.
+    if args.all {
+        for envelope in ui_lm_pages::pages(&frames, &surface) {
+            let line =
+                serde_json::to_string(&envelope).context("failed to serialise a page as JSON")?;
+            println!("{line}");
+        }
+        return Ok(ExitCode::SUCCESS);
+    }
     let envelope = ui_lm_pages::page_from_frame(frame, &surface);
     let json =
         serde_json::to_string_pretty(&envelope).context("failed to serialise the page as JSON")?;
