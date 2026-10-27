@@ -67,6 +67,65 @@ use portable_pty::{Child, CommandBuilder, MasterPty, PtySize};
 /// of the defaults that could drift from the ones the child actually got.
 pub const DEFAULT_ENV: [(&str, &str); 2] = [("TERM", "xterm-256color"), ("COLORTERM", "truecolor")];
 
+/// The environment the driver *adds* to the child's inherited one: [`DEFAULT_ENV`]
+/// first, then the caller's overrides, in the order they are applied.
+///
+/// A later pair replaces an earlier one for the same variable, which is the order
+/// [`Driver::spawn`] hands them to the command builder.
+pub fn added_environment(overrides: &[(String, String)]) -> Vec<(String, String)> {
+    let mut added: Vec<(String, String)> = DEFAULT_ENV
+        .iter()
+        .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+        .collect();
+    for (key, value) in overrides {
+        match added.iter_mut().find(|(name, _)| same_variable(name, key)) {
+            Some(slot) => slot.1 = value.clone(),
+            None => added.push((key.clone(), value.clone())),
+        }
+    }
+    added
+}
+
+/// The environment the child actually runs with: this process's own environment,
+/// with [`added_environment`] applied over it.
+///
+/// This is the list a session record has to carry. The command builder inherits the
+/// recorder's environment as the base and then adds or replaces the pairs it was
+/// given, so the child's environment is not the driver's defaults — it is the
+/// recorder's whole environment plus those. Reading the defaults as "the environment
+/// of the session" is how the harness's `NO_COLOR=1` produced 35 monochrome captures
+/// that the record did not mention.
+///
+/// The order is a process environment's order: inherited pairs where they were,
+/// replacements in place, additions appended. On Windows a variable is replaced
+/// whatever case it is written in, because Windows has one variable per name.
+pub fn child_environment(overrides: &[(String, String)]) -> Vec<(String, String)> {
+    let mut environment: Vec<(String, String)> = std::env::vars().collect();
+    for (key, value) in added_environment(overrides) {
+        match environment
+            .iter_mut()
+            .find(|(name, _)| same_variable(name, &key))
+        {
+            Some(slot) => slot.1 = value,
+            None => environment.push((key, value)),
+        }
+    }
+    environment
+}
+
+/// Whether two environment variable names are the same variable on this platform.
+///
+/// Windows has one variable per name, whatever case the name is written in, and a
+/// child that asks for `Path` must not see both `PATH` and `Path`. A Unix
+/// environment is case-sensitive and `TERM` and `term` are two variables.
+fn same_variable(left: &str, right: &str) -> bool {
+    if cfg!(windows) {
+        left.eq_ignore_ascii_case(right)
+    } else {
+        left == right
+    }
+}
+
 /// Size of the buffer the reader thread hands over at a time.
 const READ_CHUNK: usize = 8 * 1024;
 
@@ -270,7 +329,9 @@ impl Driver {
     /// reading its output.
     ///
     /// The child inherits this process's environment, then [`DEFAULT_ENV`] is
-    /// applied, then `cfg.env` — so the caller can override the defaults. It runs in
+    /// applied, then `cfg.env` — so the caller can override the defaults. That merge
+    /// is [`child_environment`], which is what a session records: the record says
+    /// what the child saw, not what this driver added to it. It runs in
     /// [`SessionConfig::working_directory`], which is the caller's directory or the
     /// recorder's own, never `portable-pty`'s home-directory default.
     pub fn spawn(cfg: &SessionConfig) -> Result<Self> {
@@ -605,6 +666,69 @@ mod tests {
             env: Vec::new(),
             cwd,
         }
+    }
+
+    #[test]
+    fn the_environment_a_session_records_is_the_one_the_child_gets() {
+        // The record's `child_env` was added because `env` — the driver's two
+        // defaults — is not the environment the child saw: the child inherits the
+        // whole recorder environment and the defaults are applied over it. Both
+        // halves of that sentence are checked here, because reading the defaults as
+        // the session's environment is what let `NO_COLOR=1` through unnoticed.
+        assert_eq!(
+            added_environment(&[]),
+            vec![
+                ("TERM".to_owned(), "xterm-256color".to_owned()),
+                ("COLORTERM".to_owned(), "truecolor".to_owned()),
+            ],
+            "with no override the driver adds exactly its own defaults, in order"
+        );
+        assert_eq!(
+            added_environment(&[("TERM".to_owned(), "xterm-16color".to_owned())]),
+            vec![
+                ("TERM".to_owned(), "xterm-16color".to_owned()),
+                ("COLORTERM".to_owned(), "truecolor".to_owned()),
+            ],
+            "an override replaces the default rather than being added twice"
+        );
+
+        // The merged environment is the process's own, plus those: a variable the
+        // driver never mentions is still in it — that is the half that was missing —
+        // and the driver's defaults are present with the override applied.
+        let inherited = if cfg!(windows) { "Path" } else { "PATH" };
+        assert!(
+            std::env::var_os(inherited).is_some(),
+            "the test needs one variable this process is guaranteed to have"
+        );
+        let merged = child_environment(&[("NO_COLOR".to_owned(), String::new())]);
+        assert!(
+            merged
+                .iter()
+                .any(|(name, _)| same_variable(name, inherited)),
+            "a variable the driver never mentions is still in the environment the child \
+             inherits, so a record of the defaults alone says nothing about it"
+        );
+        assert!(
+            merged
+                .iter()
+                .any(|(name, value)| same_variable(name, "TERM") && value == "xterm-256color"),
+            "the driver's own defaults are applied over the inherited environment"
+        );
+        assert!(
+            merged
+                .iter()
+                .any(|(name, value)| same_variable(name, "NO_COLOR") && value.is_empty()),
+            "and so is a caller override: clearing a variable is how a capture refuses to \
+             let this harness's `NO_COLOR=1` reach the application"
+        );
+        assert_eq!(
+            merged
+                .iter()
+                .filter(|(name, _)| same_variable(name, "TERM"))
+                .count(),
+            1,
+            "a variable appears once: a process environment has one entry per name"
+        );
     }
 
     #[test]

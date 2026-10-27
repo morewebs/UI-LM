@@ -42,10 +42,10 @@ use std::time::{Duration, Instant, SystemTime};
 use anyhow::{bail, Context, Result};
 use clap::{Args, Parser, Subcommand};
 
-use ui_lm_capture::{classify, Driver, Quiescer, Semantics, SessionConfig, DEFAULT_ENV};
-use ui_lm_frames::{
-    changed_rows, encode_grid, grid_from_screen, timestamp, Frame, SessionRecord, SessionWriter,
+use ui_lm_capture::{
+    added_environment, child_environment, frame_from_screen, Driver, Quiescer, SessionConfig,
 };
+use ui_lm_frames::{timestamp, Frame, SessionRecord, SessionWriter};
 
 /// How long the child's output must be quiet before the screen counts as settled.
 ///
@@ -174,12 +174,21 @@ fn record(args: Record) -> Result<ExitCode> {
         rows: args.rows,
         cols: args.cols,
         // The rig's own defaults are the environment of every session; the record
-        // says so below, from the driver's constants rather than from a copy.
+        // says so below, from the same helper the spawn uses rather than from a copy.
         env: Vec::new(),
         // `None` is not "wherever portable-pty likes": the driver resolves it to
         // this process's own directory.
         cwd: args.cwd,
     };
+    // What the child will actually see and where it will run, resolved before the
+    // session is opened: `working_directory` is the driver's own resolution (the
+    // flag, or this recorder's directory), so the record cannot disagree with the
+    // spawn, and a directory that is not one fails the run before anything is
+    // created. `child_environment` is the merged environment for the same reason:
+    // the child inherits this process's environment and the driver's defaults are
+    // applied over it, so the defaults alone are not what the program ran with.
+    let child_cwd = cfg.working_directory()?;
+    let child_env = child_environment(&cfg.env);
     // The record is known before the session runs, except for how it ended: the
     // writer completes it in `finish`.
     let session = SessionRecord {
@@ -190,10 +199,9 @@ fn record(args: Record) -> Result<ExitCode> {
         args: program_args,
         rows: args.rows,
         cols: args.cols,
-        env: DEFAULT_ENV
-            .iter()
-            .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
-            .collect(),
+        env: added_environment(&cfg.env),
+        child_env,
+        cwd: Some(child_cwd.display().to_string()),
         app_version: None,
         cost: None,
     };
@@ -321,6 +329,23 @@ fn record(args: Record) -> Result<ExitCode> {
     writer
         .finish(None)
         .context("failed to write the session record")?;
+    // A cursor-position query is how a terminal application asks where the cursor
+    // is, and it does not draw correctly until it has the answer. A reply that could
+    // not be queued — the child had stopped reading, or its write side was gone —
+    // leaves it waiting on an answer that will never arrive, so the screen it draws
+    // afterwards is not the screen it meant to draw. The capture is still a capture:
+    // the frames are what the emulator saw. What must not happen is a session like
+    // that reporting success with nothing said about it, because every number
+    // measured from those frames would be measuring the wrong screen.
+    let dropped = driver.dropped_replies();
+    if dropped > 0 {
+        eprintln!(
+            "warning: {dropped} cursor-position reply/replies the child asked for could not be \
+             queued and were dropped (it had stopped reading its input); a child starved of those \
+             answers draws a screen it did not mean to, so this session's later frames may not \
+             be the application's own drawing"
+        );
+    }
     if refused > 0 {
         eprintln!(
             "warning: {refused} scripted keystroke(s) were refused by the pty and never reached the \
@@ -385,16 +410,12 @@ impl Ended {
 /// Appends the screen as it now stands to the session, and makes it the screen the
 /// next frame is diffed against.
 ///
-/// This is where the pieces meet. The grid comes from the emulator, the
-/// `changed_rows` from the frame model's row-by-row diff, the volatile spans from
-/// the mask, and the numbering from the quiescer.
-///
-/// The first frame is emitted **unclassified**, because there is no frame before it.
-/// Passing `Frame::empty` to `classify` would be worse than useless: nothing has
-/// been logged yet, so every cell of the first screen would be reported as a change
-/// with no event behind it and the whole first screen would be masked as noise —
-/// the one thing masking must never do. `Frame::empty` is still the right *diff*
-/// baseline, because every row of a first screen really is new content.
+/// What the frame says about the screen is decided by
+/// [`ui_lm_capture::frame_from_screen`]; this appends it and carries it forward as
+/// the diff baseline. The first frame is the one case that call site has to get
+/// right: there is no frame before it, so `previous` stays `None` for the first
+/// append and the diff below is against [`Frame::empty`], which is what makes every
+/// row of a first screen new content.
 fn emit_frame(
     driver: &Driver,
     writer: &mut SessionWriter,
@@ -402,50 +423,12 @@ fn emit_frame(
     previous: &mut Option<Frame>,
     keystroke_between: bool,
 ) -> Result<()> {
-    let screen = driver.screen();
-    let (rows, cols) = screen.size();
-    let grid = grid_from_screen(screen, cols);
-    let mut frame = Frame::empty(rows, cols);
-    frame.seq = quiescer.take_seq();
-    frame.alt_screen = screen.alternate_screen();
-    frame.cursor = if screen.hide_cursor() {
-        None
-    } else {
-        Some(screen.cursor_position())
-    };
-    frame.runs = encode_grid(&grid);
-    frame.changed_rows = match previous {
-        Some(before) => changed_rows(before, &frame),
-        None => changed_rows(&Frame::empty(rows, cols), &frame),
-    };
-    // Volatile spans, from the two signals the mask rule needs.
-    //
-    // `keystroke_between` is known exactly: this loop is the only thing that writes
-    // to the child, and it counts the keystrokes it queued between the two frames.
-    //
-    // `event_between` is **not** known. The application's own event stream is not
-    // wired into the recording path yet, so this task cannot say whether the program
-    // reported anything between these two frames. It is passed as `true` —
-    // "assume an event may explain this change" — because that is the only value
-    // that does not assert a fact this task cannot know. `false` would claim the
-    // application reported nothing, and every change the program made of its own
-    // accord would then be recorded as noise: masking eating content is precisely
-    // the failure the mask exists to prevent. The cost of `true` is the other
-    // direction — nothing is masked until the event stream arrives — and that cost
-    // buys a session that has not mislabelled any content. When the event stream is
-    // wired, this becomes the real count of events between the two frames and the
-    // spans start to appear.
-    frame.volatile = match previous {
-        Some(before) => classify(
-            before,
-            &frame,
-            Semantics {
-                event_between: true,
-                keystroke_between,
-            },
-        ),
-        None => Vec::new(),
-    };
+    let frame = frame_from_screen(
+        driver.screen(),
+        quiescer.take_seq(),
+        previous.as_ref(),
+        keystroke_between,
+    );
     writer
         .append(&frame)
         .with_context(|| format!("failed to append frame {}", frame.seq))?;

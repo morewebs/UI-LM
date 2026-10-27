@@ -50,6 +50,18 @@ pub struct Frame {
     /// The cells stay in `runs`. A masked span is metadata about a change, not
     /// permission to drop the content that changed.
     pub volatile: Vec<Span>,
+    /// The stretch of the application's event stream this frame's changes came
+    /// from, as a half-open `(first, end)` range of event indexes.
+    ///
+    /// §7.1 names it in the frame record, and it is what label alignment needs: a
+    /// block of the transcript can only be tied to a *frame* if the frame says which
+    /// events it drew. It is `None` in this plan — the recorder has no event stream
+    /// wired into it yet, so there is no range it could honestly name, and a guessed
+    /// one would be a label pointing at a screen it may not describe. The field
+    /// exists now so the next plan fills it without changing the session format a
+    /// second time; a frame written without it reads back as `None`.
+    #[serde(default)]
+    pub acp_event_range: Option<(u64, u64)>,
 }
 
 /// A contiguous group of cells that changed for a reason other than the
@@ -99,6 +111,7 @@ impl Frame {
             runs: Vec::new(),
             changed_rows: Vec::new(),
             volatile: Vec::new(),
+            acp_event_range: None,
         }
     }
 }
@@ -254,6 +267,46 @@ mod tests {
         primary.alt_screen = true;
         alternate.alt_screen = false;
         assert_eq!(changed_rows(&primary, &alternate), vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn a_frame_written_before_acp_event_range_existed_still_reads() {
+        // Every frame of the 35 W1 sessions was written without this field: it is a
+        // version-1 frame that says nothing about the event stream, and it must read
+        // back as saying nothing rather than as an unreadable line. The reader skips
+        // an unreadable line with a warning, so a missing default here would not
+        // fail — it would quietly shrink every session in the set.
+        let mut f = frame_from_chars(0, 1, 2, &[vec!['a', 'b']]);
+        assert_eq!(
+            f.acp_event_range, None,
+            "no event stream is wired in, so no frame names a range"
+        );
+        let json = serde_json::to_string(&f).expect("a frame serialises");
+        let without = {
+            let mut value: serde_json::Value = serde_json::from_str(&json).expect("valid JSON");
+            value
+                .as_object_mut()
+                .expect("a frame is an object")
+                .remove("acp_event_range");
+            assert!(
+                value.get("acp_event_range").is_none(),
+                "the field must be gone for this to be an older frame"
+            );
+            serde_json::to_string(&value).expect("the trimmed frame serialises")
+        };
+        let back: Frame = serde_json::from_str(&without).expect("an older frame still reads");
+        assert_eq!(
+            back.acp_event_range, None,
+            "a frame without the field says nothing about the event stream"
+        );
+        assert_eq!(back.runs, f.runs, "and its screen is unchanged");
+
+        // When the event stream arrives, the range is a value of its own and it
+        // survives the trip to the file: `(first, end)`, in stream order.
+        f.acp_event_range = Some((3, 7));
+        let json = serde_json::to_string(&f).expect("a frame serialises");
+        let back: Frame = serde_json::from_str(&json).expect("a frame deserialises");
+        assert_eq!(back.acp_event_range, Some((3, 7)));
     }
 
     #[test]

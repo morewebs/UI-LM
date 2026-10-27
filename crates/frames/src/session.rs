@@ -60,12 +60,48 @@ pub struct SessionRecord {
     pub rows: u16,
     /// Screen width the capture used, in columns.
     pub cols: u16,
-    /// The environment the program was run with.
+    /// The environment the recorder *added* to the child's inherited one: the
+    /// driver's own defaults first, then whatever the caller overrode.
+    ///
+    /// This is a list of overrides, not the environment the program ran with. The
+    /// child inherits this process's whole environment and these pairs are applied
+    /// on top of it, so a variable this list never names is still in the child's
+    /// environment. That distinction was a defect and not a wording problem: the
+    /// harness exported `NO_COLOR=1`, the child inherited it, the application
+    /// honoured it, and the first W1 captures came back monochrome while this field
+    /// — read as "the environment of the session" — said nothing about it.
+    /// [`SessionRecord::child_env`] is the merged environment, and it is what a
+    /// reader reproducing a session has to use.
     ///
     /// Pairs rather than a map: the order is the order a process environment has,
     /// a variable may be set twice, and sorting it to make it a map would hide
     /// which of the two the program saw.
     pub env: Vec<(String, String)>,
+    /// The environment the program actually ran with.
+    ///
+    /// The recorder's own environment with the additions in
+    /// [`SessionRecord::env`] applied over it, in the order a process environment
+    /// has. Recorded because a screen is only reproducible in the environment it
+    /// was drawn in, and "the child inherited whatever the recorder happened to
+    /// have" is not an environment anyone can reproduce a year later.
+    ///
+    /// Empty for a session written before this field existed; for those, `env` is
+    /// all that is on disk and it is not the whole environment.
+    #[serde(default)]
+    pub child_env: Vec<(String, String)>,
+    /// The directory the program ran in, as an absolute path.
+    ///
+    /// A capture is about a directory — a scratch project, a fixture tree — and
+    /// which one it was is part of what was recorded. Its absence cost two fix
+    /// rounds: `portable-pty` puts a child whose command names no directory in the
+    /// user's home directory, so a session started inside a scratch project recorded
+    /// the home directory's screens, created a file there, and nothing in the record
+    /// could have said so. Recorded here as the directory the driver resolved, so it
+    /// cannot disagree with the spawn.
+    ///
+    /// `None` for a session written before this field existed.
+    #[serde(default)]
+    pub cwd: Option<String>,
     /// The application's own version string, when it reports one.
     ///
     /// Recorded because the screens from two versions of the same program are
@@ -398,6 +434,11 @@ mod tests {
             rows: 2,
             cols: 2,
             env: vec![("TERM".into(), "xterm-256color".into())],
+            child_env: vec![
+                ("TERM".into(), "xterm-256color".into()),
+                ("COLORTERM".into(), "truecolor".into()),
+            ],
+            cwd: Some("/scratch/project".into()),
             app_version: Some("1.2.3".into()),
             cost: None,
         }
@@ -628,6 +669,81 @@ mod tests {
             "the NotFound must name the record, so an incomplete capture is distinguishable \
              from a directory that is not a session: {message}"
         );
+    }
+
+    #[test]
+    fn a_record_written_before_child_env_and_cwd_existed_still_reads() {
+        // The 35 W1 sessions were written before either field existed, and a set
+        // that stops reading is worse than a set missing two facts. A record without
+        // them is a version-1 record with less in it: `child_env` defaults to empty
+        // and `cwd` to `None`, which is exactly what is known about those captures.
+        let dir = tempdir().unwrap();
+        let old = r#"{
+            "version": 1,
+            "started_at": "2026-10-27T10:00:00Z",
+            "ended_at": "2026-10-27T10:00:13Z",
+            "command": "grok",
+            "args": [],
+            "rows": 50,
+            "cols": 160,
+            "env": [["TERM", "xterm-256color"], ["COLORTERM", "truecolor"]],
+            "app_version": "1.0.70",
+            "cost": null
+        }"#;
+        std::fs::write(dir.path().join("session.json"), old).unwrap();
+        std::fs::write(
+            dir.path().join("frames.jsonl"),
+            "{\"seq\":0,\"rows\":1,\"cols\":1,\"alt_screen\":false,\"cursor\":null,\
+             \"runs\":[{\"row\":0,\"col\":0,\"len\":1,\"ch\":\"a\",\"style\":{\"fg\":\
+             {\"kind\":\"default\"},\"bg\":{\"kind\":\"default\"},\"bold\":false,\
+             \"italic\":false,\"underline\":false,\"reverse\":false},\"wide_tail\":false}],\
+             \"changed_rows\":[0],\"volatile\":[]}\n",
+        )
+        .unwrap();
+
+        let (record, frames) = read_frames(dir.path()).expect("an older record still reads");
+        assert!(
+            record.child_env.is_empty(),
+            "an older record says nothing about the child's environment, and must not invent one"
+        );
+        assert_eq!(record.cwd, None, "an older record names no directory");
+        assert_eq!(
+            record.env,
+            vec![
+                ("TERM".to_owned(), "xterm-256color".to_owned()),
+                ("COLORTERM".to_owned(), "truecolor".to_owned()),
+            ],
+            "the fields that were there are read exactly as before"
+        );
+        assert_eq!(
+            frames.len(),
+            1,
+            "and the frames of an older session still read"
+        );
+    }
+
+    #[test]
+    fn child_env_and_cwd_reach_the_record() {
+        // The two facts that were missing are facts a reader gets back: the whole
+        // environment the child saw, in order, and the directory it ran in.
+        let dir = tempdir().unwrap();
+        let mut record = rec();
+        record.cwd = Some("C:\\scratch\\project".into());
+        let mut writer = SessionWriter::new(dir.path(), record).unwrap();
+        writer
+            .append(&frame_from_chars(0, 1, 1, &[vec!['a']]))
+            .unwrap();
+        writer.finish(None).unwrap();
+
+        let (back, _) = read_frames(dir.path()).unwrap();
+        assert_eq!(
+            back.child_env,
+            vec![
+                ("TERM".to_owned(), "xterm-256color".to_owned()),
+                ("COLORTERM".to_owned(), "truecolor".to_owned()),
+            ]
+        );
+        assert_eq!(back.cwd.as_deref(), Some("C:\\scratch\\project"));
     }
 
     #[test]

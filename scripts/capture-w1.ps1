@@ -701,14 +701,30 @@ finally {
     # The per-session restore in the loop is the normal path; this is the path for
     # everything that skips it.
     $recorderNote = Stop-LiveRecorders -Own $activeRecorder
-    if ($null -ne $configBackup) {
-        $configFinal = Restore-GrokFile -Path $GrokConfig -Backup $configBackup
-    } elseif (Test-Path -LiteralPath $GrokConfig) {
-        $configFinal = 'no config.toml before the run, but one exists now; left in place for inspection'
-    } else {
-        $configFinal = 'no config.toml before or after the run'
+    # The two restores are independent, and each is wrapped so that a throw from one
+    # cannot skip the other. They are not independent by nature: `config.toml` and
+    # `trusted_folders.toml` are two files the application rewrites, and a failed
+    # `File.WriteAllBytes` on the first - a file locked by the application, a
+    # permission the machine owner had changed - would otherwise take the second
+    # restore with it and leave `trusted_folders.toml` holding a scratch directory per
+    # session. That is the dirty-user-config failure this script spent two rounds
+    # getting right, and re-creating it in the closing block would have undone both.
+    try {
+        if ($null -ne $configBackup) {
+            $configFinal = Restore-GrokFile -Path $GrokConfig -Backup $configBackup
+        } elseif (Test-Path -LiteralPath $GrokConfig) {
+            $configFinal = 'no config.toml before the run, but one exists now; left in place for inspection'
+        } else {
+            $configFinal = 'no config.toml before or after the run'
+        }
+    } catch {
+        $configFinal = "the restore threw, so config.toml may still hold what the run wrote: $($_.Exception.Message)"
     }
-    $trustFinal = Restore-GrokTrust -Path $GrokTrust -Backup $trustBackup
+    try {
+        $trustFinal = Restore-GrokTrust -Path $GrokTrust -Backup $trustBackup
+    } catch {
+        $trustFinal = "the restore threw, so trusted_folders.toml may still hold what the run wrote: $($_.Exception.Message)"
+    }
     $trustCountAfter = Get-TrustEntryCount -Path $GrokTrust
     "capture-w1: config:   $configFinal -- $GrokConfig"
     "capture-w1: trust:    $trustFinal -- $GrokTrust holds $(Format-Count -Count $trustCountAfter -Singular 'entry' -Plural 'entries'), $(Format-Count -Count $trustCountBefore -Singular 'entry' -Plural 'entries') before the run"

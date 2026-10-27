@@ -233,6 +233,119 @@ fn the_cwd_flag_puts_the_child_in_the_directory_it_names() {
     );
 }
 
+/// A child that draws on the primary screen, switches to the alternate screen, and
+/// draws there.
+///
+/// The switch is the application's own escape sequence, `ESC [ ? 1049 h`, written by
+/// the child rather than arranged by the test: what is being checked is what reaches
+/// the recorder from a real pty, not what the emulator does with a sequence the test
+/// handed it (`ui_lm_capture::screen`'s tests cover that half on the real parser).
+///
+/// `ping` rather than `timeout` for the pause on Windows: `timeout` refuses to run
+/// with its input redirected, which is exactly the situation on a pty. The pause
+/// before the switch is what makes the first screen a settled frame of its own.
+fn switches_to_the_alternate_screen() -> Vec<String> {
+    if cfg!(windows) {
+        vec![
+            "cmd".into(),
+            "/c".into(),
+            "echo primary-screen & ping -n 2 127.0.0.1 -w 400 >nul & echo \x1b[?1049h & ping -n \
+             2 127.0.0.1 -w 400 >nul & echo alt-surface"
+                .into(),
+        ]
+    } else {
+        vec![
+            "sh".into(),
+            "-c".into(),
+            "printf 'primary-screen\\n'; sleep 0.4; printf '\\033[?1049h'; printf \
+             'alt-surface'; sleep 0.4"
+                .into(),
+        ]
+    }
+}
+
+#[test]
+fn a_child_that_switches_to_the_alternate_screen_is_recorded() {
+    let _watchdog = arm_watchdog("a_child_that_switches_to_the_alternate_screen_is_recorded");
+    let out = tempfile::tempdir().unwrap();
+    let output = recorder(out.path())
+        .arg("--")
+        .args(switches_to_the_alternate_screen())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "the recorder failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let (_, frames) = read_frames(out.path()).unwrap();
+    let last = frames
+        .last()
+        .expect("a child that drew two screens produced frames");
+    let screen = frame_text(last);
+
+    // What both pty hosts agree on: the switch replaced the surface. The children
+    // above draw `primary-screen`, then switch, then draw `alt-surface`; the last
+    // frame holds the second and not the first, so the screen it describes is the
+    // one the child drew after the switch.
+    assert!(
+        screen.contains("alt-surface"),
+        "the frame after the alternate-screen switch must hold what the child drew on it: \
+         {screen:?}"
+    );
+    assert!(
+        !screen.contains("primary-screen"),
+        "the alternate screen is a different surface, so the primary screen's content is not \
+         on it: {screen:?}"
+    );
+    assert!(
+        !screen.contains("1049"),
+        "the switch was consumed rather than drawn as text, so the escape reached a terminal \
+         and not the grid: {screen:?}"
+    );
+
+    // What the two platforms disagree about. A Unix pty hands the child's bytes over
+    // unchanged, so the recorder's emulator sees the switch and the frame says so.
+    //
+    // `cfg!` rather than `#[cfg]` so that this half is still type-checked when the
+    // suite is built on Windows, which is the platform this rig is developed on: the
+    // expectation that cannot hold here should not be the expectation nothing
+    // compiles.
+    if cfg!(unix) {
+        assert!(
+            last.alt_screen,
+            "the child switched to the alternate screen, so the recorded frame must say so: \
+             {screen:?}"
+        );
+        assert_eq!(
+            last.changed_rows,
+            (0..last.rows).collect::<Vec<_>>(),
+            "entering the alternate screen replaces the whole surface, so every row is new \
+             content"
+        );
+    }
+
+    // On Windows the pty host is ConPTY, and ConPTY does not forward the switch: it
+    // keeps the application's buffer itself and re-renders the delta to the client.
+    // Measured from a bare pty, the bytes a child's `ESC [ ? 1049 h` produces
+    // downstream are `ESC [ 25 l ESC [ H ESC [ K CRLF …` — a repaint of a cleared
+    // buffer — and never the switch, so `vt100::Screen::alternate_screen()` cannot be
+    // true for any child. That is also why the 35 W1 sessions have zero
+    // alternate-screen frames even in the three that ran with `--fullscreen`.
+    // `portable-pty` 0.9 knows the flag that would change this
+    // (`PSEUDOCONSOLE_PASSTHROUGH_MODE`) and does not use it; until something does,
+    // this is a fact about the rig's platform, not about this test.
+    if cfg!(windows) {
+        assert!(
+            !last.alt_screen,
+            "ConPTY is expected to consume the switch, so no frame here can be on the \
+             alternate screen; an `alt_screen: true` frame means the host started \
+             forwarding it and this test's platform note is out of date"
+        );
+    }
+}
+
 #[test]
 fn record_writes_frames_changed_rows_and_session() {
     let _watchdog = arm_watchdog("record_writes_frames_changed_rows_and_session");

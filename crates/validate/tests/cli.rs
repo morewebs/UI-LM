@@ -54,6 +54,8 @@ fn write_session_of(dir: &Path, screens: &[Vec<Vec<char>>]) {
         rows,
         cols,
         env: vec![("TERM".to_owned(), "xterm-256color".to_owned())],
+        child_env: vec![("TERM".to_owned(), "xterm-256color".to_owned())],
+        cwd: Some("scratch".to_owned()),
         app_version: None,
         cost: None,
     };

@@ -217,12 +217,34 @@ below rather than left to be remembered. The comparison is cell by cell and refu
 two screens of different shapes, so a session recorded at any other size is not
 evidence at all.
 
-**The capture script is `scripts/capture-w1.ps1`** — the Task 10 script that drives the
-W1 scenarios through this same recorder. It is not in `scripts/` yet (as of
-`e34b2ca`), so the fallback here is a manual invocation **per scenario, with concrete
-arguments and nothing left to fill in**. Once `scripts/capture-w1.ps1` lands, take its
-per-scenario keystroke files, keep the geometry, keep the dump-before-run rule, and
-prefer its invocations to these.
+**The capture script is `scripts/capture-w1.ps1`**, and it is in `scripts/` — it is the
+instrument every session in
+[`docs/reports/2026-10-27-w1-capture.md`](../docs/reports/2026-10-27-w1-capture.md) came
+from. It cannot record the patched fork: the application's path is fixed near the top
+of the script (`$GrokExe = 'C:\Users\moreweb\.grok\bin\grok.exe'`) and it takes no
+parameter for another binary. So the per-scenario commands below are the K5
+instrument, **concrete arguments and nothing left to fill in**, and they obey the four
+rules the W1 capture paid for:
+
+- **The folder-trust card eats the first keystroke.** A directory the application has
+  not been told to trust opens on *"Do you trust the contents of this directory?"*, and
+  while that card is up keystrokes aimed at the prompt are swallowed. Every key list
+  below therefore begins with an Enter at 4500 ms, which answers the card. (In a
+  directory the application already trusts, that Enter is an empty line at the prompt,
+  which none of these three screens depend on.)
+- **`--cwd` is passed twice.** `portable-pty` 0.9 runs a child whose command names no
+  directory in the user's home directory, so the recorder is given `--cwd $Scratch`
+  *and* the application is given its own `--cwd $Scratch` after `--`. Without both,
+  the session records this repository rather than the scratch project — which is what
+  the first pass of the W1 capture did, and one scenario created a file in the user's
+  home because of it.
+- **`NO_COLOR` is cleared.** This harness exports `NO_COLOR=1`, the application
+  honours it by drawing without colour, and a capture taken under it carries one
+  default colour and no styling. Under it the mandatory styled-wide-glyph scenario
+  would compare clean while proving nothing, so every block below removes the
+  variable from the environment it runs in.
+- **The dump file is removed before the run.** The fork appends, so a run that follows
+  a run would put two runs' draws in one file.
 
 The blocks below are Windows PowerShell and run as written in `powershell.exe` (5.1,
 this machine's host) and in `pwsh` 7: nothing here needs `-NoNewline` (which 5.1
@@ -247,18 +269,24 @@ absorbed by widening an ignore mask.
 
 ### Scenario 1 — startup (the opening screen)
 
-`grok` takes no arguments here: it is the program after `--`, and the startup scenario
-is the bare TUI. A scenario that does need application arguments appends them after the
-binary path, still after `--`.
+`grok` takes no arguments here beyond the directory it is being pointed at: it is the
+program after `--`, and the startup scenario is the bare TUI. A scenario that does need
+application arguments appends them after the binary path, still after `--`.
 
 ```powershell
 cargo build -p ui-lm-capture
 New-Item -ItemType Directory -Force sessions/k5 | Out-Null
+$Scratch = Join-Path $env:TEMP 'ui-lm-k5\cwd\probe'
+New-Item -ItemType Directory -Force -Path $Scratch | Out-Null
+# The prologue Enter answers the folder-trust card. See the rules above.
+[IO.File]::WriteAllText("$PWD\sessions\k5\probe.keys", "4500 \r", (New-Object System.Text.UTF8Encoding($false)))
 Remove-Item sessions/k5/probe-buffer.jsonl -ErrorAction SilentlyContinue
+Remove-Item Env:\NO_COLOR -ErrorAction SilentlyContinue
 $env:GROK_FRAME_DUMP = "$PWD\sessions\k5\probe-buffer.jsonl"
 
 .\target\debug\ui-lm-capture.exe record --rows 50 --cols 160 --out sessions/k5/probe `
-  -- ..\grok-build-k5\target\release\grok.exe
+  --script sessions/k5/probe.keys --cwd $Scratch `
+  -- ..\grok-build-k5\target\release\grok.exe --cwd $Scratch
 
 Remove-Item Env:GROK_FRAME_DUMP
 ```
@@ -270,26 +298,33 @@ own environment to the child, so the fork inherits `GROK_FRAME_DUMP` through the
 
 ### Scenario 2 — a styled full-width glyph (mandatory)
 
-The keystroke file is a 1500 ms pause and then 你好 typed into the prompt. `[char]` and
-`WriteAllText` are used so the file is exactly `1500 ` followed by the UTF-8 bytes of
-the two glyphs — no BOM, which `read_script` would otherwise send as a keystroke.
+The keystroke file is the prologue Enter at 4500 ms that answers the trust card, and
+then a 1500 ms pause before 你好 is typed into the prompt. The first segment is
+`"4500 \r"` — a backslash and an `r`, which `read_script` turns into a carriage return,
+**not** a real CR before the line ending, which it would strip as a CRLF and then send
+nothing. `[char]` and `WriteAllText` are used so the file is UTF-8 **without** a BOM,
+which `read_script` would otherwise send as a keystroke.
 
 ```powershell
 New-Item -ItemType Directory -Force sessions/k5 | Out-Null
-[IO.File]::WriteAllText("$PWD\sessions\k5\wide-glyph.keys", "1500 " + [char]0x4F60 + [char]0x597D, (New-Object System.Text.UTF8Encoding($false)))
+$Scratch = Join-Path $env:TEMP 'ui-lm-k5\cwd\wide-glyph'
+New-Item -ItemType Directory -Force -Path $Scratch | Out-Null
+[IO.File]::WriteAllText("$PWD\sessions\k5\wide-glyph.keys", "4500 \r" + "`r`n" + "1500 " + [char]0x4F60 + [char]0x597D, (New-Object System.Text.UTF8Encoding($false)))
 Remove-Item sessions/k5/wide-glyph-buffer.jsonl -ErrorAction SilentlyContinue
+Remove-Item Env:\NO_COLOR -ErrorAction SilentlyContinue
 $env:GROK_FRAME_DUMP = "$PWD\sessions\k5\wide-glyph-buffer.jsonl"
 
 .\target\debug\ui-lm-capture.exe record --rows 50 --cols 160 --out sessions/k5/wide-glyph `
-  --script sessions/k5/wide-glyph.keys `
-  -- ..\grok-build-k5\target\release\grok.exe
+  --script sessions/k5/wide-glyph.keys --cwd $Scratch `
+  -- ..\grok-build-k5\target\release\grok.exe --cwd $Scratch
 
 Remove-Item Env:GROK_FRAME_DUMP
 ```
 
 1500 ms is the pause *before* the keystroke, long enough for the TUI to have drawn its
-first screen; raise it if the bytes arrive while the application is still starting.
-End the run as described below once the glyph is on screen.
+first screen after the card is answered; raise it if the bytes arrive while the
+application is still starting. End the run as described below once the glyph is on
+screen.
 
 The scenario has done its job only if the dump holds the glyph **and** its continuation
 cell, in one styled run:
@@ -303,45 +338,70 @@ immediately to its right must be `"symbol":""`, and both cells must carry the sa
 non-`reset` `fg` (or `bg`). That is the wide-glyph question, and step 5 turns that pair
 into a verdict.
 
+If the prompt box draws typed text in `reset` — plausible, since an input box may not
+style what is typed into it — the substitute screen is the application's own rendered
+answer: run the two glyphs as a prompt (`1500 ` + 你好 + `\r` in the same key file) and
+use the finished turn, whose transcript text is drawn in the theme's own colour rather
+than `reset`; if that comes back `reset` too, the continuation-column pair is untestable
+in this build and K5 cannot be cleared — which is a finding to record, never a reason to
+widen an ignore mask.
+
 ### Scenario 3 — a plain prompt (the single-width control)
 
 ```powershell
 New-Item -ItemType Directory -Force sessions/k5 | Out-Null
-[IO.File]::WriteAllText("$PWD\sessions\k5\plain-prompt.keys", "1500 hello, grok", (New-Object System.Text.UTF8Encoding($false)))
+$Scratch = Join-Path $env:TEMP 'ui-lm-k5\cwd\plain-prompt'
+New-Item -ItemType Directory -Force -Path $Scratch | Out-Null
+[IO.File]::WriteAllText("$PWD\sessions\k5\plain-prompt.keys", "4500 \r" + "`r`n" + "1500 hello, grok", (New-Object System.Text.UTF8Encoding($false)))
 Remove-Item sessions/k5/plain-prompt-buffer.jsonl -ErrorAction SilentlyContinue
+Remove-Item Env:\NO_COLOR -ErrorAction SilentlyContinue
 $env:GROK_FRAME_DUMP = "$PWD\sessions\k5\plain-prompt-buffer.jsonl"
 
 .\target\debug\ui-lm-capture.exe record --rows 50 --cols 160 --out sessions/k5/plain-prompt `
-  --script sessions/k5/plain-prompt.keys `
-  -- ..\grok-build-k5\target\release\grok.exe
+  --script sessions/k5/plain-prompt.keys --cwd $Scratch `
+  -- ..\grok-build-k5\target\release\grok.exe --cwd $Scratch
 
 Remove-Item Env:GROK_FRAME_DUMP
 ```
 
 ### Ending a run, and what to check
 
-The application does not exit by itself, so end the run with **Ctrl-C in the console
-window that started it**: the recorder claims the interrupt, finishes the session and
-writes `session.json`, and prints
+The cleanest ending is to let the application leave: the W1 capture found exactly one
+way out — `/exit` typed at the prompt — after Ctrl-C, Ctrl-D and a typed `/quit` were
+all ignored. Add it as the last line of the key file and the child exits, so the
+recorder ends on `(the program exited)` with no interrupt involved and no live child to
+close by hand:
+
+```powershell
+# Append to the scenario's key file before running it, 1200 ms after the screen you want:
+Add-Content -LiteralPath sessions/k5/wide-glyph.keys -Value "`r`n1200 /exit\r"
+```
+
+Both sides stop at the same moment either way, so the last frame and the last draw of
+the dump are still the same screen — and if the application will not leave, **Ctrl-C in
+the console window that started the run** is the fallback: the recorder claims the
+interrupt, finishes the session and writes `session.json`, and prints
 
 ```
 recorded 34 frame(s) to sessions/k5/probe (interrupted; frames settled up to the last 150ms of quiet)
 ```
 
 Exit code 0 means the session was written — not that the screen was the one you wanted.
-If a scenario can ask the application to exit instead (a quit keystroke as a final
-`--script` line), prefer that: the recorder then ends on `(the program exited)` with no
-interrupt involved, and there is no live child to close by hand.
 
 ```powershell
-Get-ChildItem sessions/k5/probe
-Get-Content sessions/k5/probe-buffer.jsonl -Tail 1 | ForEach-Object { $_.Substring(0, $_.IndexOf('"cells"')) }
+# Name the scenario you actually ran: probe (startup), wide-glyph, or plain-prompt.
+# A wide-glyph run must be checked against wide-glyph-buffer.jsonl, not the probe's.
+$Session = 'wide-glyph'
+Get-ChildItem "sessions/k5/$Session"
+Get-Content "sessions/k5/$Session-buffer.jsonl" -Tail 1 |
+  ForEach-Object { $_.Substring(0, $_.IndexOf('"cells"')) }
 ```
 
-Expected: `frames.jsonl` and `session.json` in the directory, and a last dump line whose
-head reads `{"seq":34,"rows":50,"cols":160,` — the same 50x160 the session declares,
-with whatever draw number the run ended on. A dump that declares another shape means
-the fork's buffer is not the recorder's screen, and step 5 will refuse the pair.
+Expected: `frames.jsonl` and `session.json` in `sessions/k5/<the scenario you ran>`, and
+a last line of `sessions/k5/<that scenario>-buffer.jsonl` whose head reads
+`{"seq":34,"rows":50,"cols":160,` — the same 50x160 the session declares, with whatever
+draw number the run ended on. A dump that declares another shape means the fork's
+buffer is not the recorder's screen, and step 5 will refuse the pair.
 
 ## 5. Compare
 
@@ -365,6 +425,15 @@ principled relationship to draw 12.
 `--ours-seq N` and `--theirs-seq M` name one screen by its own `seq` on each side
 when a specific middle screen is wanted. They are not an index into an aligned
 sequence, and a `seq` the run does not have is an error rather than a fallback.
+
+They are also **not** a way past a damaged dump. The validator reads every line of the
+dump before it looks at `--theirs-seq` or `--ours-seq`, and an unreadable line — the
+usual one being a last line cut short when the run was killed — fails that read with
+the file name and the line number. So a dump whose final draw is torn cannot be
+salvaged by naming the draw before it: nothing in that file is compared at all. The
+fix is to remove the dump and take the session again (the fork appends, so a re-run
+would otherwise land beside the damage), never a `--theirs-seq` that steps back from
+it.
 
 Output on a clean comparison — exit code 0:
 
