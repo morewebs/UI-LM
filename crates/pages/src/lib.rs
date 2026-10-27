@@ -752,34 +752,86 @@ struct Segment {
     last: usize,
     /// True when every line in it is a tool line.
     tool: bool,
+    /// True when the stretch is a bordered box: a panel, or the composer.
+    boxed: bool,
 }
 
-/// Splits one block into runs of tool lines and runs of everything else.
+/// Splits one block into the things it holds.
+///
+/// A block is a run of non-blank rows, and a run of non-blank rows can hold several
+/// things: prose, tool lines, and a bordered box. A recorded `/help` overlay made this
+/// concrete — the panel and the composer beneath it touch, so they arrived as one block
+/// of thirty-three lines and the whole thing was described as a composer. Splitting at
+/// the borders is what makes the panel a panel and the composer a composer.
 fn segments(lines: &[String], first: usize, last: usize) -> Vec<Segment> {
     if first >= last {
         return Vec::new();
     }
-    let mut found = Vec::new();
-    let mut start = first;
-    let mut tool = is_tool_line(&lines[first]);
-    for (row, line) in lines.iter().enumerate().take(last).skip(first + 1) {
-        let row_is_tool = is_tool_line(line);
-        if row_is_tool != tool {
+    let mut found: Vec<Segment> = Vec::new();
+    let mut inside_box = false;
+    for (row, line) in lines.iter().enumerate().take(last).skip(first) {
+        let opens = opens_box(line);
+        let closes = closes_box(line);
+        let tool = is_tool_line(line);
+
+        // A box that opens ends whatever stretch was running, and the box takes its own
+        // first line; a box that closes ends its own stretch after the line.
+        // Any newly opening box starts its own stretch, even when one is already open:
+        // an overlay drawn over a panel can have its bottom border scrolled off, and the
+        // composer below it is a different thing regardless. A recorded `/help` screen
+        // is exactly that case.
+        if opens {
+            inside_box = true;
             found.push(Segment {
-                first: start,
-                last: row,
-                tool,
+                first: row,
+                last: row + 1,
+                tool: false,
+                boxed: true,
             });
-            start = row;
-            tool = row_is_tool;
+            continue;
+        }
+        if inside_box {
+            if let Some(current) = found.last_mut() {
+                current.last = row + 1;
+            }
+            if closes {
+                inside_box = false;
+            }
+            continue;
+        }
+        if closes && !inside_box {
+            // A closing border with no opening: its own stretch, so the shape is kept.
+            found.push(Segment {
+                first: row,
+                last: row + 1,
+                tool: false,
+                boxed: true,
+            });
+            continue;
+        }
+        // Outside any box: extend the last stretch when it is the same kind, else start
+        // a new one.
+        match found.last_mut() {
+            Some(current) if !current.boxed && current.tool == tool => current.last = row + 1,
+            _ => found.push(Segment {
+                first: row,
+                last: row + 1,
+                tool,
+                boxed: false,
+            }),
         }
     }
-    found.push(Segment {
-        first: start,
-        last,
-        tool,
-    });
     found
+}
+
+/// Whether a line opens a bordered box.
+fn opens_box(line: &str) -> bool {
+    line.trim_start().starts_with(['╭', '┌'])
+}
+
+/// Whether a line closes a bordered box.
+fn closes_box(line: &str) -> bool {
+    line.trim_start().starts_with(['╰', '└'])
 }
 
 /// Whether a line is a tool line.
@@ -1063,6 +1115,10 @@ fn shortcuts_of(lines: &[String]) -> Vec<Shortcut> {
 }
 
 /// A line without the panel borders an application draws around content.
+///
+/// A scrollbar is stripped too: it is drawn in the panel's gutter, not written by the
+/// content, and leaving it on the last field would make every row of a list end at a
+/// different place than the one beside it.
 fn strip_borders(line: &str) -> String {
     let trimmed = line.trim();
     let trimmed = trimmed
@@ -1070,8 +1126,7 @@ fn strip_borders(line: &str) -> String {
         .unwrap_or(trimmed)
         .trim_start();
     trimmed
-        .strip_suffix(['│', '┃'])
-        .unwrap_or(trimmed)
+        .trim_end_matches(['█', '▌', '▐', '│', '┃'])
         .trim_end()
         .to_owned()
 }
@@ -1921,5 +1976,41 @@ mod tests {
             })
             .expect("the box must be a block");
         assert_eq!(role, "composer", "{page:?}");
+    }
+
+    #[test]
+    fn an_overlay_without_a_bottom_border_does_not_swallow_the_composer() {
+        // The shape a recorded /help screen has: an overlay whose bottom border is
+        // scrolled off, with the input box touching it below. They are two things, and
+        // the whole block used to be described as one composer.
+        let page = page_from_frame(
+            &frame_of(
+                &[
+                    "  ┌─ Commands ────────┌",
+                    "  │ New Session      Ctrl+N │",
+                    "  │ Back to Home      /home  │",
+                    "  ╭─────────╭",
+                    "  │ > type here │",
+                    "  ╰─────────╰",
+                ],
+                30,
+            ),
+            "s",
+        );
+        let kinds: Vec<String> = page
+            .create_surface
+            .components
+            .iter()
+            .filter(|component| component.component == "Block")
+            .map(|component| match &component.body {
+                Body::Block { role, rows, .. } => format!("{role}:{}", rows[0]),
+                _ => String::new(),
+            })
+            .collect();
+        assert_eq!(
+            kinds,
+            vec!["text:0".to_owned(), "composer:3".to_owned()],
+            "{page:?}"
+        );
     }
 }

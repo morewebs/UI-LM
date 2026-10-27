@@ -157,6 +157,19 @@ surveyed standard can express: a per-line kind *and* per-span attributes at once
 | `Table` | **not implemented** — nothing recorded has drawn one |
 | `Thought` | **not implemented** — nothing recorded has drawn one |
 
+## Why the command list is not a `Table`
+
+A recorded `/help` overlay draws a command list — rows of `New Session … Ctrl+N`, grouped
+under `Session`, `Context` and headings of their own. It is described as `shortcuts` on a
+`Block`, not as a `Table`, for two reasons: the rows are label-and-key pairs, which is what
+`shortcuts` exists for, and the overlay has no column headers — the group names are
+headings over sections, not names for columns. `Table` stays unimplemented; a genuine grid
+with `Table`'s shape has still not been drawn by anything recorded.
+
+A side effect worth knowing: that overlay's bottom border is scrolled off, and the input
+box touches it below. Blocks now split at every opening border, so the overlay and the
+composer are two components rather than one thirty-three-line "composer" — which is what
+the first attempt produced.
 ## Guarantees
 
 Three properties are checked on every corpus (`ui-lm-capture audit`) and, for the
