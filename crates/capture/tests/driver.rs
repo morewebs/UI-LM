@@ -1,15 +1,22 @@
 //! The driver against a real child process: spawn, read to EOF, read the screen.
 //!
 //! Every test here spawns a program on a pty rather than mocking one: what can go
-//! wrong in this layer — output that never arrives, a stream that ends too early,
-//! keystrokes that never reach the child — is a property of the platform's pty
+//! wrong in this layer ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â output that never arrives, a stream that ends too early,
+//! keystrokes that never reach the child ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â is a property of the platform's pty
 //! implementation, and a mock would assert only what this file already believes.
 
+mod common;
+
+use common::comparable;
+
 use std::sync::atomic::{AtomicBool, Ordering};
+
 use std::sync::Arc;
+
 use std::time::{Duration, Instant};
 
 use ui_lm_capture::{Driver, SessionConfig};
+
 use ui_lm_frames::grid_from_screen;
 
 /// How long a test that spawns a child may run before the watchdog aborts the
@@ -41,7 +48,7 @@ impl Drop for Watchdog {
 /// A test that can hang is a defect, not a slow test: Task 4's RED run sat for
 /// nine minutes on a read that never reached EOF, and nothing in the suite said
 /// so. Every test in this file that starts a real child arms this, so a
-/// regression fails loudly instead of consuming a session — a detached thread
+/// regression fails loudly instead of consuming a session ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â a detached thread
 /// sleeps [`WATCHDOG_DEADLINE`], and if the test has still not returned it names
 /// the test on stderr and aborts the process. That message is the whole diagnosis
 /// available from CI output alone.
@@ -175,8 +182,8 @@ fn a_quiet_child_is_not_the_end_of_the_stream() {
 #[test]
 fn keystrokes_reach_the_child() {
     let _watchdog = arm_watchdog("keystrokes_reach_the_child");
-    // The child turns its input into text the terminal never echoed — "got[abc]"
-    // is the child's own rendering of the line it read — so the assertion cannot
+    // The child turns its input into text the terminal never echoed ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â "got[abc]"
+    // is the child's own rendering of the line it read ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â so the assertion cannot
     // be satisfied by the pty echoing our keystrokes back at us.
     let cfg = SessionConfig {
         command: if cfg!(windows) {
@@ -296,7 +303,7 @@ fn a_child_that_floods_cursor_queries_without_reading_does_not_stall_the_reader(
     );
     // The child types a file of twenty thousand cursor queries and never reads its
     // own input, so every answer it is owed piles up uncollected. Answering those
-    // inline — a write to a pty whose child is not reading — is the hang this test
+    // inline ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â a write to a pty whose child is not reading ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â is the hang this test
     // exists to catch: `read_some` must keep returning so a record loop keeps
     // running, with the answers it cannot deliver dropped and counted instead of
     // queued without limit.
@@ -379,7 +386,7 @@ const DIRECTORY_SCREEN: (u16, u16) = (10, 200);
 /// A child that prints its own working directory and exits.
 ///
 /// `cd` and `pwd` are the platform's own answer to "where am I", so what the
-/// assertion reads is the directory the child really ran in — not a value the
+/// assertion reads is the directory the child really ran in ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â not a value the
 /// rig believes it asked for.
 fn prints_its_directory() -> (String, Vec<String>) {
     if cfg!(windows) {
@@ -434,32 +441,7 @@ fn reported_directory(screen: &str) -> &str {
         .unwrap_or_else(|| panic!("the child printed no directory: {screen:?}"))
 }
 
-/// A directory in the form two of them can be compared in.
-///
-/// Windows reports a path in whatever case it likes, with either separator, and
-/// `std::fs::canonicalize` would add a `\\?\` prefix the child never prints — so
-/// neither a byte comparison nor the canonical form is the right test.
-///
-/// This helper is duplicated in `tests/cli.rs`; the two must stay in step, and a
-/// macOS `/var` to `/private/var` mismatch in one of them has already broken CI
-/// once while the other passed.
-fn comparable(path: &str) -> String {
-    let trimmed = path.trim();
-    let trimmed = trimmed.strip_prefix(r"\\?\").unwrap_or(trimmed);
-    if cfg!(windows) {
-        trimmed.replace('/', "\\").to_lowercase()
-    } else {
-        // macOS puts a temporary directory behind the `/var` to `/private/var`
-        // symlink, so the directory the test made and the directory the child
-        // reports are the same place spelled two ways. Resolving both compares
-        // what the filesystem says rather than how it is spelled.
-        std::fs::canonicalize(trimmed)
-            .map(|resolved| resolved.to_string_lossy().into_owned())
-            .unwrap_or_else(|_| trimmed.to_owned())
-    }
-}
-
-/// The directory the child would fall back to if nothing set it on Windows —
+/// The directory the child would fall back to if nothing set it on Windows ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â
 /// portable-pty's `USERPROFILE`, which is the behaviour this change rules out.
 fn home_directory() -> Option<String> {
     std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" })
