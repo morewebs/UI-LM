@@ -1217,8 +1217,11 @@ fn is_composer(lines: &[String]) -> bool {
     let Some(last) = lines.last() else {
         return false;
     };
-    let opens = first.trim_start().starts_with('╭');
-    let closes = last.trim_start().starts_with('╰');
+    // Rounded and square corners both, because which an application draws depends on
+    // the glyph set it believes the terminal has: the one that draws `╭` here draws
+    // `┌` when it is talking to a code page without the rounded characters.
+    let opens = first.trim_start().starts_with(['╭', '┌']);
+    let closes = last.trim_start().starts_with(['╰', '└']);
     // A block of a single line cannot hold a border on both sides of itself.
     let prompt_between = lines.len() >= 2
         && lines[1..lines.len() - 1]
@@ -1898,5 +1901,25 @@ mod tests {
             })
             .expect("the prose must be a block");
         assert!(pairs.is_empty(), "{pairs:?}");
+    }
+
+    #[test]
+    fn a_square_cornered_box_is_still_a_composer() {
+        // The same box drawn for a terminal without rounded corners, which is what an
+        // application does when it thinks the glyph set has no ╭.
+        let page = page_from_frame(
+            &frame_of(&["  ┌─────────┌", "  │ > type here │", "  └─────────└"], 24),
+            "s",
+        );
+        let role = page
+            .create_surface
+            .components
+            .iter()
+            .find_map(|component| match &component.body {
+                Body::Block { role, .. } => Some(role.as_str()),
+                _ => None,
+            })
+            .expect("the box must be a block");
+        assert_eq!(role, "composer", "{page:?}");
     }
 }
