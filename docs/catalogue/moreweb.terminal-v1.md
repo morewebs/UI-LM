@@ -155,8 +155,9 @@ surveyed standard can express: a per-line kind *and* per-span attributes at once
 | `ToolCall` | recorded screens (`Read notes.txt`, `Hook … failed`) |
 | `Meter` | recorded screens (`1.3K / 500K`) |
 | `Diff` | **constructed frames only** — no recorded screen has drawn a diff body |
+| `Thought` | a recorded screen with reasoning raised: `♦ Thought for 3.0s` |
 | `Table` | **not implemented** — nothing recorded has drawn one |
-| `Thought` | **not implemented** — nothing recorded has drawn one |
+
 
 ## `Block` is carrying the structure
 
@@ -166,6 +167,24 @@ becoming a container for everything a panel can show. The alternative — a comp
 structure — would version the catalogue once per screen, which ADR 0003 already declined
 for blocking cards. A schema rework is justified when there is a consumer to break; there
 is not one yet, and each field is individually evidenced.
+### `Thought` — reasoning the application collapsed
+
+```json
+{
+  "id": "block-…",
+  "component": "Thought",
+  "source": "seen",
+  "rows": [7, 8],
+  "text": "    ♦ Thought for 3.0s",
+  "seconds": 3.0
+}
+```
+
+Recorded with the CLI's reasoning effort raised: the application draws one line naming how
+long the reasoning took and keeps the reasoning itself collapsed. The page therefore holds
+the summary and **not** the hidden text — the spec's folding rule applied literally, since a
+folded block's content is not on the page and so is not in the IR. `seconds` is absent when
+a line does not report a duration.
 ## Why the command list is not a `Table`
 
 A recorded `/help` overlay draws a command list — rows of `New Session … Ctrl+N`, grouped

@@ -62,7 +62,7 @@ pub const CATALOGUE_ID: &str = "moreweb.terminal/v1";
 /// draw, so it is a fault rather than an extension — an unknown component is what the
 /// degradation rule in the spec handles at *render* time, and a page this crate emits
 /// has no business relying on it.
-pub const COMPONENTS: [&str; 5] = ["Column", "Block", "ToolCall", "Meter", "Diff"];
+pub const COMPONENTS: [&str; 6] = ["Column", "Block", "ToolCall", "Meter", "Diff", "Thought"];
 
 /// What is wrong with a page, in terms of the promises the page model makes.
 ///
@@ -152,7 +152,7 @@ pub fn audit(page: &Envelope) -> Vec<String> {
                 }
                 check_rows(&mut problems, &component.id, rows);
             }
-            Body::ToolCall { rows, .. } | Body::Meter { rows, .. } => {
+            Body::ToolCall { rows, .. } | Body::Meter { rows, .. } | Body::Thought { rows, .. } => {
                 check_rows(&mut problems, &component.id, rows);
             }
         }
@@ -212,6 +212,9 @@ pub fn render_text(page: &Envelope) -> Vec<String> {
                 }
             }
             Body::Meter {
+                rows: span, text, ..
+            } => placed.push((span[0], text.as_str())),
+            Body::Thought {
                 rows: span, text, ..
             } => placed.push((span[0], text.as_str())),
             Body::Column { .. } => {}
@@ -334,6 +337,7 @@ fn component_text(body: &Body) -> Vec<String> {
             .map(|call| call.text.clone())
             .collect::<Vec<_>>(),
         Body::Meter { text, .. } => vec![text.clone()],
+        Body::Thought { text, .. } => vec![text.clone()],
     }
 }
 
@@ -463,6 +467,22 @@ pub enum Body {
         rows: [u16; 2],
         /// One entry per line, in the order drawn.
         calls: Vec<ToolCallLine>,
+    },
+    /// A block of reasoning the application collapsed to a summary line.
+    ///
+    /// Read off a recorded screen with reasoning raised: `♦ Thought for 3.0s`. The
+    /// reasoning itself is not on the page — collapsed, not merely styled — so it is not
+    /// in the page either. That is the spec's folding rule applied honestly: a folded
+    /// block's hidden content is not in the IR, and a page that invented it would be
+    /// describing a screen nobody saw.
+    Thought {
+        /// The rows it covers, as a half-open `[first, end)`.
+        rows: [u16; 2],
+        /// The summary line as drawn.
+        text: String,
+        /// How long the reasoning took, in seconds, when the line reports it.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        seconds: Option<f64>,
     },
     /// A line reporting a quantity against a limit: usage, a quota, a budget.
     ///
@@ -649,13 +669,20 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
                 Provenance::Carried
             };
             let (component, body) = if segment.tool {
-                (
-                    "ToolCall".to_owned(),
-                    Body::ToolCall {
-                        rows,
-                        calls: tool_calls(text),
-                    },
-                )
+                let calls = tool_calls(text);
+                // A collapsed reasoning line is the catalogue's `Thought`, not a tool
+                // call: the application says `♦ Thought for 3.0s` and nothing else.
+                match calls.as_slice() {
+                    [only] if only.tool.eq_ignore_ascii_case("thought") => (
+                        "Thought".to_owned(),
+                        Body::Thought {
+                            rows,
+                            text: only.text.trim_end().to_owned(),
+                            seconds: thought_seconds(&only.text),
+                        },
+                    ),
+                    _ => ("ToolCall".to_owned(), Body::ToolCall { rows, calls }),
+                }
             } else if let Some(meter) = as_meter(text) {
                 (
                     "Meter".to_owned(),
@@ -1065,6 +1092,20 @@ fn blocks(lines: &[String]) -> Vec<(usize, usize)> {
         found.push((first, lines.len()));
     }
     found
+}
+
+/// How long a collapsed reasoning line reports it took, in seconds.
+///
+/// The line is `♦ Thought for 3.0s`, so the number sits between `for` and `s`. A line
+/// without one is still a thought; it simply does not claim a duration.
+fn thought_seconds(text: &str) -> Option<f64> {
+    let after_for = text.split_once(" for ")?.1;
+    let digits: String = after_for
+        .trim_start()
+        .chars()
+        .take_while(|character| character.is_ascii_digit() || *character == '.')
+        .collect();
+    digits.parse().ok()
 }
 
 /// One row of a shortcut list: what it does, and the key that does it.
@@ -1534,7 +1575,8 @@ mod tests {
                 Body::Column { .. }
                 | Body::Diff { .. }
                 | Body::ToolCall { .. }
-                | Body::Meter { .. } => None,
+                | Body::Meter { .. }
+                | Body::Thought { .. } => None,
             })
             .collect();
         assert_eq!(roles, vec!["text", "prompt"]);
@@ -2169,5 +2211,42 @@ mod tests {
         assert_eq!(pairs[0].label, "Working directory");
         assert_eq!(pairs[0].value, "C:\\Users\\someone\\project");
         assert_eq!(pairs[1].label, "Turn");
+    }
+
+    #[test]
+    fn a_collapsed_reasoning_line_is_a_thought_and_names_its_duration() {
+        // The line a real screen drew when reasoning was raised: ♦ Thought for 3.0s,
+        // with the reasoning collapsed and therefore absent from the page.
+        let page = page_from_frame(&frame_of(&["  ♦ Thought for 3.0s"], 40), "s");
+        let thought = page
+            .create_surface
+            .components
+            .iter()
+            .find(|component| component.component == "Thought")
+            .unwrap_or_else(|| panic!("the reasoning line must be a Thought: {page:?}"));
+        let Body::Thought { seconds, rows, .. } = &thought.body else {
+            panic!("a Thought must carry its own shape: {thought:?}");
+        };
+        assert_eq!(seconds, &Some(3.0));
+        assert_eq!(rows, &[0, 1]);
+    }
+
+    #[test]
+    fn an_ordinary_tool_line_stays_a_tool_call() {
+        let page = page_from_frame(&frame_of(&["  ♦ Read notes.txt"], 40), "s");
+        assert!(
+            page.create_surface
+                .components
+                .iter()
+                .all(|component| component.component != "Thought"),
+            "only reasoning is a Thought: {page:?}"
+        );
+        assert!(
+            page.create_surface
+                .components
+                .iter()
+                .any(|component| component.component == "ToolCall"),
+            "a read is still a tool call: {page:?}"
+        );
     }
 }
