@@ -482,6 +482,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ui-lm-serve"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "serde_json",
+ "tempfile",
+ "ui-lm-frames",
+ "ui-lm-pages",
+ "ui-lm-render",
+]
+
+[[package]]
 name = "ui-lm-validate"
 version = "0.1.0"
 dependencies = [

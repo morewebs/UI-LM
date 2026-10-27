@@ -1,0 +1,22 @@
+[package]
+name = "ui-lm-serve"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Serves a live view of a recording, and types back into the program"
+
+[[bin]]
+name = "ui-lm-serve"
+path = "src/main.rs"
+
+[dependencies]
+ui-lm-frames = { path = "../frames" }
+ui-lm-pages = { path = "../pages" }
+ui-lm-render = { path = "../render" }
+clap = { version = "4", features = ["derive"] }
+serde_json.workspace = true
+anyhow.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

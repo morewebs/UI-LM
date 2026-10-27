@@ -41,7 +41,7 @@ Plus two operator scripts: `scripts/capture-w1.ps1` (a scripted capture session)
 
 ```bash
 cargo build --workspace
-cargo test --workspace        # 170 tests
+cargo test --workspace        # 174 tests
 ```
 
 Record a session of any terminal application:
@@ -54,6 +54,22 @@ ui-lm-capture record --rows 50 --cols 160 --out sessions/example \
 Each settled screen becomes one line of `frames.jsonl`: run-length cells with character, foreground, background, bold/italic/underline/reverse and a `wide_tail` flag for full-width glyphs. `session.json` records the command, geometry, the rendering-relevant environment, and where the child ran.
 
 A frame exists only at a **settled** point — 150 ms of quiet. An animating screen produces frames at its pauses, not continuously.
+
+## See it live, and type back
+
+Two processes: one records, one serves the recording and forwards what you type.
+
+```bash
+ui-lm-capture record --out sessions/live --control keys.txt -- --some-program
+ui-lm-serve --session sessions/live --keys keys.txt --port 8787
+# open http://127.0.0.1:8787/
+```
+
+The browser shows the program's screens as they settle, and the box at the bottom types into
+it — the text goes to `keys.txt`, the recorder forwards it to the program's terminal. It
+listens on this machine only: no account, no TLS, nothing reachable from elsewhere. A screen
+appears when the program settles, so a spinner mid-animation is not shown; it never was a
+frame.
 
 Type into a program while it runs, from outside the recorder:
 
