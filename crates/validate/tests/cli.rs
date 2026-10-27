@@ -29,16 +29,30 @@ fn dump_line(seq: u32, left: char, right: char) -> String {
     )
 }
 
-/// Writes a finished session of 1x2 frames into `dir`, the way the recorder does.
-fn write_session(dir: &Path, screens: &[[char; 2]]) {
+/// One dump line: a `rows × cols` screen with every cell set to `ch`.
+fn dump_screen(seq: u32, rows: u16, cols: u16, ch: char) -> String {
+    let cells: Vec<String> = (0..rows)
+        .flat_map(|row| (0..cols).map(move |col| cell(row, col, ch)))
+        .collect();
+    format!(
+        r#"{{"seq":{seq},"rows":{rows},"cols":{cols},"cells":[{}]}}"#,
+        cells.join(",")
+    )
+}
+
+/// Writes a finished session of frames into `dir`, the way the recorder does: each
+/// screen is given as its rows of characters.
+fn write_session_of(dir: &Path, screens: &[Vec<Vec<char>>]) {
+    let rows = screens[0].len() as u16;
+    let cols = screens[0][0].len() as u16;
     let record = SessionRecord {
         version: 1,
         started_at: "2026-10-27T10:00:00Z".to_owned(),
         ended_at: None,
         command: "grok".to_owned(),
         args: Vec::new(),
-        rows: 1,
-        cols: 2,
+        rows,
+        cols,
         env: vec![("TERM".to_owned(), "xterm-256color".to_owned())],
         app_version: None,
         cost: None,
@@ -46,10 +60,16 @@ fn write_session(dir: &Path, screens: &[[char; 2]]) {
     let mut writer = SessionWriter::new(dir, record).expect("the session opens");
     for (seq, screen) in screens.iter().enumerate() {
         writer
-            .append(&frame_from_chars(seq as u32, 1, 2, &[screen.to_vec()]))
+            .append(&frame_from_chars(seq as u32, rows, cols, screen))
             .expect("the frame appends");
     }
     writer.finish(None).expect("the session finishes");
+}
+
+/// Writes a finished session of 1x2 frames into `dir`, the way the recorder does.
+fn write_session(dir: &Path, screens: &[[char; 2]]) {
+    let screens: Vec<Vec<Vec<char>>> = screens.iter().map(|screen| vec![screen.to_vec()]).collect();
+    write_session_of(dir, &screens);
 }
 
 /// Writes `lines` as a dump file and returns its path.
@@ -75,6 +95,11 @@ fn compare(ours: &Path, theirs: &Path, extra: &[&str]) -> Output {
 /// A binary's stdout, as text.
 fn stdout(output: &Output) -> String {
     String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
+/// A binary's stderr, as text.
+fn stderr(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stderr).into_owned()
 }
 
 #[test]
@@ -126,6 +151,42 @@ fn a_differing_cell_exits_non_zero_and_names_its_position() {
     assert!(
         text.contains("first mismatch: 0,1: ours='d' theirs='X'"),
         "the first mismatch must be reported as row,col with both characters: {text}"
+    );
+}
+
+#[test]
+fn frames_of_different_shapes_fail_hard_rather_than_being_counted_as_mismatches() {
+    // The union of two differently-shaped screens reports every cell outside the
+    // smaller one as a mismatch, and that number is indistinguishable from real
+    // emulator drift — the one thing K5 exists to detect. So a shape difference is a
+    // hard failure: the operator learns "our frames are the wrong size", not "we
+    // disagree on ten cells".
+    let dir = tempfile::tempdir().unwrap();
+    let session = dir.path().join("session");
+    let screen = vec![vec!['a'; 40]; 10];
+    write_session_of(&session, &[screen]);
+    // The dump declares one column fewer, with every other cell identical: a union
+    // comparison would call the missing column ten mismatches.
+    let dump = write_dump(dir.path(), &[dump_screen(0, 10, 39, 'a')]);
+
+    let output = compare(&session, &dump, &[]);
+    let text = format!("{}{}", stdout(&output), stderr(&output));
+    assert!(
+        !output.status.success(),
+        "differently-shaped frames must exit non-zero: {text}"
+    );
+    assert!(
+        text.contains("10x40") && text.contains("10x39"),
+        "the failure must name both shapes: {text}"
+    );
+    assert!(
+        text.contains("different shapes"),
+        "the failure must say the screens are differently shaped: {text}"
+    );
+    assert!(
+        !stdout(&output).contains("mismatched:"),
+        "a shape difference must not be presented as a cell-by-cell disagreement: {}",
+        stdout(&output)
     );
 }
 

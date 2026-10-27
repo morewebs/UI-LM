@@ -20,6 +20,14 @@
 //! frame-by-frame alignment. `--ours-seq` and `--theirs-seq` therefore name one
 //! screen on each side by its own `seq`, not an index into an aligned sequence.
 //!
+//! # A shape difference is a hard failure
+//!
+//! The two selected screens must be the same `rows x cols`. When they are not, the
+//! command prints both shapes and exits non-zero without comparing anything. The
+//! union of two differently-shaped screens reports every cell outside the smaller
+//! one as a mismatch, and that count cannot be told apart from real emulator drift —
+//! so it would dress a rig error up as the finding K5 exists to produce.
+//!
 //! # What is not compared
 //!
 //! Nothing is masked by default. `Frame::volatile` is a statement our own recorder
@@ -133,9 +141,21 @@ fn run_compare(args: Compare) -> Result<ExitCode> {
         theirs.cols
     );
     if (ours.rows, ours.cols) != (theirs.rows, theirs.cols) {
-        // Said out loud because it is the likeliest cause of a wall of mismatches:
-        // the two runs were not on the same size of terminal.
-        println!("shapes: the screens are different sizes, so the union of both is compared");
+        // A hard failure, not a comparison. The union of two differently-shaped
+        // screens reports every cell outside the smaller one as a mismatch, and that
+        // number is numerically indistinguishable from real emulator drift — the one
+        // thing K5 exists to detect. Stop, and say which side is which size, so the
+        // operator reads this as "our frames are the wrong size" rather than "we
+        // disagree on ten cells".
+        return Err(anyhow!(
+            "the screens are different shapes: ours is {}x{} and theirs is {}x{}, \
+             so there is no cell-by-cell comparison to make — the two runs were not \
+             recorded on the same size of terminal",
+            ours.rows,
+            ours.cols,
+            theirs.rows,
+            theirs.cols
+        ));
     }
 
     let comparison = compare_frames(ours, theirs, &[]);
