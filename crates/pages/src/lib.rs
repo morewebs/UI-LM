@@ -1,13 +1,13 @@
 //! The page a recorded screen describes: UI-LM's first intermediate representation.
 //!
-//! A frame is a grid of styled cells Ã¢â‚¬â€ everything the terminal actually shows, and
+//! A frame is a grid of styled cells — everything the terminal actually shows, and
 //! nothing about what it *means*. This crate is the first step from the grid towards
 //! meaning: it reads a frame and writes an A2UI v0.9.1 `createSurface` message whose
 //! components come from the `moreweb.terminal/v1` catalogue (ADR 0002).
 //!
 //! ## What this first slice does
 //!
-//! It finds **blocks** Ã¢â‚¬â€ maximal runs of non-blank rows Ã¢â‚¬â€ and emits one `Block`
+//! It finds **blocks** — maximal runs of non-blank rows — and emits one `Block`
 //! component per block: its row span, its lines of text, and a role. That is
 //! deliberately the least interesting thing a page can be, and it is still the
 //! first time a frame has been described rather than copied.

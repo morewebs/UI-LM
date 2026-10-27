@@ -12,7 +12,7 @@
         "children": [
           "block-dac02fcfa49cf206",
           "block-0ba563efe700b705",
-          "block-81287792b29aab9a"
+          "block-2a7e0a9124d1d4ad"
         ]
       },
       {
@@ -43,7 +43,7 @@
         ]
       },
       {
-        "id": "block-81287792b29aab9a",
+        "id": "block-2a7e0a9124d1d4ad",
         "component": "Block",
         "source": "seen",
         "role": "text",
@@ -52,7 +52,7 @@
           6
         ],
         "lines": [
-          "  Waiting for responseâ€¦ 0.4s"
+          "  Waiting for response… 0.4s"
         ]
       }
     ]

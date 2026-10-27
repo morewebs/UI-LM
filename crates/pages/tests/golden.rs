@@ -1,8 +1,8 @@
 //! The first golden: a known screen, and the page it must describe.
 //!
 //! The page model is the thing the model will be trained against, so it must not
-//! change shape by accident. This test pins one screen's whole envelope â€” every id,
-//! role, row span and provenance word â€” and compares it to a file in the repository.
+//! change shape by accident. This test pins one screen's whole envelope — every id,
+//! role, row span and provenance word — and compares it to a file in the repository.
 //!
 //! Regenerate the file deliberately, never to make a run pass:
 //!
@@ -25,7 +25,7 @@ const SCREEN: &[&str] = &[
     "> what file is in this folder",
     "  This folder is empty.",
     "",
-    "  Waiting for responseâ€¦ 0.4s",
+    "  Waiting for response… 0.4s",
 ];
 
 /// Where the expected page lives.
@@ -57,6 +57,11 @@ fn a_known_screen_describes_the_same_page_it_always_has() {
             path.display()
         )
     });
+    // A checkout on a platform with different line endings must not turn a matching
+    // page into a failing one: the golden is about content, not about CRLF.
+    // `.gitattributes` pins the file to LF, and this normalises anyway, because a
+    // rule that only one of those guards is one checkout away from a red build.
+    let expected = expected.replace("\r\n", "\n");
     assert_eq!(
         actual, expected,
         "the page for a known screen changed. If the change is intended, regenerate the \

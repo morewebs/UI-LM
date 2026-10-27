@@ -1,9 +1,9 @@
 //! The capture CLI end to end: the real binary, a real child on a pty, a session
 //! on disk.
 //!
-//! Nothing here is mocked. The point of this file is that the whole rig composes ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â
+//! Nothing here is mocked. The point of this file is that the whole rig composes —
 //! the driver's reader thread, the emulator, the quiescer, the mask and the session
-//! writer ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â and a test that stubbed any one of them would assert only that the
+//! writer — and a test that stubbed any one of them would assert only that the
 //! stub was told what the test already believed. These tests run the binary the
 //! way a capture script does, then read the session back the way the validator
 //! will.
@@ -88,7 +88,7 @@ fn recorder(out: &Path) -> Command {
 ///
 /// The pause is the whole point. Without one, all three lines arrive inside a
 /// single burst, the screen settles once, and there is one frame with nothing to
-/// diff ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â which is correct behaviour and a useless test. The pause is what makes
+/// diff — which is correct behaviour and a useless test. The pause is what makes
 /// each line a settled screen of its own.
 ///
 /// `ping` rather than `timeout` for the sleep on Windows: `timeout` refuses to run
@@ -113,8 +113,8 @@ fn three_paused_lines() -> Vec<String> {
 
 /// A child that reads one line of its input and prints what it read.
 ///
-/// The child renders the line itself ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â `got[abc]` is its own text, not the echo
-/// of what was typed ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â so a frame containing it cannot have come from the pty
+/// The child renders the line itself — `got[abc]` is its own text, not the echo
+/// of what was typed — so a frame containing it cannot have come from the pty
 /// echoing keystrokes back at the recorder.
 fn reads_a_line() -> Vec<String> {
     if cfg!(windows) {
@@ -178,8 +178,8 @@ fn reported_directory(screen: &str) -> String {
 fn the_cwd_flag_puts_the_child_in_the_directory_it_names() {
     let _watchdog = arm_watchdog("the_cwd_flag_puts_the_child_in_the_directory_it_names");
     // Two scratch directories: the recorder is started in one and told about the
-    // other. Only a `--cwd` that reaches the driver ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â through the argument
-    // parser, the session config and the command builder ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â can put the child in
+    // other. Only a `--cwd` that reaches the driver — through the argument
+    // parser, the session config and the command builder — can put the child in
     // the second, so this cannot pass because the recorder happened to inherit a
     // directory.
     let recorder_dir = tempfile::tempdir().unwrap();
@@ -323,7 +323,7 @@ fn a_child_that_switches_to_the_alternate_screen_is_recorded() {
     // host's decision rather than the emulator's. Both outcomes have now been
     // observed: a development machine's conhost consumes `ESC [ ? 1049 h` and
     // re-renders the delta (the bytes a child's switch produces downstream are
-    // `ESC [ 25 l ESC [ H ESC [ K CRLF ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦`, never the switch), while a
+    // `ESC [ 25 l ESC [ H ESC [ K CRLF …`, never the switch), while a
     // `windows-latest` runner forwarded it and the frame recorded `alt_screen:
     // true`. `portable-pty` 0.9 knows the flag that would decide this
     // (`PSEUDOCONSOLE_PASSTHROUGH_MODE`) and does not use it.
@@ -355,7 +355,7 @@ fn record_writes_frames_changed_rows_and_session() {
     // The first frame is the whole first screen: there is no screen before it.
     assert_eq!(frames[0].changed_rows, (0u16..10).collect::<Vec<_>>());
     // The second frame is the first line plus the second, so fewer rows than a
-    // whole screen moved ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â and at least one of them did.
+    // whole screen moved — and at least one of them did.
     assert!(!frames[1].changed_rows.is_empty());
     assert!(frames[1].changed_rows.len() < 10);
     assert_eq!(frames[0].seq, 0);
@@ -390,7 +390,7 @@ fn a_non_zero_child_exit_is_reported_but_not_propagated() {
         .unwrap();
 
     // The recorder's exit code describes the recorder's job, and its job is to
-    // write the session ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â which it did. A scenario that deliberately kills the
+    // write the session — which it did. A scenario that deliberately kills the
     // application must not read as a failed capture to the script running it.
     assert!(
         output.status.success(),
@@ -473,7 +473,7 @@ fn a_script_delay_over_the_cap_is_refused_naming_the_file_and_line() {
     // The first line's delay is fine; the second is 27 hours written as if it were
     // milliseconds, which is the typo this rule is for. A delay that large is not a
     // pause a script could mean, and it is large enough that adding it to the clock
-    // overflowed and aborted the capture mid-session ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â so it must be a parse error
+    // overflowed and aborted the capture mid-session — so it must be a parse error
     // instead, naming the line it is on, before anything is spawned or written.
     std::fs::write(script.path(), "1 first\\r\n99999999 hello\\r\n").unwrap();
 
@@ -532,7 +532,7 @@ fn a_script_delay_over_the_cap_is_refused_naming_the_file_and_line() {
 /// The fixture for the interrupt test: draws a line, then stays alive.
 ///
 /// It has to still be running when the interrupt arrives, and it has to have
-/// drawn something settled before it ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â an interrupt before the first frame would
+/// drawn something settled before it — an interrupt before the first frame would
 /// only prove that an empty session is still a valid one.
 fn draws_then_waits() -> Vec<String> {
     if cfg!(windows) {
@@ -565,7 +565,7 @@ mod interrupt {
     /// accepted with a process group of zero, which would signal the test harness
     /// and cargo as well. `CTRL_BREAK_EVENT` *can* be aimed at a process group, the
     /// recorder is started in one of its own, and the recorder handles both events
-    /// through one handler ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â so this exercises the same code path as a user
+    /// through one handler — so this exercises the same code path as a user
     /// pressing Ctrl-C.
     pub fn send_interrupt(child: &Child) {
         let sent = unsafe { GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, child.id()) };

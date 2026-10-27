@@ -5,7 +5,7 @@
 //! `changed_rows` from the frame model's row-by-row diff, the volatile spans from
 //! the mask, and the numbers come from the caller. Everything a recorded frame says
 //! about a screen is decided here, so a fact about the screen has exactly one place
-//! it can be dropped ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â and the tests can feed a screen straight in rather than
+//! it can be dropped — and the tests can feed a screen straight in rather than
 //! inferring what it would have produced from a session on disk.
 //!
 //! It is a function of a `vt100::Screen` rather than of a [`crate::Driver`] so that
@@ -23,7 +23,7 @@ use crate::mask::{classify, Semantics};
 /// The first frame is emitted **unclassified**, because there is no frame before it.
 /// Passing `Frame::empty` to `classify` would be worse than useless: nothing has
 /// been logged yet, so every cell of the first screen would be reported as a change
-/// with no event behind it and the whole first screen would be masked as noise ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â the
+/// with no event behind it and the whole first screen would be masked as noise — the
 /// one thing masking must never do. `Frame::empty` is still the right *diff*
 /// baseline, because every row of a first screen really is new content.
 ///
@@ -36,7 +36,7 @@ use crate::mask::{classify, Semantics};
 /// this frame sits at the end of, when the tap could find that stream. Whether the
 /// program reported anything between two frames is not a separate input: a range
 /// that grew says it did, a range that did not says it did not, and no range at all
-/// means nobody can say â€” which the mask must read as "assume it did".
+/// means nobody can say — which the mask must read as "assume it did".
 pub fn frame_from_screen(
     screen: &vt100::Screen,
     seq: u32,
@@ -122,7 +122,7 @@ mod tests {
         // Item from the final review: `screen.alternate_screen()` reaching
         // `frame.alt_screen` had no test, and the 35 real sessions produced no
         // alternate-screen frame at all. The real-session half cannot be shown on
-        // Windows (ConPTY consumes the switch before the client sees it ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â see the
+        // Windows (ConPTY consumes the switch before the client sees it — see the
         // note in `tests/cli.rs`), so the composition is proved here, on the same
         // emulator the recorder uses, and end-to-end by
         // `tests/cli.rs::a_child_that_switches_to_the_alternate_screen_is_recorded`.
