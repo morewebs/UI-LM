@@ -450,6 +450,7 @@ dependencies = [
  "tempfile",
  "ui-lm-frames",
  "ui-lm-pages",
+ "ui-lm-render",
  "vt100",
 ]
 
@@ -470,6 +471,14 @@ dependencies = [
  "serde",
  "serde_json",
  "ui-lm-frames",
+]
+
+[[package]]
+name = "ui-lm-render"
+version = "0.1.0"
+dependencies = [
+ "ui-lm-frames",
+ "ui-lm-pages",
 ]
 
 [[package]]

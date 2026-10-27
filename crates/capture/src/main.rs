@@ -95,12 +95,34 @@ enum Command {
     Audit(Summarize),
     /// Print the page a recorded frame describes, as an A2UI message.
     Page(PageArgs),
+    /// Draw recorded pages as one standalone HTML file you can open in a browser.
+    Render(RenderArgs),
     /// Score one recorded session's pages against another's.
     ///
     /// The use this exists for: record the same deterministic scenario twice and see
     /// whether the pages agree. A dataset whose structure changes between identical
     /// captures cannot support a claim about a model.
     Compare(CompareArgs),
+}
+
+/// What to draw, and where to put it.
+#[derive(Debug, Args)]
+struct RenderArgs {
+    /// The session directory holding the frames.
+    #[arg(long, value_name = "DIR")]
+    session: PathBuf,
+
+    /// Which frame, by sequence number. Defaults to the session's last frame.
+    #[arg(long)]
+    seq: Option<u32>,
+
+    /// Draw every frame, in order, into one document.
+    #[arg(long)]
+    all: bool,
+
+    /// The HTML file to write.
+    #[arg(long, value_name = "FILE")]
+    out: PathBuf,
 }
 
 /// The two sessions to score against each other.
@@ -234,7 +256,49 @@ fn run(command: Command) -> Result<ExitCode> {
         Command::Audit(args) => audit(&args.sessions),
         Command::Page(args) => page(&args),
         Command::Compare(args) => compare(&args),
+        Command::Render(args) => render(&args),
     }
+}
+
+/// Draws recorded pages into one HTML file.
+fn render(args: &RenderArgs) -> Result<ExitCode> {
+    let pages = ui_lm_capture::summary::session_pages(&args.session)
+        .with_context(|| format!("failed to read the session {}", args.session.display()))?;
+    if pages.is_empty() {
+        bail!(
+            "the session {} holds no frames to draw",
+            args.session.display()
+        );
+    }
+    let title = args
+        .session
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "session".to_owned());
+
+    let html = if args.all {
+        ui_lm_render::render_pages(&pages, &title)
+    } else {
+        // A session's frames are numbered in order, and `session_pages` maps them in
+        // that order, so a frame number is a position in this list.
+        let index = match args.seq {
+            Some(seq) => usize::try_from(seq)
+                .ok()
+                .filter(|index| *index < pages.len())
+                .with_context(|| format!("the session has no frame {seq}"))?,
+            None => pages.len() - 1,
+        };
+        ui_lm_render::render_page(&pages[index], &title)
+    };
+    std::fs::write(&args.out, &html)
+        .with_context(|| format!("failed to write {}", args.out.display()))?;
+    println!(
+        "wrote {} ({} page(s), {} bytes)",
+        args.out.display(),
+        if args.all { pages.len() } else { 1 },
+        html.len()
+    );
+    Ok(ExitCode::SUCCESS)
 }
 
 /// Scores one session's pages against another's, reporting both kinds of agreement.

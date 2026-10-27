@@ -41,7 +41,7 @@ Plus two operator scripts: `scripts/capture-w1.ps1` (a scripted capture session)
 
 ```bash
 cargo build --workspace
-cargo test --workspace        # 133 tests
+cargo test --workspace        # 166 tests
 ```
 
 Record a session of any terminal application:
@@ -54,6 +54,14 @@ ui-lm-capture record --rows 50 --cols 160 --out sessions/example \
 Each settled screen becomes one line of `frames.jsonl`: run-length cells with character, foreground, background, bold/italic/underline/reverse and a `wide_tail` flag for full-width glyphs. `session.json` records the command, geometry, the rendering-relevant environment, and where the child ran.
 
 A frame exists only at a **settled** point — 150 ms of quiet. An animating screen produces frames at its pauses, not continuously.
+
+Draw a recording as a page you can open in a browser:
+
+```bash
+ui-lm-capture render --session sessions/example --all --out example.html
+```
+
+That is the whole loop in one command: a program was observed, its screens were described, and the description was drawn by something that never saw the terminal. [docs/demo/fixture.html](docs/demo/fixture.html) is a rendering of the checked-in recording, so the output can be looked at without building anything.
 
 Read back what a corpus holds:
 

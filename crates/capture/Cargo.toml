@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 ui-lm-frames = { path = "../frames" }
 ui-lm-pages = { path = "../pages" }
+ui-lm-render = { path = "../render" }
 portable-pty = "0.9"
 vt100 = "0.15"
 clap = { version = "4", features = ["derive"] }

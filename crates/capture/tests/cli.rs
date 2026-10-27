@@ -690,3 +690,33 @@ fn a_timed_stop_ends_the_session_and_writes_its_record() {
         "a finished session records when it ended: {record:?}"
     );
 }
+#[test]
+fn render_writes_an_html_file_from_a_recorded_session() {
+    // The whole loop in one command, against the checked-in recording rather than a
+    // capture taken during the test: record → page → draw. If this passes, a person can
+    // go from a session on disk to a file they can open in a browser.
+    let fixture = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../pages/tests/fixtures/session");
+    let out = tempfile::tempdir().unwrap();
+    let page = out.path().join("page.html");
+    let status = std::process::Command::new(env!("CARGO_BIN_EXE_ui-lm-capture"))
+        .args(["render", "--session"])
+        .arg(&fixture)
+        .arg("--out")
+        .arg(&page)
+        .status()
+        .unwrap();
+    assert!(status.success(), "the renderer failed: {status}");
+
+    let html = std::fs::read_to_string(&page).expect("the renderer must write the file");
+    assert!(
+        html.starts_with("<!doctype html>"),
+        "not a document: {html:.80}"
+    );
+    assert!(
+        html.contains("Grok Build fixture"),
+        "the screen text is missing"
+    );
+    assert!(html.contains("class=\"meter\""), "the meter is missing");
+    assert!(html.contains("class=\"tool\""), "the tool line is missing");
+}

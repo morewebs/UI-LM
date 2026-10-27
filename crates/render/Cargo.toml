@@ -1,0 +1,13 @@
+[package]
+name = "ui-lm-render"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Draws a UI-LM page as a standalone HTML document"
+
+[dependencies]
+ui-lm-pages = { path = "../pages" }
+
+[dev-dependencies]
+ui-lm-frames = { path = "../frames" }
