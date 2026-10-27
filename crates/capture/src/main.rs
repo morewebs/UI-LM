@@ -64,6 +64,14 @@ const READ_BUFFER: usize = 64 * 1024;
 /// enough that an idle session costs nothing.
 const POLL_PAUSE: Duration = Duration::from_millis(5);
 
+/// The longest delay a `--script` line may ask for, in milliseconds.
+///
+/// A delay is a pause before a keystroke, so the useful range is milliseconds to
+/// seconds: one minute is far past any pause a capture script needs, and small
+/// enough that no delay it accepts can overflow the clock. Anything longer is
+/// refused as a script error naming its line — see [`split_delay`].
+const MAX_DELAY_MILLIS: u64 = 60_000;
+
 /// The command line: `ui-lm-capture record …`.
 #[derive(Debug, Parser)]
 #[command(
@@ -103,10 +111,11 @@ struct Record {
     ///
     /// Each line is an optional delay in milliseconds, then the keystroke to send
     /// after it: `250 \x1b[B` sends a down-arrow 250 ms after the line before it,
-    /// and `hello\r` types `hello` and presses Enter. The escapes `\r`, `\n`, `\t`,
-    /// `\e`, `\x41` and `\\` are interpreted; after any other backslash everything
-    /// is literal, so a Windows path can be written as it is. Leading whitespace on
-    /// a line is not sent, trailing whitespace is.
+    /// and `hello\r` types `hello` and presses Enter. A delay may be at most 60000
+    /// ms. The escapes `\r`, `\n`, `\t`, `\e`, `\x41` and `\\` are interpreted;
+    /// after any other backslash everything is literal, so a Windows path can be
+    /// written as it is. Leading whitespace on a line is not sent, trailing
+    /// whitespace is.
     #[arg(long, value_name = "FILE")]
     script: Option<PathBuf>,
 
@@ -189,7 +198,14 @@ fn record(args: Record) -> Result<ExitCode> {
     let mut refused = 0usize;
     let mut typed_since_frame = false;
     let mut unrecorded_output = false;
-    let mut next_keystroke_at = keystrokes.front().map(|step| Instant::now() + step.delay);
+    // When the script's first keystroke is due, if it has one. `deadline_after`
+    // rather than `Instant::now() + step.delay`: the bare addition panics on a delay
+    // the clock cannot hold, and a panic here would end the capture before the child
+    // had drawn anything.
+    let mut next_keystroke_at = match keystrokes.front() {
+        Some(step) => Some(deadline_after(Instant::now(), step.delay)?),
+        None => None,
+    };
 
     let ended = loop {
         if signal::interrupted() {
@@ -273,7 +289,13 @@ fn record(args: Record) -> Result<ExitCode> {
                         })
                     }
                 }
-                next_keystroke_at = keystrokes.front().map(|step| Instant::now() + step.delay);
+                // The next keystroke's instant, if the script has another one — and
+                // checked, so a delay the clock cannot hold is an error rather than
+                // the panic that used to leave flushed frames with no record.
+                next_keystroke_at = match keystrokes.front() {
+                    Some(step) => Some(deadline_after(Instant::now(), step.delay)?),
+                    None => None,
+                };
             }
         }
 
@@ -477,6 +499,13 @@ fn read_script(path: &Path) -> Result<VecDeque<Keystroke>> {
 /// A leading run of digits followed by whitespace is the delay; anything else is
 /// the payload from the first character on. Whitespace alone is not a delay, so a
 /// keystroke that begins with digits can be written with a delay of its own.
+///
+/// The delay may be at most [`MAX_DELAY_MILLIS`]. A larger number is a script error
+/// rather than a wait: it is either a unit typo (`99999999 hello\r` is 27 hours
+/// written as if it were milliseconds), which would look exactly like a hung
+/// recorder, or it is a delay whose sum with the clock does not fit, which is how a
+/// capture used to end as a panic — mid-session, after frames had been written and
+/// before the record that finishes them.
 fn split_delay(line: &str) -> Result<(Duration, &str)> {
     let digits = line.bytes().take_while(u8::is_ascii_digit).count();
     let rest = &line[digits..];
@@ -487,10 +516,34 @@ fn split_delay(line: &str) -> Result<(Duration, &str)> {
     let milliseconds: u64 = line[..digits]
         .parse()
         .with_context(|| format!("{digits} digits is not a delay in milliseconds"))?;
+    if milliseconds > MAX_DELAY_MILLIS {
+        bail!(
+            "a delay of {milliseconds} ms is longer than the {MAX_DELAY_MILLIS} ms maximum a \
+             script line may ask for; a delay is how a script waits for the program to draw, \
+             not how long the capture may take"
+        );
+    }
     Ok((
         Duration::from_millis(milliseconds),
         rest.trim_start_matches(char::is_whitespace),
     ))
+}
+
+/// The instant that a wait of `delay`, starting at `now`, ends at.
+///
+/// Never `now + delay`: that addition panics when the sum is past what the clock can
+/// represent, and a panic in a wait site ends the capture without a session — the
+/// exact unfinished-session failure that finishing on exit and on interrupt exists to
+/// prevent. [`split_delay`]'s cap means no scripted delay can reach the overflow
+/// today; this is the second guard, so that no arithmetic path panics even if the cap
+/// is later raised.
+fn deadline_after(now: Instant, delay: Duration) -> Result<Instant> {
+    now.checked_add(delay).with_context(|| {
+        format!(
+            "a wait of {delay:?} is longer than this machine's clock can represent, so the \
+             capture cannot schedule it"
+        )
+    })
 }
 
 /// The bytes a script line asks for, with its backslash escapes interpreted.
@@ -678,6 +731,45 @@ mod tests {
         assert_eq!(split_delay("42").unwrap().0, Duration::ZERO);
         assert_eq!(split_delay("42").unwrap().1, "42");
         assert_eq!(split_delay("42 eggs").unwrap().0, Duration::from_millis(42));
+    }
+
+    #[test]
+    fn a_delay_over_the_cap_is_refused_at_the_cap() {
+        // A delay is a pause before a keystroke, so its useful range is
+        // milliseconds to seconds. One minute is the largest a line may ask for:
+        // exactly that is allowed, one millisecond more is a typo, and a typo has
+        // to be a parse error rather than a wait so long the capture looks hung.
+        assert_eq!(
+            split_delay("60000 hello").unwrap().0,
+            Duration::from_millis(60_000)
+        );
+        let error = split_delay("60001 hello")
+            .expect_err("a delay over the cap is not a keystroke script line");
+        let message = format!("{error:#}");
+        assert!(
+            message.contains("60001") && message.contains("60000"),
+            "the error must name the delay that was asked for and the limit it broke: \
+             {message:?}"
+        );
+    }
+
+    #[test]
+    fn an_absurd_delay_is_an_error_rather_than_a_panic() {
+        // `Instant::now() + delay` panics when the sum does not fit in the clock, and
+        // a panic in the wait sites ends a capture without a session. The script
+        // parser's cap keeps a script from reaching that today; this guard is what
+        // keeps it from being a panic if the cap is ever raised, so it is exercised
+        // through the private helper rather than through a script.
+        let now = Instant::now();
+        assert!(
+            deadline_after(now, Duration::MAX).is_err(),
+            "a delay the clock cannot represent is an error, not a panic"
+        );
+        // A wait the clock can hold is still an ordinary instant.
+        assert_eq!(
+            deadline_after(now, Duration::from_millis(60_000)).unwrap(),
+            now + Duration::from_millis(60_000)
+        );
     }
 
     #[test]

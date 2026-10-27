@@ -260,6 +260,83 @@ fn a_scripted_keystroke_is_written_through_to_the_child() {
     );
 }
 
+/// The fixture for the delay-cap test: draws a line as soon as it starts.
+///
+/// It exists so that "nothing was recorded" is evidence rather than a coincidence:
+/// if the recorder ran this program, a frame would be on disk, so the absence of
+/// one says the script was refused before the program was ever spawned.
+fn draws_a_line_at_once() -> Vec<String> {
+    if cfg!(windows) {
+        vec!["cmd".into(), "/c".into(), "echo ran".into()]
+    } else {
+        vec!["sh".into(), "-c".into(), "echo ran".into()]
+    }
+}
+
+#[test]
+fn a_script_delay_over_the_cap_is_refused_naming_the_file_and_line() {
+    let _watchdog = arm_watchdog("a_script_delay_over_the_cap_is_refused_naming_the_file_and_line");
+    let out = tempfile::tempdir().unwrap();
+    let script = tempfile::NamedTempFile::new().unwrap();
+    // The first line's delay is fine; the second is 27 hours written as if it were
+    // milliseconds, which is the typo this rule is for. A delay that large is not a
+    // pause a script could mean, and it is large enough that adding it to the clock
+    // overflowed and aborted the capture mid-session — so it must be a parse error
+    // instead, naming the line it is on, before anything is spawned or written.
+    std::fs::write(script.path(), "1 first\\r\n99999999 hello\\r\n").unwrap();
+
+    let output = recorder(out.path())
+        .arg("--script")
+        .arg(script.path())
+        .arg("--")
+        .args(draws_a_line_at_once())
+        .output()
+        .unwrap();
+
+    assert!(
+        !output.status.success(),
+        "a delay over the cap is a bad script rather than a long wait, so the recorder \
+         must fail; it exited {}",
+        output.status
+    );
+
+    // "Clear" is both halves of where: which file, and which line of it.
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let name = script
+        .path()
+        .file_name()
+        .expect("the temp script has a name")
+        .to_string_lossy()
+        .into_owned();
+    assert!(
+        stderr.contains(&name),
+        "the error must name the keystroke script it came from: {stderr:?}"
+    );
+    assert!(
+        stderr.contains(":2:"),
+        "the error must name the line the delay is on, not just the file: {stderr:?}"
+    );
+    assert!(
+        stderr.contains("60000"),
+        "the error must say what the largest delay a line may ask for is: {stderr:?}"
+    );
+
+    // And no session at all: not a record, and not an empty stream that a reader
+    // could mistake for a capture that ran and drew nothing.
+    assert!(
+        read_frames(out.path()).is_err(),
+        "a refused script must not leave a session `read_frames` would accept"
+    );
+    assert!(
+        !out.path().join("session.json").exists(),
+        "a refused script must not leave a session record"
+    );
+    assert!(
+        !out.path().join("frames.jsonl").exists(),
+        "a refused script must not leave frames behind"
+    );
+}
+
 /// The fixture for the interrupt test: draws a line, then stays alive.
 ///
 /// It has to still be running when the interrupt arrives, and it has to have
