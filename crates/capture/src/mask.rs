@@ -11,13 +11,16 @@
 //! # The rule
 //!
 //! A change is volatile when it arrived with nothing to explain it: no event from
-//! the application's own stream, and no keystroke written to the PTY, between the
-//! two frames. That is the whole rule. The obvious alternative — "a change that
-//! looks like a spinner" — needs a list of glyphs that a new animation invalidates,
-//! and the obvious mechanical alternative, diffing without looking at whether
-//! anything happened, gets typeahead echo wrong: a keystroke that has not yet been
-//! answered can echo into empty cells with no application event behind it, and a
-//! recorder that called that noise would teach a model that typing changes nothing.
+//! the application's own stream, no keystroke written to the PTY, and no change of
+//! surface between the two frames. That is the whole rule. A flip of the
+//! `alt_screen` flag replaces the surface the cells are drawn on, so the new screen
+//! is new content whatever it holds, and a flip is never volatile. The obvious
+//! alternative — "a change that looks like a spinner" — needs a list of glyphs that
+//! a new animation invalidates, and the obvious mechanical alternative, diffing
+//! without looking at whether anything happened, gets typeahead echo wrong: a
+//! keystroke that has not yet been answered can echo into empty cells with no
+//! application event behind it, and a recorder that called that noise would teach a
+//! model that typing changes nothing.
 
 use ui_lm_frames::{decode_grid, Frame, MaskReason, Span};
 
@@ -47,8 +50,15 @@ pub struct Semantics {
 /// — a frame of a different shape, or the empty frame before a session's first
 /// screen — is a blank, which is how [`changed_rows`](ui_lm_frames::changed_rows)
 /// treats a missing row. Spans come out ordered by row and then by column.
+///
+/// A frame whose `alt_screen` flag differs from the previous frame's yields no
+/// spans at all. Entering or leaving the alternate screen replaces the surface, so
+/// every cell of the new one is new content — [`changed_rows`](ui_lm_frames::changed_rows)
+/// reports every row for a flip for exactly that reason. Without this, a flip that
+/// arrived with no event and no keystroke would have the whole new screen masked as
+/// noise, which is the failure this module exists to prevent.
 pub fn classify(prev: &Frame, next: &Frame, sem: Semantics) -> Vec<Span> {
-    if sem.event_between || sem.keystroke_between {
+    if sem.event_between || sem.keystroke_between || prev.alt_screen != next.alt_screen {
         return Vec::new();
     }
 
@@ -214,6 +224,35 @@ mod tests {
         );
         assert_eq!(spans.len(), 1);
         assert_eq!((spans[0].col, spans[0].len), (1, 1));
+    }
+
+    #[test]
+    fn an_alt_screen_flip_is_not_masked() {
+        // Entering or leaving the alternate screen replaces the surface, so the
+        // cells the new surface carries are new content even where they hold what
+        // the old one held — `changed_rows` reports every row for a flip for the
+        // same reason. A flip that arrived with no event and no keystroke would
+        // otherwise have every changed cell masked as noise: masking eating the
+        // content it exists to protect. The cells differ on their own here, and
+        // the no-flip pair is asserted to produce a span, so the empty result
+        // cannot come from a vacuous diff.
+        let a = frame(0, 4, &[vec!['a'; 4]]);
+        let mut flipped = frame(1, 4, &[vec!['b'; 4]]);
+        let plain = flipped.clone();
+        flipped.alt_screen = true;
+
+        let quiet = || Semantics {
+            event_between: false,
+            keystroke_between: false,
+        };
+        assert!(
+            !classify(&a, &plain, quiet()).is_empty(),
+            "these two frames' cells do differ; only the flip suppresses the spans"
+        );
+        assert!(
+            classify(&a, &flipped, quiet()).is_empty(),
+            "a surface flip is real content, not noise"
+        );
     }
 
     #[test]
