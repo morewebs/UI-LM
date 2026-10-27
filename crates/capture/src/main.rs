@@ -89,6 +89,20 @@ struct Cli {
 enum Command {
     /// Run a program on a pty and record its screens as a session.
     Record(Record),
+    /// Report what a set of recorded sessions contains.
+    Summarize(Summarize),
+}
+
+/// What the corpus reader is asked about.
+#[derive(Debug, Args)]
+struct Summarize {
+    /// Session directories, or directories holding sessions, one or more.
+    ///
+    /// Both kinds are accepted because a corpus is usually pointed at from above —
+    /// `sessions/` holds `w1/` and `k5/`, and both are wanted — while a single
+    /// recording is pointed at directly.
+    #[arg(last = true, required = true, num_args = 1.., value_name = "DIR")]
+    sessions: Vec<PathBuf>,
 }
 
 #[derive(Debug, Args)]
@@ -161,7 +175,16 @@ fn main() -> ExitCode {
 fn run(command: Command) -> Result<ExitCode> {
     match command {
         Command::Record(args) => record(args),
+        Command::Summarize(args) => summarise(&args.sessions),
     }
+}
+
+/// Prints what the given sessions hold.
+fn summarise(sessions: &[PathBuf]) -> Result<ExitCode> {
+    let summary = ui_lm_capture::summary::summarize(sessions)
+        .with_context(|| format!("failed to read the sessions under {sessions:?}"))?;
+    print!("{}", summary.render());
+    Ok(ExitCode::SUCCESS)
 }
 
 /// Records one session, and reports how it ended.

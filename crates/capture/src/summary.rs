@@ -1,0 +1,205 @@
+//! What a set of recorded sessions actually contains.
+//!
+//! A capture produces a directory per session, and the questions asked of a corpus
+//! afterwards are always the same: how many screens, how many of them are the same
+//! screen seen twice, how much of the change was masked as noise, and which events
+//! the application labelled. Reading that off `frames.jsonl` by hand is slow and
+//! easy to get wrong, so it is computed once here and printed.
+
+use std::collections::{BTreeMap, HashSet};
+use std::path::{Path, PathBuf};
+
+use ui_lm_frames::{read_frames, read_orphaned_frames, Frame};
+
+/// The counts a corpus is argued about with.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Summary {
+    /// Directories read, whether they held a finished session or a killed one.
+    pub sessions: usize,
+    /// Frames across every session.
+    pub frames: usize,
+    /// Frames that describe a screen no other frame in the corpus describes.
+    pub distinct_screens: usize,
+    /// Cells marked as noise by the volatile mask.
+    pub masked_cells: usize,
+    /// Frames that could name the stretch of the event stream behind them.
+    pub frames_with_range: usize,
+    /// Frames that carried the application's own labels.
+    pub frames_with_kinds: usize,
+    /// Earliest and latest frame offset seen, in milliseconds.
+    pub first_at_ms: Option<u64>,
+    pub last_at_ms: Option<u64>,
+    /// How often the application labelled an event with each kind.
+    pub kinds: BTreeMap<String, usize>,
+}
+
+impl Summary {
+    /// Adds one session's frames to the totals.
+    ///
+    /// Kept separate from reading them so counting is testable without a corpus on
+    /// disk, and so a caller holding frames for another reason can reuse it.
+    pub fn add(&mut self, frames: &[Frame]) {
+        self.frames += frames.len();
+        let mut seen: HashSet<String> = HashSet::new();
+        for frame in frames {
+            // A screen is its cells: two frames with the same size and the same runs
+            // are the same screen, whatever their sequence numbers say.
+            seen.insert(format!("{}x{}|{:?}", frame.rows, frame.cols, frame.runs));
+            self.masked_cells += frame
+                .volatile
+                .iter()
+                .map(|span| usize::from(span.len))
+                .sum::<usize>();
+            if frame.acp_event_range.is_some() {
+                self.frames_with_range += 1;
+            }
+            if !frame.event_kinds.is_empty() {
+                self.frames_with_kinds += 1;
+                for kind in &frame.event_kinds {
+                    *self.kinds.entry(kind.clone()).or_default() += 1;
+                }
+            }
+            if let Some(at) = frame.at_ms {
+                self.first_at_ms = Some(self.first_at_ms.map_or(at, |seen| seen.min(at)));
+                self.last_at_ms = Some(self.last_at_ms.map_or(at, |seen| seen.max(at)));
+            }
+        }
+        self.distinct_screens += seen.len();
+    }
+
+    /// The summary as the lines a person reads.
+    pub fn render(&self) -> String {
+        let span = match (self.first_at_ms, self.last_at_ms) {
+            (Some(first), Some(last)) => {
+                format!(
+                    "{:.1} s of recorded wall clock",
+                    (last - first) as f64 / 1000.0
+                )
+            }
+            _ => "no timings recorded".to_owned(),
+        };
+        let mut out = format!(
+            "{} session(s), {} frame(s), {} distinct screen(s)\n\
+             {span}\n\
+             masked cells: {}; frames naming an event range: {}; frames carrying kinds: {}\n",
+            self.sessions,
+            self.frames,
+            self.distinct_screens,
+            self.masked_cells,
+            self.frames_with_range,
+            self.frames_with_kinds
+        );
+        if self.kinds.is_empty() {
+            out.push_str("events labelled: none\n");
+        } else {
+            out.push_str("events labelled by the application:\n");
+            for (kind, count) in &self.kinds {
+                out.push_str(&format!("  {kind}: {count}\n"));
+            }
+        }
+        out
+    }
+}
+
+/// Summarises each directory under `roots`, finishing sessions and killed ones alike.
+///
+/// A killed capture is included because the state is honest: its frames are real
+/// screens, and dropping them would understate what the corpus holds.
+pub fn summarize(roots: &[PathBuf]) -> std::io::Result<Summary> {
+    let mut summary = Summary::default();
+    for root in roots {
+        for dir in session_dirs(root)? {
+            let frames = match read_frames(&dir) {
+                Ok((_, frames)) => frames,
+                Err(_) => read_orphaned_frames(&dir)?,
+            };
+            summary.sessions += 1;
+            summary.add(&frames);
+        }
+    }
+    Ok(summary)
+}
+
+/// `root` itself if it looks like a session, else the session directories under it.
+fn session_dirs(root: &Path) -> std::io::Result<Vec<PathBuf>> {
+    if root.join("frames.jsonl").is_file() {
+        return Ok(vec![root.to_path_buf()]);
+    }
+    let mut found: Vec<PathBuf> = std::fs::read_dir(root)?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.join("frames.jsonl").is_file())
+        .collect();
+    found.sort();
+    Ok(found)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ui_lm_frames::{CellRun, MaskReason, Span, Style};
+
+    /// A frame of one row whose cells read `text`, one cell per character.
+    fn frame(seq: u32, text: &str) -> Frame {
+        let cols = u16::try_from(text.len()).unwrap();
+        let mut frame = Frame::empty(1, cols);
+        frame.seq = seq;
+        frame.runs = text
+            .chars()
+            .enumerate()
+            .map(|(col, ch)| CellRun {
+                row: 0,
+                col: u16::try_from(col).unwrap(),
+                len: 1,
+                ch,
+                style: Style::default(),
+                wide_tail: false,
+            })
+            .collect();
+        frame
+    }
+
+    #[test]
+    fn counting_separates_screens_from_frames() {
+        let mut summary = Summary::default();
+        summary.add(&[frame(0, "ab"), frame(1, "ab"), frame(2, "cd")]);
+        assert_eq!(summary.frames, 3);
+        assert_eq!(
+            summary.distinct_screens, 2,
+            "the repeated screen is one screen seen twice"
+        );
+    }
+
+    #[test]
+    fn the_mask_and_the_labels_are_counted_apart() {
+        let mut quiet = frame(0, "ab");
+        quiet.acp_event_range = Some((0, 10));
+        let mut ticking = frame(1, "ab");
+        ticking.acp_event_range = Some((10, 10));
+        ticking.volatile = vec![Span {
+            row: 0,
+            col: 0,
+            len: 2,
+            reason: MaskReason::NoSemanticChange,
+        }];
+        ticking.event_kinds = vec!["agent_message".to_owned()];
+        ticking.at_ms = Some(1_500);
+
+        let mut summary = Summary::default();
+        summary.add(&[quiet, ticking]);
+        assert_eq!(summary.masked_cells, 2);
+        assert_eq!(summary.frames_with_range, 2);
+        assert_eq!(summary.frames_with_kinds, 1);
+        assert_eq!(summary.kinds.get("agent_message"), Some(&1));
+        assert_eq!(summary.first_at_ms, Some(1_500));
+    }
+
+    #[test]
+    fn the_rendering_names_what_was_counted() {
+        let mut summary = Summary::default();
+        summary.add(&[frame(0, "a")]);
+        let text = summary.render();
+        assert!(text.contains("1 frame(s)"), "{text}");
+        assert!(text.contains("events labelled: none"), "{text}");
+    }
+}
