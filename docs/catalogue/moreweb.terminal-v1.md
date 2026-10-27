@@ -78,6 +78,7 @@ Holds component ids in order. One page, one column.
 | `spans` | per-line styling, parallel to `lines`; only non-default cells appear |
 | `tabs` | present when the block is a panel with a tab strip |
 | `shortcuts` | present when the block holds label-and-key rows |
+| `properties` | present when the block reports named values (`Model: Grok 4.7`) |
 
 Roles mean what their evidence proves: `composer` is a bordered box holding the input
 prompt, `panel` is a bordered box, `prompt` starts with `>`, `heading` with `#`. Everything
@@ -157,6 +158,14 @@ surveyed standard can express: a per-line kind *and* per-span attributes at once
 | `Table` | **not implemented** — nothing recorded has drawn one |
 | `Thought` | **not implemented** — nothing recorded has drawn one |
 
+## `Block` is carrying the structure
+
+`Block` now holds `lines`, `spans`, `tabs`, `shortcuts` and `properties`. That is one field
+per structure found on a recorded screen, and it is worth naming the tension: the block is
+becoming a container for everything a panel can show. The alternative — a component per
+structure — would version the catalogue once per screen, which ADR 0003 already declined
+for blocking cards. A schema rework is justified when there is a consumer to break; there
+is not one yet, and each field is individually evidenced.
 ## Why the command list is not a `Table`
 
 A recorded `/help` overlay draws a command list — rows of `New Session … Ctrl+N`, grouped

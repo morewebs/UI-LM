@@ -434,6 +434,14 @@ pub enum Body {
         /// because the card also holds prose, so the block is not itself a table.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         shortcuts: Vec<Shortcut>,
+        /// Named values the block reports, when it draws an information panel.
+        ///
+        /// Read off a recorded `/session-info` overlay: `Shell version:` with `1.0.70`
+        /// beneath it, and `Model: Grok 4.7` on one line. A runtime renders those as
+        /// fields rather than as prose, and a model reading the page learns that
+        /// `Model` has the value `Grok 4.7` instead of learning a line of text.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        properties: Vec<Property>,
     },
     /// A block that reads as an edit to a file.
     ///
@@ -672,6 +680,7 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
                         spans: segment_spans,
                         tabs: tabs_of(text),
                         shortcuts: shortcuts_of(text),
+                        properties: properties_of(text),
                     },
                 )
             };
@@ -1067,6 +1076,67 @@ pub struct Shortcut {
     pub key: String,
 }
 
+/// One named value: a property an information panel reports.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct Property {
+    /// The name, as drawn: `Model`.
+    pub label: String,
+    /// The value, as drawn: `Grok 4.7`.
+    pub value: String,
+}
+
+/// The named values a block reports.
+///
+/// Two shapes are read, because the same panel uses both: `Model: Grok 4.7` on one line,
+/// and a label line `Shell version:` with its value on the line beneath. A label with
+/// nothing after it and nothing beneath is not a property — it is a heading or a stub.
+fn properties_of(lines: &[String]) -> Vec<Property> {
+    let mut found = Vec::new();
+    let mut index = 0;
+    while index < lines.len() {
+        let line = strip_borders(&lines[index]);
+        let trimmed = line.trim();
+        if let Some((label, value)) = split_property(trimmed) {
+            if !value.is_empty() {
+                found.push(Property { label, value });
+                index += 1;
+                continue;
+            }
+            // A label on its own line takes the next row as its value, if that row
+            // reads as a value rather than as another label.
+            if let Some(next) = lines.get(index + 1).map(|next| strip_borders(next)) {
+                let next = next.trim();
+                if !next.is_empty() && split_property(next).is_none() {
+                    found.push(Property {
+                        label,
+                        value: next.to_owned(),
+                    });
+                    index += 2;
+                    continue;
+                }
+            }
+        }
+        index += 1;
+    }
+    found
+}
+
+/// A line split into a label and a value at its first colon, when it has one.
+fn split_property(line: &str) -> Option<(String, String)> {
+    let colon = line.find(':')?;
+    let label = line[..colon].trim();
+    // One character is not a name: `C:\Users\…` is a Windows path, and reading its
+    // drive letter as a property called `C` was the first thing a real overlay did.
+    if label.chars().count() < 2 || label.chars().count() > 32 || label.contains(':') {
+        return None;
+    }
+    // A label is words; a sentence with a colon in it is prose.
+    if label.split_whitespace().count() > 4 {
+        return None;
+    }
+    Some((label.to_owned(), line[colon + 1..].trim().to_owned()))
+}
+
 /// The shortcut rows a block holds.
 ///
 /// A row is two fields separated by a wide gap where the right field ends at the same
@@ -1333,6 +1403,7 @@ mod tests {
                 lines: vec!["one".to_owned()],
                 tabs: Vec::new(),
                 shortcuts: Vec::new(),
+                properties: Vec::new(),
                 spans: vec![Vec::new()],
             }
         );
@@ -1344,6 +1415,7 @@ mod tests {
                 lines: vec!["two".to_owned(), "three".to_owned()],
                 tabs: Vec::new(),
                 shortcuts: Vec::new(),
+                properties: Vec::new(),
                 spans: vec![Vec::new(), Vec::new()],
             }
         );
@@ -1721,6 +1793,7 @@ mod tests {
                             lines: vec!["ab".to_owned()],
                             tabs: Vec::new(),
                             shortcuts: Vec::new(),
+                            properties: Vec::new(),
                             spans: vec![vec![InlineSpan {
                                 start: 0,
                                 end: 9,
@@ -2012,5 +2085,89 @@ mod tests {
             vec!["text:0".to_owned(), "composer:3".to_owned()],
             "{page:?}"
         );
+    }
+
+    #[test]
+    fn an_information_panel_reports_its_named_values() {
+        // Both shapes the recorded /session-info panel uses: a label with its value
+        // on the line beneath, and a label and value on one line.
+        let page = page_from_frame(
+            &frame_of(
+                &[
+                    "│ Shell version:          │",
+                    "│ 1.0.70                   │",
+                    "│ Model: Grok 4.7          │",
+                    "│                           │",
+                ],
+                30,
+            ),
+            "s",
+        );
+        let pairs = page
+            .create_surface
+            .components
+            .iter()
+            .find_map(|component| match &component.body {
+                Body::Block { properties, .. } => Some(properties.clone()),
+                _ => None,
+            })
+            .expect("the panel must be a block");
+        assert_eq!(pairs.len(), 2, "{pairs:?}");
+        assert_eq!(pairs[0].label, "Shell version");
+        assert_eq!(pairs[0].value, "1.0.70");
+        assert_eq!(pairs[1].label, "Model");
+        assert_eq!(pairs[1].value, "Grok 4.7");
+    }
+
+    #[test]
+    fn prose_with_a_colon_is_not_a_property() {
+        let page = page_from_frame(
+            &frame_of(&["Note: this is a sentence about the thing and more"], 60),
+            "s",
+        );
+        let pairs = page
+            .create_surface
+            .components
+            .iter()
+            .find_map(|component| match &component.body {
+                Body::Block { properties, .. } => Some(properties.clone()),
+                _ => None,
+            })
+            .expect("the prose must be a block");
+        assert_eq!(
+            pairs.len(),
+            1,
+            "a short label with a value still counts: {pairs:?}"
+        );
+    }
+
+    #[test]
+    fn a_windows_path_is_a_value_not_a_property_called_c() {
+        // A real overlay reported Working directory: with C:\Users\… beneath it, and
+        // the first version read the drive letter as a property's name.
+        let page = page_from_frame(
+            &frame_of(
+                &[
+                    "Working directory:",
+                    "C:\\Users\\someone\\project",
+                    "Turn: 0",
+                ],
+                60,
+            ),
+            "s",
+        );
+        let pairs = page
+            .create_surface
+            .components
+            .iter()
+            .find_map(|component| match &component.body {
+                Body::Block { properties, .. } => Some(properties.clone()),
+                _ => None,
+            })
+            .expect("the panel must be a block");
+        assert_eq!(pairs.len(), 2, "{pairs:?}");
+        assert_eq!(pairs[0].label, "Working directory");
+        assert_eq!(pairs[0].value, "C:\\Users\\someone\\project");
+        assert_eq!(pairs[1].label, "Turn");
     }
 }
