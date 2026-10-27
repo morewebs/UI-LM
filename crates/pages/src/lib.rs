@@ -148,6 +148,27 @@ pub enum Body {
         /// One entry per line, in the order drawn.
         calls: Vec<ToolCallLine>,
     },
+    /// A line reporting a quantity against a limit: usage, a quota, a budget.
+    ///
+    /// Read off a real frame: `1.3K / 500K │ [Dashboard]`. The drawn strings are kept
+    /// verbatim with the fraction computed beside them, so a renderer that wants a bar
+    /// and a reader that wants the number do not have to parse the screen for either.
+    Meter {
+        /// The rows it covers, as a half-open `[first, end)`.
+        rows: [u16; 2],
+        /// How much has been used, as drawn.
+        used: String,
+        /// What it is measured against, as drawn.
+        limit: String,
+        /// `used / limit`, when both sides are numbers.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        fraction: Option<f64>,
+        /// What the meter is about, when the line names it.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        label: Option<String>,
+        /// The whole line as drawn.
+        text: String,
+    },
 }
 
 /// One line of a diff.
@@ -317,6 +338,18 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
                     Body::ToolCall {
                         rows,
                         calls: tool_calls(text),
+                    },
+                )
+            } else if let Some(meter) = as_meter(text) {
+                (
+                    "Meter".to_owned(),
+                    Body::Meter {
+                        rows,
+                        used: meter.used,
+                        limit: meter.limit,
+                        fraction: meter.fraction,
+                        label: meter.label,
+                        text: meter.text,
                     },
                 )
             } else if let Some(diff) = as_diff(text, &segment_spans) {
@@ -523,6 +556,60 @@ fn count_after(text: &str, sign: char) -> Option<u32> {
         }
     }
     None
+}
+
+/// The parts of a meter, before it is placed on rows.
+struct MeterParts {
+    /// How much has been used, as drawn.
+    used: String,
+    /// What it is measured against, as drawn.
+    limit: String,
+    /// `used / limit`, when both sides are numbers.
+    fraction: Option<f64>,
+    /// What the meter is about, when the line names it.
+    label: Option<String>,
+    /// The whole line as drawn.
+    text: String,
+}
+
+/// Reads a line as a quantity against a limit, or `None` when it is not one.
+///
+/// The shape is `<number> / <number>` among the line's whitespace-separated words,
+/// which is what a real frame draws: `1.3K / 500K │ [Dashboard]`. Requiring both
+/// neighbours of the `/` to be numbers is what keeps prose and paths out — a path
+/// containing a slash has a word, not a number, on each side of it.
+fn as_meter(lines: &[String]) -> Option<MeterParts> {
+    let line = lines.first()?;
+    let words: Vec<&str> = line.split_whitespace().collect();
+    let slash = words.iter().position(|word| *word == "/")?;
+    let used = *words.get(slash.checked_sub(1)?)?;
+    let limit = *words.get(slash + 1)?;
+    let used_value = number(used)?;
+    let limit_value = number(limit)?;
+    let label = words
+        .iter()
+        .position(|word| *word == "│")
+        .map(|bar| words[bar + 1..].join(" "))
+        .filter(|label| !label.is_empty());
+    Some(MeterParts {
+        used: used.to_owned(),
+        limit: limit.to_owned(),
+        fraction: (limit_value > 0.0).then(|| used_value / limit_value),
+        label,
+        text: line.clone(),
+    })
+}
+
+/// A number as drawn, with the multiplier a suffix stands for.
+fn number(word: &str) -> Option<f64> {
+    let (digits, multiplier) = match word.chars().last()? {
+        'K' => (&word[..word.len() - 1], 1e3),
+        'M' => (&word[..word.len() - 1], 1e6),
+        'G' => (&word[..word.len() - 1], 1e9),
+        _ => (word, 1.0),
+    };
+    let value: f64 = digits.parse().ok()?;
+    Some(value * multiplier)
 }
 
 /// The runs of a line that were drawn with a non-default style.
@@ -786,7 +873,10 @@ mod tests {
             .iter()
             .filter_map(|component| match &component.body {
                 Body::Block { role, .. } => Some(role.as_str()),
-                Body::Column { .. } | Body::Diff { .. } | Body::ToolCall { .. } => None,
+                Body::Column { .. }
+                | Body::Diff { .. }
+                | Body::ToolCall { .. }
+                | Body::Meter { .. } => None,
             })
             .collect();
         assert_eq!(roles, vec!["text", "prompt"]);
@@ -933,5 +1023,49 @@ mod tests {
         let call = parse_tool_line("  ♦ Read notes.txt                                        █");
         assert_eq!(call.target.as_deref(), Some("notes.txt"), "{call:?}");
         assert_eq!(call.tool, "Read");
+    }
+
+    #[test]
+    fn a_usage_line_becomes_a_meter() {
+        // The line as a real frame drew it: the project path, the usage figure, and
+        // the label the application puts after its separator.
+        let page = page_from_frame(&frame_of(&["~/p 1.3K / 500K │ [Dashboard]"], 60), "s");
+        let meter = page
+            .create_surface
+            .components
+            .iter()
+            .find(|component| component.component == "Meter")
+            .unwrap_or_else(|| panic!("the usage line must be a Meter: {page:?}"));
+        let Body::Meter {
+            used,
+            limit,
+            fraction,
+            label,
+            ..
+        } = &meter.body
+        else {
+            panic!("a Meter component must carry its figures: {meter:?}");
+        };
+        assert_eq!(used, "1.3K");
+        assert_eq!(limit, "500K");
+        assert_eq!(label.as_deref(), Some("[Dashboard]"));
+        let fraction = fraction.expect("both sides are numbers");
+        assert!(
+            (fraction - 0.0026).abs() < 1e-3,
+            "1.3K of 500K is about 0.0026, not {fraction}"
+        );
+    }
+
+    #[test]
+    fn a_path_is_not_a_meter() {
+        // A slash is not enough: a path has words around it, not numbers.
+        let page = page_from_frame(&frame_of(&["~/A/L/T/u/proj"], 40), "s");
+        assert!(
+            page.create_surface
+                .components
+                .iter()
+                .all(|component| component.component != "Meter"),
+            "a path must not become a meter: {page:?}"
+        );
     }
 }
