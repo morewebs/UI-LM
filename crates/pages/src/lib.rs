@@ -14,8 +14,15 @@
 //!
 //! ## What it does not do, and says so in the output
 //!
-//! - No `Diff`, `Table`, `Meter`, `ToolCall` or `Thought`: those need per-span
-//!   attributes and roles this slice cannot yet infer honestly.
+//! - No `Table`, `Meter`, `ToolCall` or `Thought`: those need roles this slice
+//!   cannot yet infer honestly.
+//! - `Diff` is recognised from a block carrying both a `+` line and a `-` line, and
+//!   that shape has not yet been seen on a real screen. Every recording so far ran
+//!   with the application's auto-approval on, where an edit is reported in a
+//!   sentence ("the first line of `notes.txt` now says …") and the diff card that
+//!   would carry `+`/`-` lines is never drawn. So the component is tested against
+//!   the shape, not against a captured screen; the corpus needs a run in a mode that
+//!   asks before editing to prove it.
 //! - No actions. Every keybinding is absent rather than guessed.
 //! - No `guessed` or `carried` provenance: every component here is `seen`, because
 //!   every character of it was on the screen. A later slice that reconstructs text
@@ -120,6 +127,31 @@ pub enum Body {
         /// inline emphasis will be built from.
         spans: Vec<Vec<InlineSpan>>,
     },
+    /// A block that reads as an edit to a file.
+    ///
+    /// This is the component ADR 0002 calls the thing no surveyed standard can
+    /// express: a diff needs a per-line kind *and* per-span attributes on the same
+    /// line, and no standard has both. It is recognised from the text alone — a
+    /// `+` line and a `-` line in the same block — because the prefixes are what the
+    /// application draws regardless of theme, while the colours it uses to reinforce
+    /// them are not something to depend on.
+    Diff {
+        /// The rows it covers, as a half-open `[first, end)`.
+        rows: [u16; 2],
+        /// The lines of the edit, in order.
+        lines: Vec<DiffLine>,
+    },
+}
+
+/// One line of a diff.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct DiffLine {
+    /// `add`, `remove` or `context`.
+    pub kind: String,
+    /// The line's text, right-trimmed, including its `+` or `-` prefix.
+    pub text: String,
+    /// The styling of the line, as a block's lines carry it.
+    pub spans: Vec<InlineSpan>,
 }
 
 /// A run of cells inside one line that shares a non-default style.
@@ -223,27 +255,37 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
     let mut children = Vec::new();
     for (first, last) in blocks(&lines) {
         let text = &lines[first..last];
+        let block_spans = spans[first..last].to_vec();
+        let rows = [
+            u16::try_from(first).unwrap_or(u16::MAX),
+            u16::try_from(last).unwrap_or(u16::MAX),
+        ];
         let id = block_id(text);
         children.push(id.clone());
+        // `insert` is the whole provenance rule: the first frame to show this
+        // block read it from the cells, every later one carried it forward.
+        let source = if appeared.insert(id.clone()) {
+            Provenance::Seen
+        } else {
+            Provenance::Carried
+        };
+        let (component, body) = match as_diff(text, &block_spans) {
+            Some(diff) => ("Diff".to_owned(), Body::Diff { rows, lines: diff }),
+            None => (
+                "Block".to_owned(),
+                Body::Block {
+                    role: role_of(text).to_owned(),
+                    rows,
+                    lines: text.to_vec(),
+                    spans: block_spans,
+                },
+            ),
+        };
         components.push(Component {
             id,
-            component: "Block".to_owned(),
-            // `insert` is the whole provenance rule: the first frame to show this
-            // block read it from the cells, every later one carried it forward.
-            source: if appeared.insert(block_id(text)) {
-                Provenance::Seen
-            } else {
-                Provenance::Carried
-            },
-            body: Body::Block {
-                role: role_of(text).to_owned(),
-                rows: [
-                    u16::try_from(first).unwrap_or(u16::MAX),
-                    u16::try_from(last).unwrap_or(u16::MAX),
-                ],
-                lines: text.to_vec(),
-                spans: spans[first..last].to_vec(),
-            },
+            component,
+            source,
+            body,
         });
     }
     // The root's children are only known once every block has been walked.
@@ -263,6 +305,48 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
             components,
         },
     }
+}
+
+/// The lines of a block read as a diff, or `None` when the block is not one.
+///
+/// A diff is recognised by carrying **both** a `+` line and a `-` line: those are
+/// the prefixes the application draws for an addition and a deletion, whatever
+/// theme it is running. Requiring the pair is what keeps a bulleted list — which has
+/// `-` lines and no `+` lines — from being described as an edit that removes content
+/// nobody removed. A diff that only adds lines is therefore reported as a `Block`,
+/// which is the conservative direction: a plain block is never wrong, only less
+/// specific.
+fn as_diff(lines: &[String], spans: &[Vec<InlineSpan>]) -> Option<Vec<DiffLine>> {
+    let kinds: Vec<&str> = lines
+        .iter()
+        .map(|line| {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with('+') {
+                "add"
+            } else if trimmed.starts_with('-') {
+                "remove"
+            } else {
+                "context"
+            }
+        })
+        .collect();
+    let adds = kinds.iter().filter(|kind| **kind == "add").count();
+    let removes = kinds.iter().filter(|kind| **kind == "remove").count();
+    if adds == 0 || removes == 0 {
+        return None;
+    }
+    Some(
+        lines
+            .iter()
+            .zip(spans)
+            .zip(&kinds)
+            .map(|((text, spans), kind)| DiffLine {
+                kind: (*kind).to_owned(),
+                text: text.clone(),
+                spans: spans.clone(),
+            })
+            .collect(),
+    )
 }
 
 /// The runs of a line that were drawn with a non-default style.
@@ -526,10 +610,44 @@ mod tests {
             .iter()
             .filter_map(|component| match &component.body {
                 Body::Block { role, .. } => Some(role.as_str()),
-                Body::Column { .. } => None,
+                Body::Column { .. } | Body::Diff { .. } => None,
             })
             .collect();
         assert_eq!(roles, vec!["text", "prompt"]);
+    }
+
+    #[test]
+    fn a_block_with_an_added_and_a_removed_line_is_a_diff() {
+        let page = page_from_frame(
+            &frame_of(&["  -old line", "  +new line", "   context"], 20),
+            "s",
+        );
+        let diff = page
+            .create_surface
+            .components
+            .iter()
+            .find(|component| component.component == "Diff")
+            .unwrap_or_else(|| panic!("the edit must be a Diff: {page:?}"));
+        let Body::Diff { lines, rows } = &diff.body else {
+            panic!("a Diff component must carry diff lines: {diff:?}");
+        };
+        assert_eq!(rows, &[0, 3]);
+        let kinds: Vec<&str> = lines.iter().map(|line| line.kind.as_str()).collect();
+        assert_eq!(kinds, vec!["remove", "add", "context"]);
+    }
+
+    #[test]
+    fn a_bulleted_list_is_not_a_diff() {
+        // The reason the detection needs both prefixes: three list items look like
+        // three deletions to a rule that only looks for `-`.
+        let page = page_from_frame(&frame_of(&["- one", "- two", "- three"], 12), "s");
+        assert!(
+            page.create_surface
+                .components
+                .iter()
+                .all(|component| component.component != "Diff"),
+            "a list must not be described as an edit: {page:?}"
+        );
     }
 
     #[test]
