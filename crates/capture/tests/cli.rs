@@ -774,3 +774,45 @@ fn a_control_file_types_into_a_running_program() {
         "the waiting screen must have been recorded"
     );
 }
+#[test]
+fn a_recording_becomes_training_pairs() {
+    // The bridge from the rig to a model: each screen's text, and the page it describes.
+    let fixture = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../pages/tests/fixtures/session");
+    let out = tempfile::tempdir().unwrap();
+    let pairs = out.path().join("pairs.jsonl");
+    let status = std::process::Command::new(env!("CARGO_BIN_EXE_ui-lm-capture"))
+        .args(["dataset", "--session"])
+        .arg(&fixture)
+        .arg("--out")
+        .arg(&pairs)
+        .status()
+        .unwrap();
+    assert!(status.success(), "the export failed: {status}");
+
+    let body = std::fs::read_to_string(&pairs).expect("the export must write the file");
+    let lines: Vec<&str> = body
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+    assert_eq!(
+        lines.len(),
+        1,
+        "the fixture holds one screen with content: {body}"
+    );
+    let pair: serde_json::Value = serde_json::from_str(lines[0]).expect("each line must be JSON");
+    let input = pair["input"].as_str().unwrap_or_default();
+    let target = pair["target"].as_str().unwrap_or_default();
+    assert!(
+        input.contains("Grok Build fixture"),
+        "the screen text is the input: {input}"
+    );
+    assert!(
+        target.contains("createSurface"),
+        "the page is the target: {target}"
+    );
+    assert!(
+        !body.contains("\n\n"),
+        "one pair per line is the whole point"
+    );
+}

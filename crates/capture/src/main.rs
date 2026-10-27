@@ -95,6 +95,8 @@ enum Command {
     Audit(Summarize),
     /// Print the page a recorded frame describes, as an A2UI message.
     Page(PageArgs),
+    /// Write the training pairs a recording holds: the screen's text, and its page.
+    Dataset(DatasetArgs),
     /// Draw recorded pages as one standalone HTML file you can open in a browser.
     Render(RenderArgs),
     /// Score one recorded session's pages against another's.
@@ -103,6 +105,18 @@ enum Command {
     /// whether the pages agree. A dataset whose structure changes between identical
     /// captures cannot support a claim about a model.
     Compare(CompareArgs),
+}
+
+/// Which recording to export, and where to put the pairs.
+#[derive(Debug, Args)]
+struct DatasetArgs {
+    /// The session directory holding the frames.
+    #[arg(long, value_name = "DIR")]
+    session: PathBuf,
+
+    /// The JSON Lines file to write: one pair per line, `input` and `target`.
+    #[arg(long, value_name = "FILE")]
+    out: PathBuf,
 }
 
 /// What to draw, and where to put it.
@@ -266,8 +280,32 @@ fn run(command: Command) -> Result<ExitCode> {
         Command::Audit(args) => audit(&args.sessions),
         Command::Page(args) => page(&args),
         Command::Compare(args) => compare(&args),
+        Command::Dataset(args) => dataset(&args),
         Command::Render(args) => render(&args),
     }
+}
+
+/// Writes the training pairs a recording holds.
+fn dataset(args: &DatasetArgs) -> Result<ExitCode> {
+    let pairs = ui_lm_capture::summary::training_pairs(&args.session)
+        .with_context(|| format!("failed to read the session {}", args.session.display()))?;
+    if pairs.is_empty() {
+        bail!(
+            "the session {} holds no screen with anything on it",
+            args.session.display()
+        );
+    }
+    use std::io::Write as _;
+    let mut out = std::fs::File::create(&args.out)
+        .with_context(|| format!("failed to create {}", args.out.display()))?;
+    for (input, target) in &pairs {
+        // One JSON object per line, so a trainer can stream it without holding the whole
+        // set in memory, and a person can read a single example with `head -1`.
+        let line = serde_json::json!({ "input": input, "target": target });
+        writeln!(out, "{line}")?;
+    }
+    println!("wrote {} pair(s) to {}", pairs.len(), args.out.display());
+    Ok(ExitCode::SUCCESS)
 }
 
 /// Draws recorded pages into one HTML file.

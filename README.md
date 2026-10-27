@@ -96,6 +96,16 @@ The channel is a file rather than a socket on purpose: no port to open, nothing 
 from another machine, and the same behaviour everywhere. The recorder forwards only what is
 new since it last looked, so a long session does not replay its history.
 
+Turn a recording into training pairs — the screen's text, and the page that describes it:
+
+```bash
+ui-lm-capture dataset --session sessions/example --out pairs.jsonl
+```
+
+One JSON object per line with `input` (what the screen said, row by row) and `target` (the
+page, as JSON). Frames with nothing on them are left out. This is the shape a model would
+learn: convert one, get the other.
+
 Draw a recording as a page you can open in a browser:
 
 ```bash

@@ -303,6 +303,42 @@ fn screen_text(frame: &Frame) -> Vec<String> {
         .collect()
 }
 
+/// One training pair: what a screen said, and the page that describes it.
+///
+/// This is the shape the project exists to learn. The input is what any program could read
+/// from a terminal — the text of the screen, row by row. The target is the page, which is
+/// what a runtime draws. Nothing else is offered: no keystrokes, no events, no hidden
+/// state, because a model that relied on them would need the recorder to run alongside it,
+/// and the point is to convert a screen.
+///
+/// Frames that describe an empty screen are left out. A blank screen has a page — a page
+/// with nothing in it — and teaching a model to produce one from nothing is teaching it
+/// the least interesting half of the problem.
+pub fn training_pairs(dir: &Path) -> std::io::Result<Vec<(String, String)>> {
+    let frames = match read_frames(dir) {
+        Ok((_, frames)) => frames,
+        Err(_) => read_orphaned_frames(dir)?,
+    };
+    let surface = dir
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "session".to_owned());
+    let pages = ui_lm_pages::pages(&frames, &surface);
+
+    Ok(frames
+        .iter()
+        .zip(&pages)
+        .filter_map(|(frame, page)| {
+            let text = screen_text(frame).join("\n");
+            if text.trim().is_empty() {
+                return None;
+            }
+            let target = serde_json::to_string(page).ok()?;
+            Some((text, target))
+        })
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
