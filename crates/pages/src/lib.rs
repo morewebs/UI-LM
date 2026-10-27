@@ -141,6 +141,13 @@ pub enum Body {
         /// The lines of the edit, in order.
         lines: Vec<DiffLine>,
     },
+    /// A run of tool lines: what the application read, ran or edited.
+    ToolCall {
+        /// The rows it covers, as a half-open `[first, end)`.
+        rows: [u16; 2],
+        /// One entry per line, in the order drawn.
+        calls: Vec<ToolCallLine>,
+    },
 }
 
 /// One line of a diff.
@@ -152,6 +159,35 @@ pub struct DiffLine {
     pub text: String,
     /// The styling of the line, as a block's lines carry it.
     pub spans: Vec<InlineSpan>,
+}
+
+/// The glyph the application puts in front of a tool line.
+///
+/// Read off recorded screens: `♦ Read notes.txt`, `♦ Edited notes.txt, explored 1
+/// file +1 -1`. A glyph is a rendering choice and this one could change, so the
+/// only thing it is used for is *splitting* a transcript — anything it does not
+/// match stays an ordinary block, which is a smaller mistake than mislabelling prose.
+const TOOL_GLYPH: char = '♦';
+
+/// A run of tool lines inside a transcript block.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct ToolCallLine {
+    /// Lifecycle state. `done` for every line this slice can see, because the glyph
+    /// marks a call the application has finished drawing.
+    pub status: String,
+    /// The tool the application named, e.g. `Read` or `Edited`.
+    pub tool: String,
+    /// What it was applied to, when the line names one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target: Option<String>,
+    /// Lines added, for an edit.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub added: Option<u32>,
+    /// Lines removed, for an edit.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub removed: Option<u32>,
+    /// The line as drawn, for a renderer that wants to show it verbatim.
+    pub text: String,
 }
 
 /// A run of cells inside one line that shares a non-default style.
@@ -254,39 +290,55 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
     }];
     let mut children = Vec::new();
     for (first, last) in blocks(&lines) {
-        let text = &lines[first..last];
-        let block_spans = spans[first..last].to_vec();
-        let rows = [
-            u16::try_from(first).unwrap_or(u16::MAX),
-            u16::try_from(last).unwrap_or(u16::MAX),
-        ];
-        let id = block_id(text);
-        children.push(id.clone());
-        // `insert` is the whole provenance rule: the first frame to show this
-        // block read it from the cells, every later one carried it forward.
-        let source = if appeared.insert(id.clone()) {
-            Provenance::Seen
-        } else {
-            Provenance::Carried
-        };
-        let (component, body) = match as_diff(text, &block_spans) {
-            Some(diff) => ("Diff".to_owned(), Body::Diff { rows, lines: diff }),
-            None => (
-                "Block".to_owned(),
-                Body::Block {
-                    role: role_of(text).to_owned(),
-                    rows,
-                    lines: text.to_vec(),
-                    spans: block_spans,
-                },
-            ),
-        };
-        components.push(Component {
-            id,
-            component,
-            source,
-            body,
-        });
+        // A transcript block mixes prose with tool lines, so the block is split at
+        // the tool lines: a run of tool lines is one `ToolCall`, and a run of
+        // anything else is one `Block`. Keeping them together would leave the tool
+        // calls buried inside a paragraph, which is the opposite of the structure a
+        // page is for.
+        for segment in segments(&lines, first, last) {
+            let text = &lines[segment.first..segment.last];
+            let segment_spans = spans[segment.first..segment.last].to_vec();
+            let rows = [
+                u16::try_from(segment.first).unwrap_or(u16::MAX),
+                u16::try_from(segment.last).unwrap_or(u16::MAX),
+            ];
+            let id = block_id(text);
+            children.push(id.clone());
+            // `insert` is the whole provenance rule: the first frame to show this
+            // content read it from the cells, every later one carried it forward.
+            let source = if appeared.insert(id.clone()) {
+                Provenance::Seen
+            } else {
+                Provenance::Carried
+            };
+            let (component, body) = if segment.tool {
+                (
+                    "ToolCall".to_owned(),
+                    Body::ToolCall {
+                        rows,
+                        calls: tool_calls(text),
+                    },
+                )
+            } else if let Some(diff) = as_diff(text, &segment_spans) {
+                ("Diff".to_owned(), Body::Diff { rows, lines: diff })
+            } else {
+                (
+                    "Block".to_owned(),
+                    Body::Block {
+                        role: role_of(text).to_owned(),
+                        rows,
+                        lines: text.to_vec(),
+                        spans: segment_spans,
+                    },
+                )
+            };
+            components.push(Component {
+                id,
+                component,
+                source,
+                body,
+            });
+        }
     }
     // The root's children are only known once every block has been walked.
     if let Some(Body::Column {
@@ -347,6 +399,130 @@ fn as_diff(lines: &[String], spans: &[Vec<InlineSpan>]) -> Option<Vec<DiffLine>>
             })
             .collect(),
     )
+}
+
+/// A stretch of a transcript block that is one thing.
+struct Segment {
+    /// First row of the stretch.
+    first: usize,
+    /// One past its last row.
+    last: usize,
+    /// True when every line in it is a tool line.
+    tool: bool,
+}
+
+/// Splits one block into runs of tool lines and runs of everything else.
+fn segments(lines: &[String], first: usize, last: usize) -> Vec<Segment> {
+    if first >= last {
+        return Vec::new();
+    }
+    let mut found = Vec::new();
+    let mut start = first;
+    let mut tool = is_tool_line(&lines[first]);
+    for (row, line) in lines.iter().enumerate().take(last).skip(first + 1) {
+        let row_is_tool = is_tool_line(line);
+        if row_is_tool != tool {
+            found.push(Segment {
+                first: start,
+                last: row,
+                tool,
+            });
+            start = row;
+            tool = row_is_tool;
+        }
+    }
+    found.push(Segment {
+        first: start,
+        last,
+        tool,
+    });
+    found
+}
+
+/// Whether a line is a tool line.
+fn is_tool_line(line: &str) -> bool {
+    line.trim_start().starts_with(TOOL_GLYPH)
+}
+
+/// The tool calls a run of tool lines describes.
+fn tool_calls(lines: &[String]) -> Vec<ToolCallLine> {
+    lines.iter().map(|line| parse_tool_line(line)).collect()
+}
+
+/// Reads one tool line: `♦ Edited notes.txt, explored 1 file +1 -1`.
+///
+/// The shape is taken from recorded screens rather than from documentation, so it is
+/// read leniently: a line with no tool word, or no counts, still becomes a call with
+/// whatever was there.
+fn parse_tool_line(line: &str) -> ToolCallLine {
+    let text = line.trim();
+    let body = text.strip_prefix(TOOL_GLYPH).unwrap_or(text).trim_start();
+    let (tool, rest) = match body.find(' ') {
+        Some(space) => (&body[..space], body[space + 1..].trim_start()),
+        None => (body, ""),
+    };
+    let target = target_of(rest);
+    ToolCallLine {
+        status: "done".to_owned(),
+        tool: tool.to_owned(),
+        target: (!target.is_empty()).then(|| target.to_owned()),
+        added: count_after(rest, '+'),
+        removed: count_after(rest, '-'),
+        text: text.to_owned(),
+    }
+}
+
+/// The target a tool line names: `notes.txt` out of `notes.txt, explored 1 file`.
+///
+/// A terminal row runs to the edge of the screen, so the rest of a tool line holds
+/// padding and whatever the application draws in its gutter — a scrollbar, a
+/// timestamp. Two or more spaces separate one column from another and a comma
+/// separates the target from the sentence after it, so the target ends at whichever
+/// comes first. Without this a real frame yields `notes.txt` followed by forty spaces
+/// and the scrollbar glyph, which was the first thing a captured screen proved.
+fn target_of(rest: &str) -> &str {
+    let mut end = rest.len();
+    let mut spaces = 0;
+    for (index, character) in rest.char_indices() {
+        if character == ',' {
+            end = end.min(index);
+            break;
+        }
+        if character == ' ' {
+            spaces += 1;
+            if spaces == 2 {
+                end = end.min(index.saturating_sub(1));
+                break;
+            }
+        } else {
+            spaces = 0;
+        }
+    }
+    rest[..end].trim()
+}
+
+/// The number in `<sign><digits>`, when the text holds one.
+///
+/// The sign must not follow a word character, so `explored 1 file` cannot contribute
+/// a negative count and `a-b` is not read as `-b`.
+fn count_after(text: &str, sign: char) -> Option<u32> {
+    let characters: Vec<char> = text.chars().collect();
+    for index in 0..characters.len().saturating_sub(1) {
+        if characters[index] != sign || !characters[index + 1].is_ascii_digit() {
+            continue;
+        }
+        if index > 0 && characters[index - 1].is_alphanumeric() {
+            continue;
+        }
+        let digits: String = characters[index + 1..]
+            .iter()
+            .take_while(|character| character.is_ascii_digit())
+            .collect();
+        if let Ok(count) = digits.parse() {
+            return Some(count);
+        }
+    }
+    None
 }
 
 /// The runs of a line that were drawn with a non-default style.
@@ -610,7 +786,7 @@ mod tests {
             .iter()
             .filter_map(|component| match &component.body {
                 Body::Block { role, .. } => Some(role.as_str()),
-                Body::Column { .. } | Body::Diff { .. } => None,
+                Body::Column { .. } | Body::Diff { .. } | Body::ToolCall { .. } => None,
             })
             .collect();
         assert_eq!(roles, vec!["text", "prompt"]);
@@ -688,5 +864,74 @@ mod tests {
             Provenance::Seen,
             "a block that only exists in the later frame cannot have been carried"
         );
+    }
+
+    #[test]
+    fn a_transcript_splits_at_its_tool_lines() {
+        // The shape recorded from a real screen: prose, a tool line, then more prose,
+        // all inside one block of non-blank rows. The tool call must come out as its
+        // own component, not be buried in the paragraph.
+        let page = page_from_frame(
+            &frame_of(
+                &[
+                    "I will update it.",
+                    "  ♦ Read notes.txt",
+                    "  ♦ Edited notes.txt, explored 1 file +1 -1",
+                    "The second line is now BETA.",
+                ],
+                70,
+            ),
+            "s",
+        );
+        let names: Vec<&str> = page
+            .create_surface
+            .components
+            .iter()
+            .map(|component| component.component.as_str())
+            .collect();
+        assert_eq!(
+            names,
+            vec!["Column", "Block", "ToolCall", "Block"],
+            "{page:?}"
+        );
+
+        let call = page
+            .create_surface
+            .components
+            .iter()
+            .find(|component| component.component == "ToolCall")
+            .expect("the tool run must be a ToolCall");
+        let Body::ToolCall { calls, rows } = &call.body else {
+            panic!("a ToolCall component must carry calls: {call:?}");
+        };
+        assert_eq!(rows, &[1, 3]);
+        assert_eq!(calls.len(), 2, "{calls:?}");
+        assert_eq!(calls[0].tool, "Read");
+        assert_eq!(calls[0].target.as_deref(), Some("notes.txt"));
+        assert_eq!(calls[0].added, None, "a read cannot add lines");
+        assert_eq!(calls[1].tool, "Edited");
+        assert_eq!(calls[1].added, Some(1));
+        assert_eq!(calls[1].removed, Some(1));
+        assert_eq!(calls[1].status, "done");
+    }
+
+    #[test]
+    fn a_word_before_the_sign_is_not_a_count() {
+        // explored 1 file must not become a removal count, and neither must a
+        // hyphen inside a word.
+        let call = parse_tool_line("♦ Edited a-b.txt, explored 1 file");
+        assert_eq!(call.tool, "Edited");
+        assert_eq!(call.added, None);
+        assert_eq!(call.removed, None);
+        assert_eq!(call.target.as_deref(), Some("a-b.txt"));
+    }
+
+    #[test]
+    fn a_target_ends_before_the_padding_and_the_gutter() {
+        // Read off a real frame: the row runs to the screen edge, so the target is
+        // followed by padding and then the scrollbar the application draws there.
+        let call = parse_tool_line("  ♦ Read notes.txt                                        █");
+        assert_eq!(call.target.as_deref(), Some("notes.txt"), "{call:?}");
+        assert_eq!(call.tool, "Read");
     }
 }
