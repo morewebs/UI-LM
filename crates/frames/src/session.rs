@@ -324,7 +324,12 @@ fn invalid_data(path: &Path, error: &serde_json::Error) -> io::Error {
 /// are read by a human and ordered by a script that needs nothing more than a
 /// lexical sort, and RFC 3339 in UTC gives both; a dependency to print a date is a
 /// dependency the rig does not otherwise need.
-fn timestamp(now: SystemTime) -> String {
+///
+/// Public because a caller stamps the record's `started_at` itself, before the
+/// writer exists: `finish` stamps `ended_at`, but only the capture knows when it
+/// began. Making it reachable is one keyword; copying it into the binary would put
+/// a second copy of the session format's timestamp in the tree to drift.
+pub fn timestamp(now: SystemTime) -> String {
     let seconds = now
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())

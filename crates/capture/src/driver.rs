@@ -51,7 +51,12 @@ use portable_pty::{Child, CommandBuilder, MasterPty, PtySize};
 /// `TERM` that promises colour and a `COLORTERM` that promises 24-bit colour,
 /// applications downgrade or refuse to draw, and the recorded frames would not be
 /// the frames the application draws for a real user.
-const DEFAULT_ENV: [(&str, &str); 2] = [("TERM", "xterm-256color"), ("COLORTERM", "truecolor")];
+///
+/// Public because it is also part of what a session records: the environment a
+/// recorded screen was drawn in is not reproducible from the caller's overrides
+/// alone, and the recorder reads these from here rather than keeping a second copy
+/// of the defaults that could drift from the ones the child actually got.
+pub const DEFAULT_ENV: [(&str, &str); 2] = [("TERM", "xterm-256color"), ("COLORTERM", "truecolor")];
 
 /// Size of the buffer the reader thread hands over at a time.
 const READ_CHUNK: usize = 8 * 1024;

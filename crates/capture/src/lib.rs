@@ -2,12 +2,14 @@
 //!
 //! The binary in `main.rs` is a thin shell around this library; the types a
 //! recording session is built from live here so the integration tests can reach
-//! them. The command line arrives in a later task.
+//! them. What the shell decides is *when* a screen is a frame and what is true
+//! about it; what a frame is, and how it is written to disk, lives in
+//! `ui-lm-frames`.
 
 pub mod driver;
 pub mod mask;
 pub mod quiesce;
 
-pub use driver::{Driver, SessionConfig};
+pub use driver::{Driver, SessionConfig, DEFAULT_ENV};
 pub use mask::{classify, Semantics};
 pub use quiesce::Quiescer;
