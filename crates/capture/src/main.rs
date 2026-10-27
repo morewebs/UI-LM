@@ -43,7 +43,8 @@ use anyhow::{bail, Context, Result};
 use clap::{Args, Parser, Subcommand};
 
 use ui_lm_capture::{
-    added_environment, child_environment, frame_from_screen, Driver, Quiescer, SessionConfig,
+    added_environment, child_environment, events, frame_from_screen, Driver, Quiescer,
+    SessionConfig,
 };
 use ui_lm_frames::{timestamp, Frame, SessionRecord, SessionWriter};
 
@@ -133,6 +134,17 @@ struct Record {
     /// The program to run, and its arguments, after `--`.
     #[arg(last = true, required = true, num_args = 1.., value_name = "COMMAND")]
     command: Vec<String>,
+
+    /// Root of the program's own event store, if it keeps one.
+    ///
+    /// Defaults to `<home>/.grok/sessions`. The recorder watches this recording's
+    /// event stream there so it can tell a change the program reported from one
+    /// nothing explains — the difference between a spinner tick and real content.
+    /// Point it elsewhere to record another program, or leave the store out of
+    /// reach: frames then carry no event range and the volatile mask stays empty,
+    /// which is honest rather than wrong.
+    #[arg(long, value_name = "DIR")]
+    events: Option<PathBuf>,
 }
 
 fn main() -> ExitCode {
@@ -192,6 +204,17 @@ fn record(args: Record) -> Result<ExitCode> {
     // whatever credential the application needs exported.
     let child_cwd = cfg.working_directory()?;
     let child_env = child_environment(&cfg.env);
+    // The program's own event stream, when it keeps one. The tap resolves the
+    // session directory lazily, because the application creates it after it
+    // starts, so this is cheap here and may find nothing for the first few polls.
+    let mut tap = args
+        .events
+        .clone()
+        .or_else(events::default_store)
+        .map(|store| events::EventTap::new(store, child_cwd.clone()));
+    // Where the stream stood when the last frame was emitted. `None` means no
+    // frame has been emitted yet; the first frame is unclassified regardless.
+    let mut stream_at_previous_frame: Option<u64> = None;
     // The record is known before the session runs, except for how it ended: the
     // writer completes it in `finish`.
     let session = SessionRecord {
@@ -255,13 +278,28 @@ fn record(args: Record) -> Result<ExitCode> {
         let settled =
             quiescer.observe(Instant::now(), bytes_read) || (stream_ended && unrecorded_output);
         if settled {
+            // Did the program report anything since the frame before this one? A
+            // longer event stream says yes. Where the stream cannot be found the
+            // answer is "assume it may have", which keeps the mask from calling
+            // real content noise.
+            let stream_now = tap.as_mut().and_then(|tap| tap.length());
+            let (event_between, event_range) = match (stream_now, stream_at_previous_frame) {
+                (Some(now), Some(before)) => (now > before, Some((before, now))),
+                (Some(now), None) => (true, Some((0, now))),
+                (None, _) => (true, None),
+            };
             emit_frame(
                 &driver,
                 &mut writer,
                 &mut quiescer,
                 &mut previous,
                 typed_since_frame,
+                event_between,
+                event_range,
             )?;
+            if let Some(now) = stream_now {
+                stream_at_previous_frame = Some(now);
+            }
             frames += 1;
             typed_since_frame = false;
             unrecorded_output = false;
@@ -425,12 +463,16 @@ fn emit_frame(
     quiescer: &mut Quiescer,
     previous: &mut Option<Frame>,
     keystroke_between: bool,
+    event_between: bool,
+    acp_event_range: Option<(u64, u64)>,
 ) -> Result<()> {
     let frame = frame_from_screen(
         driver.screen(),
         quiescer.take_seq(),
         previous.as_ref(),
         keystroke_between,
+        event_between,
+        acp_event_range,
     );
     writer
         .append(&frame)

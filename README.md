@@ -38,7 +38,16 @@ A frame exists only at a **settled** point — 150 ms of quiet. An animating scr
 
 **Not proven, and not claimed:**
 
-- **Volatile-span masking is inert.** The classifier is implemented and tested, but no event stream is wired into the recorder, so every recorded frame carries `volatile: []`. Spinner and clock changes are recorded as content. Any dataset built from these frames needs the mask wired first.
+- **Volatile-span masking needs the program's event stream.** The classifier is
+  implemented and tested, and the recorder now follows the application's own ACP
+  event stream (`--events`, default `~/.grok/sessions`) so it can tell a spinner
+  tick from a reported change. On a real recording the mask named exactly the
+  status-line cells whose spinner and clock moved while the event stream did not
+  grow. Where no event stream can be found the mask stays empty on purpose: an
+  unknown event is never assumed absent. See [the event tap
+  note](docs/reports/2026-10-27-event-tap.md). Frames recorded before that work
+  carry `volatile: []` and should be re-captured before anything is trained on
+  them.
 - **Alt-screen frames depend on the pty host, not the emulator.** Whether a child's
   `ESC[?1049h` reaches the rig is decided by the host: one Windows conhost consumed
   the switch and re-rendered a delta, while a GitHub `windows-latest` runner

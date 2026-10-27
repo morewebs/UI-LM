@@ -6,11 +6,13 @@
 //! how it is written to disk, lives in `ui-lm-frames`.
 
 pub mod driver;
+pub mod events;
 pub mod mask;
 pub mod quiesce;
 pub mod screen;
 
 pub use driver::{added_environment, child_environment, Driver, SessionConfig, DEFAULT_ENV};
+pub use events::EventTap;
 pub use mask::{classify, Semantics};
 pub use quiesce::Quiescer;
 pub use screen::frame_from_screen;
