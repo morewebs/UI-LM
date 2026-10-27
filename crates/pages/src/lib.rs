@@ -168,6 +168,59 @@ fn check_rows(problems: &mut Vec<String>, id: &str, rows: &[u16; 2]) {
     }
 }
 
+/// The screen text a page describes, one entry per row.
+///
+/// This is the inverse of describing a screen: a page is not a copy of the grid, so
+/// the fact that it can be turned back into the same characters is the property that
+/// says nothing was lost on the way. It is checked for every page the corpus produces
+/// (see `audit_pages`), which makes it a test over real screens rather than a claim.
+///
+/// Blank rows carry an empty string. A row inside a component's span that component
+/// does not name stays empty, which is what a blank row is.
+pub fn render_text(page: &Envelope) -> Vec<String> {
+    let mut placed: Vec<(u16, &str)> = Vec::new();
+    for component in &page.create_surface.components {
+        match &component.body {
+            Body::Block {
+                rows: span, lines, ..
+            } => {
+                for (offset, line) in lines.iter().enumerate() {
+                    let row = span[0].saturating_add(u16::try_from(offset).unwrap_or(u16::MAX));
+                    placed.push((row, line.as_str()));
+                }
+            }
+            Body::Diff { rows: span, lines } => {
+                for (offset, line) in lines.iter().enumerate() {
+                    let row = span[0].saturating_add(u16::try_from(offset).unwrap_or(u16::MAX));
+                    placed.push((row, line.text.as_str()));
+                }
+            }
+            Body::ToolCall {
+                rows: span, calls, ..
+            } => {
+                for (offset, call) in calls.iter().enumerate() {
+                    let row = span[0].saturating_add(u16::try_from(offset).unwrap_or(u16::MAX));
+                    placed.push((row, call.text.as_str()));
+                }
+            }
+            Body::Meter {
+                rows: span, text, ..
+            } => placed.push((span[0], text.as_str())),
+            Body::Column { .. } => {}
+        }
+    }
+    let height = placed
+        .iter()
+        .map(|(row, _)| *row)
+        .max()
+        .map_or(0, |last| usize::from(last) + 1);
+    let mut screen = vec![String::new(); height];
+    for (row, text) in placed {
+        screen[usize::from(row)] = text.to_owned();
+    }
+    screen
+}
+
 /// Where a component's content came from.
 ///
 /// Only `Seen` is produced today. The other variants exist so that a slice which
@@ -607,9 +660,16 @@ fn tool_calls(lines: &[String]) -> Vec<ToolCallLine> {
 /// The shape is taken from recorded screens rather than from documentation, so it is
 /// read leniently: a line with no tool word, or no counts, still becomes a call with
 /// whatever was there.
+///
+/// `text` keeps the line exactly as drawn, leading indent included: rendering a page
+/// back to a screen has to put the glyph where the application put it, and trimming
+/// here would silently move it to the margin.
 fn parse_tool_line(line: &str) -> ToolCallLine {
-    let text = line.trim();
-    let body = text.strip_prefix(TOOL_GLYPH).unwrap_or(text).trim_start();
+    let body = line
+        .trim_start()
+        .strip_prefix(TOOL_GLYPH)
+        .unwrap_or(line.trim_start())
+        .trim_start();
     let (tool, rest) = match body.find(' ') {
         Some(space) => (&body[..space], body[space + 1..].trim_start()),
         None => (body, ""),
@@ -621,7 +681,7 @@ fn parse_tool_line(line: &str) -> ToolCallLine {
         target: (!target.is_empty()).then(|| target.to_owned()),
         added: count_after(rest, '+'),
         removed: count_after(rest, '-'),
-        text: text.to_owned(),
+        text: line.to_owned(),
     }
 }
 
@@ -1268,5 +1328,39 @@ mod tests {
             problems.iter().any(|problem| problem.contains("span 0..9")),
             "a span past the line must be reported: {problems:?}"
         );
+    }
+
+    #[test]
+    fn a_page_turns_back_into_the_screen_it_described() {
+        // The lossless property, on a screen with a blank separator, a prompt line and
+        // a tool line: what comes back must be the text that went in.
+        let frame = frame_of(
+            &[
+                "Grok Build",
+                "",
+                "  > hello",
+                "  ♦ Read notes.txt",
+                "1.3K / 500K │ [Dashboard]",
+            ],
+            60,
+        );
+        let page = page_from_frame(&frame, "s");
+        let screen = render_text(&page);
+        assert_eq!(
+            screen,
+            vec![
+                "Grok Build".to_owned(),
+                String::new(),
+                "  > hello".to_owned(),
+                "  ♦ Read notes.txt".to_owned(),
+                "1.3K / 500K │ [Dashboard]".to_owned(),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_blank_screen_renders_as_nothing() {
+        let page = page_from_frame(&frame_of(&["", ""], 5), "s");
+        assert!(render_text(&page).is_empty());
     }
 }

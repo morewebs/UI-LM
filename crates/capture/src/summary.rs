@@ -9,7 +9,7 @@
 use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use ui_lm_frames::{read_frames, read_orphaned_frames, Frame};
+use ui_lm_frames::{decode_grid, read_frames, read_orphaned_frames, Frame};
 
 /// The counts a corpus is argued about with.
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -171,6 +171,34 @@ pub fn audit_pages(roots: &[PathBuf]) -> std::io::Result<Vec<Violation>> {
                         problem,
                     });
                 }
+                // The lossless property: a page that cannot be turned back into the
+                // screen it describes has dropped something, and every later stage
+                // would inherit the loss.
+                if let Some(frame) = frames.get(index) {
+                    let expected = screen_text(frame);
+                    for (row, rendered) in ui_lm_pages::render_text(page).iter().enumerate() {
+                        let Some(source) = expected.get(row) else {
+                            violations.push(Violation {
+                                session: dir.display().to_string(),
+                                seq: u32::try_from(index).unwrap_or(u32::MAX),
+                                problem: format!(
+                                    "the page names row {row}, which the screen does not have"
+                                ),
+                            });
+                            continue;
+                        };
+                        if rendered != source {
+                            violations.push(Violation {
+                                session: dir.display().to_string(),
+                                seq: u32::try_from(index).unwrap_or(u32::MAX),
+                                problem: format!(
+                                    "row {row} reads {rendered:?} in the page and {source:?} on \
+                                     the screen"
+                                ),
+                            });
+                        }
+                    }
+                }
             }
         }
     }
@@ -240,6 +268,24 @@ fn frame_problems(frame: &Frame) -> Vec<String> {
         }
     }
     problems
+}
+
+/// The text a frame shows, one entry per row, right-trimmed.
+///
+/// Right-trimmed for the same reason a block's lines are: trailing blanks are the
+/// absence of content, not content, and a comparison that counted them would fail on
+/// every screen.
+fn screen_text(frame: &Frame) -> Vec<String> {
+    decode_grid(&frame.runs, frame.rows, frame.cols)
+        .iter()
+        .map(|row| {
+            row.iter()
+                .map(|cell| cell.ch)
+                .collect::<String>()
+                .trim_end()
+                .to_owned()
+        })
+        .collect()
 }
 
 #[cfg(test)]
