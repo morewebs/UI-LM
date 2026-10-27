@@ -52,7 +52,7 @@ foreach ($scenario in $scenarios) {
     }
     $keys = Join-Path $scratch ($scenario.name + ".keys")
     Set-Content -LiteralPath $keys -Value $scenario.keys -Encoding ASCII
-    Write-Host "recording $($scenario.name)…"
+    Write-Host "recording $($scenario.name)..."
     $project = Join-Path $scratch ("project-" + $scenario.name)
     New-Item -ItemType Directory -Force -Path $project | Out-Null
     Set-Content -LiteralPath (Join-Path $project "notes.txt") -Value @("alpha", "beta") -Encoding ASCII
@@ -65,18 +65,21 @@ foreach ($scenario in $scenarios) {
 
 # Programs that are not the application under study, so the corpus is not one program's
 # idea of what a screen looks like.
-Write-Host "recording an ordinary command…"
+Write-Host "recording an ordinary command..."
 $dirOut = Join-Path $sessions "cmd-dir"
 & $capture record --rows 24 --cols 80 --out $dirOut --stop-after 3000 -- cmd /c "dir /b /s" | Out-Null
 if (Test-Path (Join-Path $dirOut "session.json")) { $recorded += $dirOut }
 
-Write-Host "recording a shell…"
+Write-Host "recording a shell..."
 $shOut = Join-Path $sessions "powershell-list"
 & $capture record --rows 24 --cols 90 --out $shOut --stop-after 3000 -- powershell -NoProfile -Command "Get-ChildItem -Name" | Out-Null
 if (Test-Path (Join-Path $shOut "session.json")) { $recorded += $shOut }
 
 if ($recorded.Count -eq 0) { throw "nothing was recorded" }
 
+# An output path means "here", not "wherever the shell was launched": resolve it against
+# the repository, which is where a person running this expects to find it.
+if (-not [System.IO.Path]::IsPathRooted($Out)) { $Out = Join-Path $repo $Out }
 $pairs = Join-Path $Out "pairs.jsonl"
 New-Item -ItemType Directory -Force -Path $Out | Out-Null
 $arguments = @("dataset", "--out", $pairs, "--scrub")
