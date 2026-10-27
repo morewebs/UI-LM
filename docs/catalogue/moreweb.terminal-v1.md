@@ -198,6 +198,20 @@ A side effect worth knowing: that overlay's bottom border is scrolled off, and t
 box touches it below. Blocks now split at every opening border, so the overlay and the
 composer are two components rather than one thirty-three-line "composer" — which is what
 the first attempt produced.
+## The two masking rules
+
+A frame records cells and marks the ones that are not content:
+
+| reason | when |
+|---|---|
+| `no_semantic_change` | the cells changed with no event and no keystroke behind the change |
+| `known_glyph` | the cell holds `U+FFFD`, a byte the pty host could not represent at all |
+
+The second rule is narrow on purpose. A wider "glyphs that look wrong" list would be a
+list a new font invalidates — and a real recording produced the case it covers: CP437
+box-drawing bytes arrived as replacement characters, and a model taught that a row of them
+is meaningful would learn nothing true. Verified on a capture: four replacement characters,
+one span, `known_glyph`.
 ## Guarantees
 
 Three properties are checked on every corpus (`ui-lm-capture audit`) and, for the

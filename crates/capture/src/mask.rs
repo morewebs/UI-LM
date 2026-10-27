@@ -24,6 +24,47 @@
 
 use ui_lm_frames::{decode_grid, Frame, MaskReason, Span};
 
+/// The cells whose glyph the emulator could not represent at all.
+///
+/// This is the second masking rule, and it exists because a real recording produced it:
+/// the pty host decodes an application's bytes as an OEM code page, so a program writing
+/// CP437 box-drawing bytes delivered `U+FFFD` (and `0xB3` arrived as `ĳ`) into the grid.
+/// Those cells are an encoding failure, not content — a model taught that a row of
+/// replacement characters is meaningful would learn nothing true — so they are recorded,
+/// and marked, with [`MaskReason::KnownGlyph`].
+///
+/// The rule is deliberately narrow: only the replacement character, which is the one glyph
+/// that by definition stands for "this byte could not be decoded". Anything wider — a set
+/// of "glyphs that look wrong" — would be a list that a new font invalidates, and the
+/// module's own notes already say where that road goes.
+pub fn unrepresentable_spans(next: &Frame) -> Vec<Span> {
+    let grid = decode_grid(&next.runs, next.rows, next.cols);
+    let mut spans = Vec::new();
+    for (row, cells) in grid.iter().enumerate() {
+        let mut col = 0;
+        while col < cells.len() {
+            if cells[col].ch != REPLACEMENT {
+                col += 1;
+                continue;
+            }
+            let start = col;
+            while col < cells.len() && cells[col].ch == REPLACEMENT {
+                col += 1;
+            }
+            spans.push(Span {
+                row: row as u16,
+                col: start as u16,
+                len: (col - start) as u16,
+                reason: MaskReason::KnownGlyph,
+            });
+        }
+    }
+    spans
+}
+
+/// The character a decoder produces when the bytes could not be represented.
+const REPLACEMENT: char = '\u{FFFD}';
+
 /// What the application did between two frames.
 ///
 /// The two signals are separate because they answer separate questions — did the
@@ -292,5 +333,24 @@ mod tests {
             vec![(0, 2, 2), (1, 0, 2), (2, 1, 1), (2, 3, 1), (3, 0, 2)],
             "contiguous cells merge, a gap splits, and no span crosses a row edge"
         );
+    }
+
+    #[test]
+    fn replacement_characters_are_marked_known_glyph() {
+        // The glyph rule, on the case a real recording produced: bytes the pty host could
+        // not carry arrive as U+FFFD, which is an encoding failure and not content.
+        let frame = frame_from_chars(0, 1, 6, &[vec!['\u{FFFD}', '\u{FFFD}', 'a', 'b', ' ', ' ']]);
+        let spans = super::unrepresentable_spans(&frame);
+        assert_eq!(spans.len(), 1, "{spans:?}");
+        assert_eq!(spans[0].row, 0);
+        assert_eq!(spans[0].col, 0);
+        assert_eq!(spans[0].len, 2);
+        assert_eq!(spans[0].reason, MaskReason::KnownGlyph);
+    }
+
+    #[test]
+    fn ordinary_text_has_no_known_glyph_spans() {
+        let frame = frame_from_chars(0, 1, 6, &[vec!['a', 'b', 'c', ' ', ' ', ' ']]);
+        assert!(super::unrepresentable_spans(&frame).is_empty());
     }
 }

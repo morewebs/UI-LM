@@ -94,6 +94,13 @@ pub fn frame_from_screen(
         ),
         None => Vec::new(),
     };
+    // Encoding failures are marked whatever the events say: a replacement character is
+    // not content the application drew, and it is not the application reporting anything
+    // either. A first frame gets the same treatment, because a first screen full of
+    // replacement characters is exactly as unreadable as a later one.
+    frame
+        .volatile
+        .extend(crate::mask::unrepresentable_spans(&frame));
     frame
 }
 
