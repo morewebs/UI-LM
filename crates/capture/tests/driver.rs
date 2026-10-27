@@ -245,6 +245,9 @@ fn keystrokes_reach_the_child() {
         answered,
         "the child never rendered the line it was sent, so the keystrokes did not reach it"
     );
+    // Nothing this session owed the child was refused: the write queue only
+    // sheds answers when a child has stopped collecting them.
+    assert_eq!(d.dropped_replies(), 0);
 }
 
 #[test]
@@ -275,4 +278,88 @@ fn resize_resizes_the_emulated_screen() {
     let g = grid_from_screen(d.screen(), 30);
     assert_eq!(g.len(), 10);
     assert!(g.iter().all(|row| row.len() == 30));
+}
+
+/// How long the query-flood test keeps reading. It does not wait for EOF: on
+/// Windows the flood child never exits (see that test), so the test measures a
+/// fixed window of reading instead of a stream end.
+const FLOOD_WINDOW: Duration = Duration::from_secs(2);
+
+#[test]
+fn a_child_that_floods_cursor_queries_without_reading_does_not_stall_the_reader() {
+    let _watchdog = arm_watchdog(
+        "a_child_that_floods_cursor_queries_without_reading_does_not_stall_the_reader",
+    );
+    // The child types a file of twenty thousand cursor queries and never reads its
+    // own input, so every answer it is owed piles up uncollected. Answering those
+    // inline — a write to a pty whose child is not reading — is the hang this test
+    // exists to catch: `read_some` must keep returning so a record loop keeps
+    // running, with the answers it cannot deliver dropped and counted instead of
+    // queued without limit.
+    //
+    // On Windows conhost answers a client's own DSR itself and stops consuming the
+    // client's output once the client is not collecting answers, so the flood does
+    // not reach the reader from here (measured: a child's `A ESC [ 6 n B` arrives
+    // as `AB`). The read-loop assertions still run on both platforms; the flood
+    // assertions are reachable on Unix, where the child's queries are plain bytes.
+    let queries = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(queries.path(), "\x1b[6n".repeat(20_000)).unwrap();
+    // The path goes into the command line unquoted: `cmd /c` re-parses its
+    // arguments and mangles embedded quotes. A temporary path holds no spaces on
+    // the platforms this runs on; if one ever did, the child would fail loudly
+    // here rather than quietly test nothing.
+    let path = queries.path().display().to_string();
+    let cfg = SessionConfig {
+        command: if cfg!(windows) {
+            "cmd".into()
+        } else {
+            "sh".into()
+        },
+        args: if cfg!(windows) {
+            vec!["/c".into(), format!("type {path}")]
+        } else {
+            vec!["-c".into(), format!("cat '{path}'")]
+        },
+        rows: 5,
+        cols: 20,
+        env: vec![],
+    };
+    let mut d = Driver::spawn(&cfg).unwrap();
+    let deadline = Instant::now() + FLOOD_WINDOW;
+    let mut buf = [0u8; 4096];
+    let mut reads = 0usize;
+    let mut bytes = 0usize;
+    let mut queries_seen = 0usize;
+    while Instant::now() < deadline {
+        match d.read_some(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => {
+                bytes += n;
+                queries_seen += buf[..n].windows(4).filter(|w| *w == b"\x1b[6n").count();
+                reads += 1;
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => reads += 1,
+            Err(e) => panic!("read failed: {e}"),
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    let dropped = d.dropped_replies();
+    // Roughly 400 reads fit in the window at the sleep above. Anything near the
+    // count means the read path never stopped returning: had it blocked inside a
+    // reply write, the watchdog would have aborted the run instead.
+    assert!(
+        reads >= 50,
+        "the read loop stopped observing the stream: {reads} reads in {FLOOD_WINDOW:?}"
+    );
+    assert!(bytes > 0, "the session produced nothing at all");
+    if !cfg!(windows) {
+        assert!(
+            queries_seen > 1_000,
+            "the flood never reached the reader: {queries_seen} queries in {bytes} bytes"
+        );
+        assert!(
+            dropped > 0,
+            "answers past the write queue must be dropped and counted, but none were: {dropped}"
+        );
+    }
 }

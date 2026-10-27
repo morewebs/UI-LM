@@ -14,6 +14,13 @@
 //! decides for itself when to emit a frame, and a slow child cannot turn into a
 //! truncated session.
 //!
+//! Nothing on the read path writes to the child. `portable-pty` offers no
+//! non-blocking write either, and a write to a child that has stopped reading its
+//! input blocks until the child reads — so answering a cursor query inline would
+//! make the read path wait on the child's stdin, a hang inside the one function a
+//! recorder relies on never to hang. Every write is queued instead, and one writer
+//! thread drains the queue: it is the only thing that touches the pty's write side.
+//!
 //! Two behaviours of the stream are the driver's responsibility rather than the
 //! caller's, because they are what makes a pty host a host:
 //!
@@ -24,11 +31,15 @@
 //!   the reader having ended — never from a moment of quiet.
 //! - **Answering the child's cursor-position query.** A terminal is expected to
 //!   answer `ESC [ 6 n`, and ConPTY's client does not start until it gets an
-//!   answer, so a host that never replies captures nothing at all.
+//!   answer, so a host that never replies captures nothing at all. Each reply
+//!   carries the cursor position as of the point the query appears in the stream
+//!   — the position the child asked about — and is queued, so that a child which
+//!   floods queries without reading the answers cannot stall the read path; the
+//!   queue is bounded, and replies that do not fit are dropped and counted.
 
 use std::collections::VecDeque;
 use std::io::{self, Read, Write};
-use std::sync::mpsc::{self, Receiver, TryRecvError};
+use std::sync::mpsc::{self, Receiver, SyncSender, TryRecvError, TrySendError};
 use std::thread::JoinHandle;
 
 use anyhow::{Context, Result};
@@ -44,6 +55,18 @@ const DEFAULT_ENV: [(&str, &str); 2] = [("TERM", "xterm-256color"), ("COLORTERM"
 
 /// Size of the buffer the reader thread hands over at a time.
 const READ_CHUNK: usize = 8 * 1024;
+
+/// How many writes may be waiting for the writer thread at once.
+///
+/// The ceiling exists for the one case the read path cannot control: a child that
+/// stops reading its input. A cursor-query reply is a few bytes and a flood of
+/// queries produces one reply per four bytes of output, so an unbounded queue
+/// would let such a child grow this process's memory without limit. This is also
+/// the cap on pending replies, since a reply is one of these writes: at most 64
+/// can ever be waiting, and one that does not fit is dropped and counted. Caller
+/// input shares the same ceiling rather than having one of its own. 64 pending
+/// writes is far more than a live session needs and is a fixed, small cost.
+const WRITE_QUEUE_CAP: usize = 64;
 
 /// What to run, and the screen to emulate it on.
 #[derive(Clone, Debug)]
@@ -68,9 +91,9 @@ pub struct Driver {
     /// Held in an `Option` so it can be closed deliberately: on ConPTY, closing
     /// it is what ends the reader's stream once the child has gone.
     master: Option<Box<dyn MasterPty + Send>>,
-    /// Writing here reaches the child's stdin. Also optional so that `drop` can
-    /// close it — which is the child's EOF — before joining the reader.
-    writer: Option<Box<dyn Write + Send>>,
+    /// The child's input: every write this driver makes goes through here, and no
+    /// other part of the driver can reach the pty's write side.
+    writes: WriteQueue,
     /// The spawned program, polled for its exit status.
     child: Box<dyn Child + Send + Sync>,
     /// The terminal emulator: every byte read from the pty is processed into it.
@@ -85,14 +108,105 @@ pub struct Driver {
     chunks: Receiver<Vec<u8>>,
     /// Bytes received from the channel but not yet handed to a caller.
     pending: VecDeque<u8>,
-    /// How much of [`CURSOR_QUERY`] has been matched so far, so a query split
+    /// How much of the cursor query has been matched so far, so a query split
     /// across two reads is still recognised.
     query_progress: usize,
+    /// The thread that performs every write to the child, so that producing a
+    /// write never waits for the child to read.
+    writer: Option<JoinHandle<()>>,
     /// The reader thread. Joined in `drop`, so it never outlives the driver.
     reader: Option<JoinHandle<()>>,
     /// Set once the reader thread has ended: from then on an empty `pending` is
     /// EOF rather than "wait a little longer".
     eof: bool,
+}
+
+/// One write the writer thread owes the child.
+enum WriteOp {
+    /// An answer to a cursor-position query.
+    Reply(Vec<u8>),
+    /// Bytes a caller handed to [`Driver::write_input`].
+    Input(Vec<u8>),
+}
+
+/// The hand-off between everything that produces writes and the one thread that
+/// performs them.
+///
+/// Nothing here blocks, and nothing here grows without limit: a write that does
+/// not fit is refused. For a cursor-query reply that refusal is final and counted
+/// — the child is not reading, and there is nothing useful to do about it — while
+/// for caller input it is reported, so the caller decides whether to retry.
+struct WriteQueue {
+    /// The channel to the writer thread; `None` once the session is over.
+    sender: Option<SyncSender<WriteOp>>,
+    /// Cursor-query replies refused because the queue was full.
+    dropped_replies: usize,
+}
+
+impl WriteQueue {
+    fn new(sender: SyncSender<WriteOp>) -> Self {
+        Self {
+            sender: Some(sender),
+            dropped_replies: 0,
+        }
+    }
+
+    /// Queues `reply` for the child, or drops it if it cannot be queued.
+    ///
+    /// Returns whether it was queued. Never waits, so the read path cannot be
+    /// stalled by a child that does not read its input; a reply the writer cannot
+    /// take — the queue is full, or the write side has already gone — is lost and
+    /// counts towards [`WriteQueue::dropped`]. Nothing here reports a failure: an
+    /// answer that cannot be delivered is not an error the read path could act on.
+    fn enqueue_reply(&mut self, reply: &str) -> bool {
+        let Some(sender) = self.sender.as_ref() else {
+            return false;
+        };
+        match sender.try_send(WriteOp::Reply(reply.as_bytes().to_vec())) {
+            Ok(()) => true,
+            Err(_) => {
+                self.dropped_replies += 1;
+                false
+            }
+        }
+    }
+
+    /// Queues `bytes` for the child's stdin, reporting rather than waiting when
+    /// the writer is behind.
+    ///
+    /// [`io::ErrorKind::WouldBlock`] means the queue is full and the caller may
+    /// retry; [`io::ErrorKind::BrokenPipe`] means the session's write side has
+    /// closed.
+    fn enqueue_input(&mut self, bytes: &[u8]) -> io::Result<()> {
+        let Some(sender) = self.sender.as_ref() else {
+            return Err(io::Error::new(
+                io::ErrorKind::BrokenPipe,
+                "the pty write side is closed",
+            ));
+        };
+        match sender.try_send(WriteOp::Input(bytes.to_vec())) {
+            Ok(()) => Ok(()),
+            Err(TrySendError::Full(_)) => Err(io::Error::new(
+                io::ErrorKind::WouldBlock,
+                "the pty write queue is full",
+            )),
+            Err(TrySendError::Disconnected(_)) => Err(io::Error::new(
+                io::ErrorKind::BrokenPipe,
+                "the pty write side is closed",
+            )),
+        }
+    }
+
+    /// How many cursor-query replies have been dropped because the queue was full.
+    fn dropped(&self) -> usize {
+        self.dropped_replies
+    }
+
+    /// Ends the queue: once the sender is gone the writer thread's `recv` fails,
+    /// and the thread drops the pty writer, which is the child's EOF.
+    fn close(&mut self) {
+        self.sender = None;
+    }
 }
 
 impl Driver {
@@ -125,7 +239,8 @@ impl Driver {
 
         // Taking the writer matters even when no input is ever sent: dropping it
         // sends EOF to the child, and not taking it would leave the child waiting
-        // for input that cannot arrive.
+        // for input that cannot arrive. It goes straight to the writer thread,
+        // which is the only thing that ever touches it.
         let writer = pair
             .master
             .take_writer()
@@ -134,6 +249,26 @@ impl Driver {
             .master
             .try_clone_reader()
             .context("failed to clone the pty reader")?;
+
+        let (write_ops, ops) = mpsc::sync_channel(WRITE_QUEUE_CAP);
+        let writer_thread = std::thread::Builder::new()
+            .name("pty-writer".into())
+            .spawn(move || {
+                let mut writer = writer;
+                while let Ok(op) = ops.recv() {
+                    let bytes = match op {
+                        WriteOp::Reply(bytes) | WriteOp::Input(bytes) => bytes,
+                    };
+                    // A failed write means the child has gone and nothing on this
+                    // side can be delivered to it; the read side is what reports
+                    // the end of the stream, so stop rather than spin.
+                    if writer.write_all(&bytes).is_err() {
+                        break;
+                    }
+                }
+                // Dropping the writer closes the child's stdin: its EOF.
+            })
+            .context("failed to spawn the pty writer thread")?;
 
         let (tx, chunks) = mpsc::channel();
         let thread = std::thread::spawn(move || {
@@ -160,12 +295,13 @@ impl Driver {
 
         Ok(Self {
             master: Some(pair.master),
-            writer: Some(writer),
+            writes: WriteQueue::new(write_ops),
             child,
             parser: vt100::Parser::new(cfg.rows, cfg.cols, 0),
             chunks,
             pending: VecDeque::new(),
             query_progress: 0,
+            writer: Some(writer_thread),
             reader: Some(thread),
             eof: false,
         })
@@ -186,6 +322,14 @@ impl Driver {
     /// with bytes waiting cannot carry them, and reporting progress of zero would
     /// end the caller's loop, so that is `WouldBlock` as well. `Ok(0)` therefore
     /// always means the stream has ended.
+    ///
+    /// Nothing here waits on the child, in any direction: no output is waited for
+    /// (that is `WouldBlock`), the child's exit is polled rather than waited for,
+    /// and the answers it is owed are queued for the writer thread instead of
+    /// being written here. A child that stops reading its input therefore cannot
+    /// stall a caller's record loop. The one thing beyond moving bytes is closing
+    /// this end of the pty once the child has exited — bounded, platform-side work
+    /// that is the only way the reader reaches the end of the stream.
     pub fn read_some(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.fill_pending();
         let n = buf.len().min(self.pending.len());
@@ -205,8 +349,15 @@ impl Driver {
         for (slot, byte) in buf[..n].iter_mut().zip(self.pending.drain(..n)) {
             *slot = byte;
         }
-        self.parser.process(&buf[..n]);
-        self.answer_cursor_queries(&buf[..n]);
+        let Self {
+            parser,
+            query_progress,
+            writes,
+            ..
+        } = self;
+        process_output(parser, query_progress, &buf[..n], |reply| {
+            writes.enqueue_reply(reply);
+        });
         Ok(n)
     }
 
@@ -215,9 +366,30 @@ impl Driver {
         self.parser.screen()
     }
 
-    /// Sends `bytes` to the child's stdin, as though they had been typed.
+    /// Queues `bytes` to be sent to the child's stdin, as though they had been
+    /// typed.
+    ///
+    /// The write itself happens on the writer thread, so this never waits for a
+    /// child that is not reading its input: [`io::ErrorKind::WouldBlock`] means
+    /// the queue is full and the bytes were not queued — the caller may retry —
+    /// and [`io::ErrorKind::BrokenPipe`] means the session's write side has
+    /// closed. A write that fails at the pty itself is not reported here either;
+    /// the read side is what reports the end of the stream. Input and
+    /// cursor-query replies share one bounded queue, so they reach the child in
+    /// the order the session produced them.
     pub fn write_input(&mut self, bytes: &[u8]) -> io::Result<()> {
-        self.write_raw(bytes)
+        self.writes.enqueue_input(bytes)
+    }
+
+    /// How many cursor-position replies were dropped because they could not be
+    /// queued — the write queue was full, or the session's write side had already
+    /// closed.
+    ///
+    /// Zero for any child that reads what it is sent. A non-zero count means a
+    /// child asked about the cursor and did not collect the answers; the replies
+    /// are dropped rather than queued without limit, so the session continues.
+    pub fn dropped_replies(&self) -> usize {
+        self.writes.dropped()
     }
 
     /// Resizes both the pty and the emulator: the child learns the new size, and
@@ -278,60 +450,68 @@ impl Driver {
             self.master.take();
         }
     }
+}
 
-    /// Answers every cursor-position query in `bytes`, so a program that asks the
-    /// terminal where the cursor is gets an answer instead of waiting for one.
-    ///
-    /// The query is `ESC [ 6 n` (DSR 6). The match is stateful because its bytes
-    /// can be split across reads. A failed reply is not reported: it means the
-    /// child has gone, and the read side reports the end of the stream on its own.
-    ///
-    /// `vt100` is a display model with no way to reply, so this cannot be left to
-    /// the emulator — and a host that never answers captures nothing at all, since
-    /// ConPTY's client does not start until its opening query is answered.
-    fn answer_cursor_queries(&mut self, bytes: &[u8]) {
-        for &byte in bytes {
-            self.query_progress = match (self.query_progress, byte) {
-                (_, b'\x1b') => 1,
-                (1, b'[') => 2,
-                (2, b'6') => 3,
-                (3, b'n') => {
-                    let (row, col) = self.parser.screen().cursor_position();
-                    // DSR replies are one-based.
-                    let reply = format!("\x1b[{};{}R", row + 1, col + 1);
-                    let _ = self.write_raw(reply.as_bytes());
-                    0
-                }
-                _ => 0,
-            };
-        }
+/// Feeds `bytes` through `parser`, reporting the reply owed for each
+/// cursor-position query at the point the query appears in the stream.
+///
+/// The query is `ESC [ 6 n` (DSR 6). The match is stateful — `progress` carries
+/// how much of the sequence has been matched — because its bytes can be split
+/// across reads, and the emulator is fed up to the query's last byte before the
+/// answer is taken, so a query followed by cursor movement in the same chunk gets
+/// the position the child asked about rather than the one the movement left
+/// behind. Every byte is processed exactly once.
+///
+/// `vt100` is a display model with no way to reply, so this cannot be left to the
+/// emulator — and a host that never answers captures nothing at all, since
+/// ConPTY's client does not start until its opening query is answered.
+fn process_output(
+    parser: &mut vt100::Parser,
+    progress: &mut usize,
+    bytes: &[u8],
+    mut on_query: impl FnMut(&str),
+) {
+    let mut fed = 0;
+    for (index, &byte) in bytes.iter().enumerate() {
+        *progress = match (*progress, byte) {
+            (_, b'\x1b') => 1,
+            (1, b'[') => 2,
+            (2, b'6') => 3,
+            (3, b'n') => {
+                parser.process(&bytes[fed..=index]);
+                fed = index + 1;
+                let (row, col) = parser.screen().cursor_position();
+                // DSR replies are one-based.
+                on_query(&format!("\x1b[{};{}R", row + 1, col + 1));
+                0
+            }
+            _ => 0,
+        };
     }
-
-    /// Writes straight to the pty: the one place bytes enter the child's input.
-    fn write_raw(&mut self, bytes: &[u8]) -> io::Result<()> {
-        let writer = self
-            .writer
-            .as_mut()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::BrokenPipe, "the pty writer is closed"))?;
-        writer.write_all(bytes)
+    if fed < bytes.len() {
+        parser.process(&bytes[fed..]);
     }
 }
 
 impl Drop for Driver {
     /// Ends the session without leaving anything running behind it.
     ///
-    /// The write side is closed first, so the child sees EOF and a well-behaved
-    /// program exits; a child that ignores it is terminated, because it is holding
-    /// the pty open and the reader thread's read would otherwise never return. The
-    /// pty is then closed, and the thread joined before the channel's receiver goes
-    /// away, so it can never be left appending to a channel whose other end has
-    /// been dropped.
+    /// The write queue is closed first, so the writer thread drops the pty's write
+    /// side — the child's EOF — and the reader's stream can end; a child that
+    /// ignores it is terminated, because it is holding the pty open and the reader
+    /// thread's read would otherwise never return. The pty is then closed, which
+    /// also releases a writer blocked on a child that stopped reading, and both
+    /// threads are joined before the channels' receivers go away, so neither can
+    /// be left sending into a channel whose other end has been dropped.
     fn drop(&mut self) {
-        self.writer.take();
+        self.writes.close();
         if matches!(self.child.try_wait(), Ok(None)) {
             let _ = self.child.kill();
         }
         self.master.take();
+        if let Some(thread) = self.writer.take() {
+            let _ = thread.join();
+        }
         if let Some(thread) = self.reader.take() {
             let _ = thread.join();
         }
@@ -346,5 +526,84 @@ fn pty_size(rows: u16, cols: u16) -> PtySize {
         cols,
         pixel_width: 0,
         pixel_height: 0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The replies `read_some` would enqueue for `bytes`, in stream order.
+    fn replies_for(parser: &mut vt100::Parser, progress: &mut usize, bytes: &[u8]) -> Vec<String> {
+        let mut replies = Vec::new();
+        process_output(parser, progress, bytes, |reply| {
+            replies.push(reply.to_owned());
+        });
+        replies
+    }
+
+    #[test]
+    fn a_cursor_query_is_answered_where_the_query_appears_in_the_stream() {
+        // "A" leaves the cursor on row 1, column 2 (one-based), so that is the
+        // position the query asks about. The escape after it moves the cursor to
+        // (5, 7); answering from the end of the chunk would claim 5;7, a cursor
+        // the child never had, and a program that saves that position to restore
+        // it later would restore the wrong one.
+        let mut parser = vt100::Parser::new(5, 20, 0);
+        let mut progress = 0;
+        let replies = replies_for(&mut parser, &mut progress, b"A\x1b[6n\x1b[5;7H");
+        assert_eq!(replies, ["\x1b[1;2R"]);
+        assert_eq!(parser.screen().cursor_position(), (4, 6));
+    }
+
+    #[test]
+    fn a_cursor_query_split_across_two_reads_is_answered_once() {
+        // The sequence can arrive cut in half; the stateful match must still
+        // recognise it, answer it once, and use the position from before the
+        // movement that follows it in the second read.
+        let mut parser = vt100::Parser::new(5, 20, 0);
+        let mut progress = 0;
+        assert!(replies_for(&mut parser, &mut progress, b"A\x1b[6").is_empty());
+        let replies = replies_for(&mut parser, &mut progress, b"n\x1b[5;7H");
+        assert_eq!(replies, ["\x1b[1;2R"]);
+        assert_eq!(parser.screen().cursor_position(), (4, 6));
+    }
+
+    #[test]
+    fn the_reply_queue_stops_at_its_cap_and_counts_what_it_drops() {
+        // No writer thread here: the queue is exactly as full as the pushes make
+        // it, which is the situation the read path has to survive — a child that
+        // has stopped reading the answers it asked for. The test would hang if
+        // enqueueing waited for room, which is the point of it.
+        assert_eq!(WRITE_QUEUE_CAP, 64);
+        let (sender, held_open) = mpsc::sync_channel(WRITE_QUEUE_CAP);
+        let mut queue = WriteQueue::new(sender);
+        for queued in 0..WRITE_QUEUE_CAP {
+            assert!(
+                queue.enqueue_reply("\x1b[1;2R"),
+                "reply {queued} should still fit below the cap"
+            );
+        }
+        assert_eq!(queue.dropped(), 0);
+        assert!(
+            !queue.enqueue_reply("\x1b[1;2R"),
+            "a reply past the cap must be refused, not queued"
+        );
+        assert!(!queue.enqueue_reply("\x1b[1;2R"));
+        assert_eq!(queue.dropped(), 2);
+        drop(held_open);
+    }
+
+    #[test]
+    fn a_closed_queue_refuses_writes_instead_of_panicking() {
+        let (sender, held_open) = mpsc::sync_channel(WRITE_QUEUE_CAP);
+        let mut queue = WriteQueue::new(sender);
+        queue.close();
+        assert!(!queue.enqueue_reply("\x1b[1;2R"));
+        let error = queue
+            .enqueue_input(b"abc")
+            .expect_err("input after the queue closed should be an error");
+        assert_eq!(error.kind(), io::ErrorKind::BrokenPipe);
+        drop(held_open);
     }
 }
