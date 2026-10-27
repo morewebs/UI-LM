@@ -12,7 +12,7 @@
 # scenario waits for a real program to draw, react and stop.
 
 param(
-    [string]$Out = "corpus",
+    [string]$OutDir = "corpus",
     [switch]$Keep,
     # The grok binary, when it should be part of the corpus.
     [string]$Grok = "grok.exe"
@@ -45,7 +45,7 @@ $scenarios = @(
 
 $recorded = @()
 foreach ($scenario in $scenarios) {
-    $out = Join-Path $sessions $scenario.name
+    $sessionOut = Join-Path $sessions $scenario.name
     if ($scenario.grok -and -not (Get-Command $Grok -ErrorAction SilentlyContinue)) {
         Write-Host "skipping $($scenario.name): $Grok is not on PATH"
         continue
@@ -57,10 +57,10 @@ foreach ($scenario in $scenarios) {
     New-Item -ItemType Directory -Force -Path $project | Out-Null
     Set-Content -LiteralPath (Join-Path $project "notes.txt") -Value @("alpha", "beta") -Encoding ASCII
     if ($scenario.grok) {
-        & $capture record --rows 40 --cols 120 --out $out --cwd $project --stop-after $scenario.stop `
+        & $capture record --rows 40 --cols 120 --out $sessionOut --cwd $project --stop-after $scenario.stop `
             --script $keys -- $Grok --cwd $project | Out-Null
     }
-    if (Test-Path (Join-Path $out "session.json")) { $recorded += $out }
+    if (Test-Path (Join-Path $sessionOut "session.json")) { $recorded += $sessionOut }
 }
 
 # Programs that are not the application under study, so the corpus is not one program's
@@ -79,13 +79,19 @@ if ($recorded.Count -eq 0) { throw "nothing was recorded" }
 
 # An output path means "here", not "wherever the shell was launched": resolve it against
 # the repository, which is where a person running this expects to find it.
-if (-not [System.IO.Path]::IsPathRooted($Out)) { $Out = Join-Path $repo $Out }
-$pairs = Join-Path $Out "pairs.jsonl"
-New-Item -ItemType Directory -Force -Path $Out | Out-Null
+if (-not [System.IO.Path]::IsPathRooted($OutDir)) { $OutDir = Join-Path $repo $OutDir }
+New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+$pairs = [System.IO.Path]::GetFullPath((Join-Path $OutDir "pairs.jsonl"))
+Write-Host "writing pairs to $pairs"
+if (Test-Path $pairs) { Remove-Item -LiteralPath $pairs -Force }
 $arguments = @("dataset", "--out", $pairs, "--scrub")
 foreach ($session in $recorded) { $arguments += @("--session", $session) }
 & $capture @arguments | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "the export failed" }
+# The export claiming success is not evidence that a file exists where this script will
+# look for it. A silent miss is worse than a failure: it reports counts from a file nobody
+# can find, which is exactly what happened before this check existed.
+if (-not (Test-Path $pairs)) { throw "the export said it wrote $pairs and it is not there" }
 
 # What the corpus holds, counted rather than assumed.
 $lines = [System.IO.File]::ReadAllLines((Resolve-Path $pairs))
