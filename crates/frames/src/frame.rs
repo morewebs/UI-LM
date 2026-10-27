@@ -146,7 +146,17 @@ fn grid_from_chars(rows: u16, cols: u16, chars: &[Vec<char>]) -> Grid {
 /// Only rows `next` has are reported; a row `prev` had and `next` does not is not
 /// a row of the frame being described. A row with no runs compares as empty, which
 /// is why a frame with no content at all differs from every row of a real one.
+///
+/// A frame whose `alt_screen` flag differs from the previous frame's reports every
+/// row, whatever the runs say. Entering or leaving the alternate screen replaces
+/// the surface, so the cells the new surface carries are new content even where
+/// they hold what the old one held; a run diff of a typical flip reports most rows
+/// changed, and "most" is not a guarantee. The flag is the evidence that the whole
+/// surface changed, and no consumer downstream can recover rows a diff omitted.
 pub fn changed_rows(prev: &Frame, next: &Frame) -> Vec<u16> {
+    if prev.alt_screen != next.alt_screen {
+        return (0..next.rows).collect();
+    }
     (0..next.rows)
         .filter(|&row| !row_runs(&prev.runs, row).eq(row_runs(&next.runs, row)))
         .collect()
@@ -215,6 +225,35 @@ mod tests {
         );
         let back: Frame = serde_json::from_str(&json).expect("a frame deserialises");
         assert!(back.alt_screen);
+    }
+
+    #[test]
+    fn an_alternate_screen_flag_change_reports_every_row_as_changed() {
+        // Review Focus 3, the frame class that poisons idempotence training.
+        // Entering or leaving the alternate screen swaps the whole surface, so
+        // every row of the new frame is new content even where a cell happens to
+        // hold what the old surface held. A run diff of a real flip reports most
+        // rows; "most" is not all, and the flag is exactly the evidence that the
+        // whole surface changed rather than part of it.
+        let lines = [vec!['a'; 2], vec!['b'; 2], vec!['c'; 2]];
+        let mut primary = frame_from_chars(0, 3, 2, &lines);
+        let mut alternate = frame_from_chars(1, 3, 2, &lines);
+
+        // Same flag, same cells: nothing moved.
+        assert_eq!(
+            changed_rows(&primary, &alternate),
+            Vec::<u16>::new(),
+            "identical frames on the same screen differ in nothing"
+        );
+
+        // The cells are still identical; only the surface differs.
+        alternate.alt_screen = true;
+        assert_eq!(changed_rows(&primary, &alternate), vec![0, 1, 2]);
+
+        // And the other direction, from the alternate screen back to the primary.
+        primary.alt_screen = true;
+        alternate.alt_screen = false;
+        assert_eq!(changed_rows(&primary, &alternate), vec![0, 1, 2]);
     }
 
     #[test]
