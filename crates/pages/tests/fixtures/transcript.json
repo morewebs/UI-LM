@@ -26,6 +26,9 @@
         ],
         "lines": [
           "Grok Build 1.0.70"
+        ],
+        "spans": [
+          []
         ]
       },
       {
@@ -40,6 +43,10 @@
         "lines": [
           "> what file is in this folder",
           "  This folder is empty."
+        ],
+        "spans": [
+          [],
+          []
         ]
       },
       {
@@ -53,6 +60,9 @@
         ],
         "lines": [
           "  Waiting for response… 0.4s"
+        ],
+        "spans": [
+          []
         ]
       }
     ]

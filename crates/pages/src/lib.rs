@@ -30,7 +30,7 @@
 use std::collections::HashSet;
 
 use serde::Serialize;
-use ui_lm_frames::{decode_grid, Frame};
+use ui_lm_frames::{decode_grid, Color, Frame, Style, StyledCell};
 
 /// The envelope version this crate writes.
 ///
@@ -112,7 +112,49 @@ pub enum Body {
         rows: [u16; 2],
         /// Its text, one entry per row, right-trimmed.
         lines: Vec<String>,
+        /// The styling of each line, parallel to `lines`.
+        ///
+        /// Only cells drawn differently from the default appear here, so a plain
+        /// line contributes an empty list. The plan calls per-span attributes the
+        /// largest gap in every surveyed standard, and they are what a `Diff` or an
+        /// inline emphasis will be built from.
+        spans: Vec<Vec<InlineSpan>>,
     },
+}
+
+/// A run of cells inside one line that shares a non-default style.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct InlineSpan {
+    /// First column of the run, counting from the line's left edge.
+    pub start: u16,
+    /// One past the last column of the run.
+    pub end: u16,
+    /// How those cells were drawn.
+    pub style: Emphasis,
+}
+
+/// The attributes of a styled run, in terms a renderer can act on.
+///
+/// Colour is a string rather than an enum because the catalogue's consumers are
+/// renderers of several languages, and `indexed:4` / `rgb:12,34,56` needs no shared
+/// type to be read. It is omitted when the terminal's default was in force, which is
+/// the common case and the one worth keeping out of the file.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+pub struct Emphasis {
+    /// Bold or increased intensity.
+    pub bold: bool,
+    /// Italic.
+    pub italic: bool,
+    /// Underlined.
+    pub underline: bool,
+    /// Foreground and background swapped.
+    pub reverse: bool,
+    /// Foreground colour, when it was not the terminal's default.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fg: Option<String>,
+    /// Background colour, when it was not the terminal's default.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bg: Option<String>,
 }
 
 /// The id of the surface's root container.
@@ -162,6 +204,13 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
                 .to_owned()
         })
         .collect();
+    // Styling is read over the same width the text was trimmed to, so a span can
+    // never point past the end of the line it belongs to.
+    let spans: Vec<Vec<InlineSpan>> = grid
+        .iter()
+        .zip(&lines)
+        .map(|(row, line)| spans_of(row, line.chars().count()))
+        .collect();
 
     let mut components = vec![Component {
         id: ROOT_ID.to_owned(),
@@ -193,6 +242,7 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
                     u16::try_from(last).unwrap_or(u16::MAX),
                 ],
                 lines: text.to_vec(),
+                spans: spans[first..last].to_vec(),
             },
         });
     }
@@ -213,6 +263,60 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
             components,
         },
     }
+}
+
+/// The runs of a line that were drawn with a non-default style.
+///
+/// `width` is how many characters of the row the line kept, so a run is reported
+/// against the trimmed text a consumer actually reads.
+fn spans_of(row: &[StyledCell], width: usize) -> Vec<InlineSpan> {
+    let mut spans = Vec::new();
+    let mut open: Option<(u16, Emphasis)> = None;
+    for (col, cell) in row.iter().take(width.min(row.len())).enumerate() {
+        let column = u16::try_from(col).unwrap_or(u16::MAX);
+        let emphasis = emphasis_of(&cell.style);
+        match (open.take(), emphasis) {
+            (Some((start, current)), Some(next)) if current == next => {
+                open = Some((start, current));
+            }
+            (Some((start, current)), next) => {
+                spans.push(InlineSpan {
+                    start,
+                    end: column,
+                    style: current,
+                });
+                open = next.map(|next| (column, next));
+            }
+            (None, Some(next)) => open = Some((column, next)),
+            (None, None) => {}
+        }
+    }
+    if let Some((start, style)) = open {
+        spans.push(InlineSpan {
+            start,
+            end: u16::try_from(width).unwrap_or(u16::MAX),
+            style,
+        });
+    }
+    spans
+}
+
+/// How a cell was drawn, or `None` when it was drawn plainly.
+fn emphasis_of(style: &Style) -> Option<Emphasis> {
+    let colour = |colour: &Color| match colour {
+        Color::Default => None,
+        Color::Indexed(index) => Some(format!("indexed:{index}")),
+        Color::Rgb(r, g, b) => Some(format!("rgb:{r},{g},{b}")),
+    };
+    let emphasis = Emphasis {
+        bold: style.bold,
+        italic: style.italic,
+        underline: style.underline,
+        reverse: style.reverse,
+        fg: colour(&style.fg),
+        bg: colour(&style.bg),
+    };
+    (emphasis != Emphasis::default()).then_some(emphasis)
 }
 
 /// The half-open row ranges of the blocks: runs of rows that are not blank.
@@ -273,7 +377,7 @@ fn block_id(lines: &[String]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ui_lm_frames::frame_from_chars;
+    use ui_lm_frames::{frame_from_chars, CellRun};
 
     /// A frame whose rows are the given lines, padded to `cols`.
     fn frame_of(rows: &[&str], cols: u16) -> Frame {
@@ -298,6 +402,7 @@ mod tests {
                 role: "text".to_owned(),
                 rows: [0, 1],
                 lines: vec!["one".to_owned()],
+                spans: vec![Vec::new()],
             }
         );
         assert_eq!(
@@ -306,7 +411,59 @@ mod tests {
                 role: "text".to_owned(),
                 rows: [2, 4],
                 lines: vec!["two".to_owned(), "three".to_owned()],
+                spans: vec![Vec::new(), Vec::new()],
             }
+        );
+    }
+
+    #[test]
+    fn a_styled_run_becomes_a_span_and_a_plain_one_does_not() {
+        // Styling is the thing the grid had and the page was throwing away. A cell
+        // drawn boldly must come back as a run a renderer can act on; a plainly
+        // drawn line must contribute nothing at all.
+        let mut frame = Frame::empty(1, 4);
+        frame.runs = vec![
+            CellRun {
+                row: 0,
+                col: 0,
+                len: 2,
+                ch: 'h',
+                style: Style {
+                    bold: true,
+                    ..Style::default()
+                },
+                wide_tail: false,
+            },
+            CellRun {
+                row: 0,
+                col: 2,
+                len: 2,
+                ch: 'o',
+                style: Style::default(),
+                wide_tail: false,
+            },
+        ];
+        let page = page_from_frame(&frame, "s");
+        let Some(Body::Block { spans, lines, .. }) = page
+            .create_surface
+            .components
+            .iter()
+            .find(|component| component.component == "Block")
+            .map(|component| &component.body)
+        else {
+            panic!("the styled row must be a block: {:?}", page);
+        };
+        assert_eq!(lines, &vec!["hhoo".to_owned()]);
+        assert_eq!(
+            spans,
+            &vec![vec![InlineSpan {
+                start: 0,
+                end: 2,
+                style: Emphasis {
+                    bold: true,
+                    ..Emphasis::default()
+                },
+            }]]
         );
     }
 
