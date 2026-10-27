@@ -255,6 +255,10 @@ fn record(args: Record) -> Result<ExitCode> {
         None => None,
     };
 
+    // The clock a frame's `at_ms` is measured from: the moment the recording loop
+    // starts, which is as close to "the session began" as the recorder can know.
+    let started = Instant::now();
+
     let ended = loop {
         if signal::interrupted() {
             break Ended::Interrupted;
@@ -288,6 +292,13 @@ fn record(args: Record) -> Result<ExitCode> {
                 (Some(now), None) => (true, Some((0, now))),
                 (None, _) => (true, None),
             };
+            // What the application said between the last frame and this one, by its
+            // own labels. Only meaningful with a range; without one there is nothing
+            // honest to name, so the frame carries no kinds rather than an empty claim.
+            let event_kinds = match (tap.as_mut(), event_range) {
+                (Some(tap), Some((before, now))) if now > before => tap.kinds_between(before, now),
+                _ => Vec::new(),
+            };
             emit_frame(
                 &driver,
                 &mut writer,
@@ -296,6 +307,8 @@ fn record(args: Record) -> Result<ExitCode> {
                 typed_since_frame,
                 event_between,
                 event_range,
+                Some(started.elapsed().as_millis().min(u128::from(u64::MAX)) as u64),
+                event_kinds,
             )?;
             if let Some(now) = stream_now {
                 stream_at_previous_frame = Some(now);
@@ -465,6 +478,8 @@ fn emit_frame(
     keystroke_between: bool,
     event_between: bool,
     acp_event_range: Option<(u64, u64)>,
+    at_ms: Option<u64>,
+    event_kinds: Vec<String>,
 ) -> Result<()> {
     let frame = frame_from_screen(
         driver.screen(),
@@ -473,6 +488,8 @@ fn emit_frame(
         keystroke_between,
         event_between,
         acp_event_range,
+        at_ms,
+        event_kinds,
     );
     writer
         .append(&frame)

@@ -62,6 +62,26 @@ pub struct Frame {
     /// second time; a frame written without it reads back as `None`.
     #[serde(default)]
     pub acp_event_range: Option<(u64, u64)>,
+    /// How long after the session started this frame was taken, in milliseconds.
+    ///
+    /// Recorded because the latency the plan measures is the time from the
+    /// application drawing to the recorder having a frame, and that cannot be
+    /// reconstructed afterwards: the earlier capture could only approximate it by
+    /// polling the file's length every 100 ms and saying so. `None` in a session
+    /// written before this field existed.
+    #[serde(default)]
+    pub at_ms: Option<u64>,
+    /// The kinds of application event behind this frame's changes, in order.
+    ///
+    /// `acp_event_range` says *where* in the stream the frame sits; this says
+    /// *what* was in it, as the application labelled it (`agent_message`,
+    /// `tool_call`, `hook_execution`, …). A frame that holds a tool-call block and
+    /// names `tool_call` is a labelled example; a frame that holds one and names
+    /// nothing is an unlabelled screen. Empty when no event stream was reachable,
+    /// which is a different statement from "nothing happened" and is recorded as
+    /// the former.
+    #[serde(default)]
+    pub event_kinds: Vec<String>,
 }
 
 /// A contiguous group of cells that changed for a reason other than the
@@ -112,6 +132,8 @@ impl Frame {
             changed_rows: Vec::new(),
             volatile: Vec::new(),
             acp_event_range: None,
+            at_ms: None,
+            event_kinds: Vec::new(),
         }
     }
 }

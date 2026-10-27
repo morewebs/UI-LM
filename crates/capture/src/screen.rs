@@ -5,7 +5,7 @@
 //! `changed_rows` from the frame model's row-by-row diff, the volatile spans from
 //! the mask, and the numbers come from the caller. Everything a recorded frame says
 //! about a screen is decided here, so a fact about the screen has exactly one place
-//! it can be dropped â€” and the tests can feed a screen straight in rather than
+//! it can be dropped Ã¢â‚¬â€ and the tests can feed a screen straight in rather than
 //! inferring what it would have produced from a session on disk.
 //!
 //! It is a function of a `vt100::Screen` rather than of a [`crate::Driver`] so that
@@ -23,7 +23,7 @@ use crate::mask::{classify, Semantics};
 /// The first frame is emitted **unclassified**, because there is no frame before it.
 /// Passing `Frame::empty` to `classify` would be worse than useless: nothing has
 /// been logged yet, so every cell of the first screen would be reported as a change
-/// with no event behind it and the whole first screen would be masked as noise â€” the
+/// with no event behind it and the whole first screen would be masked as noise Ã¢â‚¬â€ the
 /// one thing masking must never do. `Frame::empty` is still the right *diff*
 /// baseline, because every row of a first screen really is new content.
 ///
@@ -41,12 +41,16 @@ pub fn frame_from_screen(
     keystroke_between: bool,
     event_between: bool,
     acp_event_range: Option<(u64, u64)>,
+    at_ms: Option<u64>,
+    event_kinds: Vec<String>,
 ) -> Frame {
     let (rows, cols) = screen.size();
     let grid = grid_from_screen(screen, cols);
     let mut frame = Frame::empty(rows, cols);
     frame.seq = seq;
     frame.acp_event_range = acp_event_range;
+    frame.at_ms = at_ms;
+    frame.event_kinds = event_kinds;
     frame.alt_screen = screen.alternate_screen();
     frame.cursor = if screen.hide_cursor() {
         None
@@ -112,12 +116,21 @@ mod tests {
         // Item from the final review: `screen.alternate_screen()` reaching
         // `frame.alt_screen` had no test, and the 35 real sessions produced no
         // alternate-screen frame at all. The real-session half cannot be shown on
-        // Windows (ConPTY consumes the switch before the client sees it â€” see the
+        // Windows (ConPTY consumes the switch before the client sees it Ã¢â‚¬â€ see the
         // note in `tests/cli.rs`), so the composition is proved here, on the same
         // emulator the recorder uses, and end-to-end by
         // `tests/cli.rs::a_child_that_switches_to_the_alternate_screen_is_recorded`.
         let mut parser = parser_with(3, 4, b"ab\r\ncd");
-        let primary = frame_from_screen(parser.screen(), 0, None, false, true, None);
+        let primary = frame_from_screen(
+            parser.screen(),
+            0,
+            None,
+            false,
+            true,
+            None,
+            None,
+            Vec::new(),
+        );
         assert!(
             !primary.alt_screen,
             "a screen nothing has switched is the primary screen"
@@ -126,7 +139,16 @@ mod tests {
 
         // Entering the alternate screen: the same cells, a different surface.
         parser.process(b"\x1b[?1049h");
-        let alternate = frame_from_screen(parser.screen(), 1, Some(&primary), false, true, None);
+        let alternate = frame_from_screen(
+            parser.screen(),
+            1,
+            Some(&primary),
+            false,
+            true,
+            None,
+            None,
+            Vec::new(),
+        );
         assert!(
             alternate.alt_screen,
             "the emulator says this screen is the alternate one, so the frame must too"
@@ -146,7 +168,16 @@ mod tests {
         // And back out: the primary screen is restored, and the flag goes back with
         // it rather than sticking to the last thing the emulator was told.
         parser.process(b"\x1b[?1049l");
-        let back = frame_from_screen(parser.screen(), 2, Some(&alternate), false, true, None);
+        let back = frame_from_screen(
+            parser.screen(),
+            2,
+            Some(&alternate),
+            false,
+            true,
+            None,
+            None,
+            Vec::new(),
+        );
         assert!(
             !back.alt_screen,
             "leaving the alternate screen is recorded too"
@@ -162,7 +193,16 @@ mod tests {
     #[test]
     fn a_frame_name_no_event_range_until_an_event_stream_exists() {
         let parser = parser_with(2, 2, b"a");
-        let frame = frame_from_screen(parser.screen(), 0, None, false, true, None);
+        let frame = frame_from_screen(
+            parser.screen(),
+            0,
+            None,
+            false,
+            true,
+            None,
+            None,
+            Vec::new(),
+        );
         assert_eq!(
             frame.acp_event_range, None,
             "no event stream is wired in, so no frame may claim a range of one"
@@ -175,9 +215,27 @@ mod tests {
         // masked: the empty `volatile` of every recorded session is explained here so
         // that it is a decision rather than a mystery.
         let parser = parser_with(2, 2, b"a");
-        let first = frame_from_screen(parser.screen(), 0, None, false, true, None);
+        let first = frame_from_screen(
+            parser.screen(),
+            0,
+            None,
+            false,
+            true,
+            None,
+            None,
+            Vec::new(),
+        );
         let parser = parser_with(2, 2, b"ab");
-        let second = frame_from_screen(parser.screen(), 1, Some(&first), true, true, None);
+        let second = frame_from_screen(
+            parser.screen(),
+            1,
+            Some(&first),
+            true,
+            true,
+            None,
+            None,
+            Vec::new(),
+        );
         assert_eq!(second.changed_rows, vec![0]);
         assert!(
             second.volatile.is_empty(),

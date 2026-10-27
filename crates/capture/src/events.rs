@@ -98,6 +98,34 @@ impl EventTap {
         self.updates.is_some()
     }
 
+    /// The `sessionUpdate` kinds the application wrote between two lengths.
+    ///
+    /// Offsets are byte positions in the same stream `length` reports, so the two
+    /// line up: a frame's `acp_event_range` is exactly the stretch this reads.
+    /// Parsing is deliberately shallow, because the kind is the one field label
+    /// alignment needs; a line this cannot read is skipped rather than failing a
+    /// recording that is otherwise sound.
+    pub fn kinds_between(&mut self, from: u64, to: u64) -> Vec<String> {
+        if self.updates.is_none() {
+            self.updates = self.locate();
+        }
+        let Some(path) = self.updates.as_ref() else {
+            return Vec::new();
+        };
+        let Ok(bytes) = fs::read(path) else {
+            return Vec::new();
+        };
+        let start = usize::try_from(from).unwrap_or(usize::MAX).min(bytes.len());
+        let end = usize::try_from(to).unwrap_or(usize::MAX).min(bytes.len());
+        if start >= end {
+            return Vec::new();
+        }
+        String::from_utf8_lossy(&bytes[start..end])
+            .lines()
+            .filter_map(session_update_kind)
+            .collect()
+    }
+
     /// The session directory's update file, once known.
     fn locate(&self) -> Option<PathBuf> {
         let bucket = self.store.join(bucket_name(&self.cwd));
@@ -113,6 +141,19 @@ impl EventTap {
         let updates = newest.join(UPDATES);
         updates.is_file().then_some(updates)
     }
+}
+
+/// The `sessionUpdate` kind on one line of the application's event stream.
+///
+/// A line is a JSON object whose `params.update.sessionUpdate` names the kind. This
+/// reads it without a JSON parser: the key is unique on a line, and a line without
+/// one is a shape this rig has not met, which is skipped rather than guessed at.
+fn session_update_kind(line: &str) -> Option<String> {
+    const KEY: &str = "\"sessionUpdate\":\"";
+    let start = line.find(KEY)? + KEY.len();
+    let rest = &line[start..];
+    let end = rest.find('"')?;
+    Some(rest[..end].to_owned())
 }
 
 #[cfg(test)]
@@ -183,5 +224,56 @@ mod tests {
         );
         assert_eq!(tap.length(), None);
         assert!(!tap.attached());
+    }
+
+    #[test]
+    fn the_kinds_between_two_lengths_are_the_events_written_there() {
+        let root = tempfile::tempdir().unwrap();
+        let cwd = Path::new("/work/project");
+        let updates = store_with(
+            root.path(),
+            cwd,
+            "01a",
+            "{\"params\":{\"update\":{\"sessionUpdate\":\"hook_execution\"}}}\n",
+        );
+        let mut tap = EventTap::new(root.path().to_path_buf(), cwd.to_path_buf());
+        let mark = tap.length().unwrap();
+
+        let mut file = fs::OpenOptions::new().append(true).open(&updates).unwrap();
+        file.write_all(
+            b"{\"params\":{\"update\":{\"sessionUpdate\":\"tool_call\"}}}\n\
+              {\"params\":{\"update\":{\"sessionUpdate\":\"agent_message\"}}}\n",
+        )
+        .unwrap();
+        file.flush().unwrap();
+        let end = tap.length().unwrap();
+
+        // The stretch after the mark is exactly what a frame covers, and the
+        // stretch before it belongs to the frame that preceded that frame.
+        assert_eq!(
+            tap.kinds_between(mark, end),
+            vec!["tool_call".to_owned(), "agent_message".to_owned()]
+        );
+        assert_eq!(
+            tap.kinds_between(0, mark),
+            vec!["hook_execution".to_owned()]
+        );
+        assert!(tap.kinds_between(end, end).is_empty());
+    }
+
+    #[test]
+    fn a_line_without_a_kind_is_skipped_rather_than_failing_the_read() {
+        let root = tempfile::tempdir().unwrap();
+        let cwd = Path::new("/work/project");
+        store_with(
+            root.path(),
+            cwd,
+            "01a",
+            "not json at all\n\
+             {\"params\":{\"update\":{\"sessionUpdate\":\"plan\"}}}\n",
+        );
+        let mut tap = EventTap::new(root.path().to_path_buf(), cwd.to_path_buf());
+        let end = tap.length().unwrap();
+        assert_eq!(tap.kinds_between(0, end), vec!["plan".to_owned()]);
     }
 }
