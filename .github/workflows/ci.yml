@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Every job here reads the repo and runs tests. Saying so explicitly means a
+# retargeted or compromised action in this workflow cannot get a token that
+# pushes to main, whatever the repository-wide default happens to be.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Actions are pinned to full commit SHAs with what each stands for in a
+# trailing comment, the same pins the org's other Rust CI uses. Bump one
+# deliberately: resolve the tag to its commit, then edit the SHA and its
+# comment together.
+#
+# The toolchain is fixed at 1.99.1 rather than following `stable`, so CI
+# keeps testing the compiler this tree is actually developed against.
+#
+# Why the OS matrix exists here, beyond the obvious: the driver's Unix paths
+# have never been compiled. The signal handler is `#[cfg(unix)]`, the test
+# fixtures branch on `cmd /c` versus `sh -c`, `io::ErrorKind::IsADirectory`
+# is only reachable there, and one flood test's assertions are
+# `cfg!(windows)`-gated and therefore skip on the development machine. A
+# Linux runner is the cheapest way to turn those from argued into executed.
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@d124f86f28ff42855784ff3319f48ac182c248f8 # 1.99.1
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      # The gates run in a fixed order and stop at the first failure: format,
+      # then lints, then tests. `--locked` everywhere, so a lockfile that
+      # disagrees with the manifests fails here instead of resolving quietly.
+      - run: cargo fmt --all --check
+      - run: cargo clippy --all-targets --locked -- -D warnings
+      # Three of these tests spawn a real child process through a PTY. They
+      # carry a 20 second watchdog that aborts the test binary rather than
+      # letting a hang consume the runner, so a regression fails loudly.
+      - run: cargo test --locked
+
+  # The declared MSRV must hold against the real lockfile: transitive
+  # dependencies can silently raise the floor. It is tight here already,
+  # because clap_builder, clap_derive, clap_lex and getrandom all resolve at
+  # exactly 1.85.0, so any bump of any of them would break the declared
+  # floor rather than break the build.
+  msrv:
+    name: MSRV (1.85)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # This job asks the action for a toolchain by name instead of using a
+      # toolchain-named ref, so the pin is the action itself and the input
+      # stays the workspace's declared floor.
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master, resolved 2026-10-26
+        with:
+          toolchain: "1.85"
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: cargo check --locked --all-targets
