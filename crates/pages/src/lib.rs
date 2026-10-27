@@ -987,9 +987,12 @@ fn blocks(lines: &[String]) -> Vec<(usize, usize)> {
 
 /// A role, from what the block's own text says about itself.
 ///
-/// Only the two roles the text can prove are named; everything else is `text`
-/// rather than a confident guess that would be wrong on the page.
+/// Only roles the text can prove are named; everything else is `text` rather than a
+/// confident guess that would be wrong on the page.
 fn role_of(lines: &[String]) -> &'static str {
+    if is_composer(lines) {
+        return "composer";
+    }
     let first = lines.first().map(String::as_str).unwrap_or_default();
     let trimmed = first.trim_start();
     if trimmed.starts_with('>') {
@@ -999,6 +1002,33 @@ fn role_of(lines: &[String]) -> &'static str {
     } else {
         "text"
     }
+}
+
+/// Whether a block is the application's input box.
+///
+/// Read off recorded screens, where it is the same three lines on every one of them:
+/// a rounded top border, a row holding the text cursor prompt, and a rounded bottom
+/// border. It is worth naming because it is the surface a GUI would have to give back
+/// as an editable field, and a generic block does not say so.
+///
+/// The test is structural rather than positional: the borders must be the first and
+/// last lines of the block and the prompt must be inside them, so a panel that happens
+/// to be rounded does not become an input box just by being drawn in a box.
+fn is_composer(lines: &[String]) -> bool {
+    let Some(first) = lines.first() else {
+        return false;
+    };
+    let Some(last) = lines.last() else {
+        return false;
+    };
+    let opens = first.trim_start().starts_with('╭');
+    let closes = last.trim_start().starts_with('╰');
+    // A block of a single line cannot hold a border on both sides of itself.
+    let prompt_between = lines.len() >= 2
+        && lines[1..lines.len() - 1]
+            .iter()
+            .any(|line| line.trim_start().starts_with('│') && line.contains('>'));
+    opens && closes && prompt_between
 }
 
 /// A stable id for a block, derived from its content.
@@ -1524,5 +1554,43 @@ mod tests {
     fn an_empty_reference_is_a_perfect_match() {
         let blank = page_from_frame(&frame_of(&["", ""], 5), "s");
         assert!(compare(&blank, &blank).is_perfect());
+    }
+
+    #[test]
+    fn the_input_box_is_named_a_composer() {
+        // The three lines every recorded screen of this application shows.
+        let page = page_from_frame(
+            &frame_of(&["  ╭─────────╭", "  │ > type here │", "  ╰─────────╰"], 24),
+            "s",
+        );
+        let role = page
+            .create_surface
+            .components
+            .iter()
+            .find_map(|component| match &component.body {
+                Body::Block { role, .. } => Some(role.as_str()),
+                _ => None,
+            })
+            .expect("the box must be a block");
+        assert_eq!(role, "composer", "{page:?}");
+    }
+
+    #[test]
+    fn a_rounded_panel_without_a_prompt_is_not_a_composer() {
+        // Structure alone is not enough: a box that holds text but no input is a panel.
+        let page = page_from_frame(
+            &frame_of(&["  ╭─────────╭", "  │ changelog │", "  ╰─────────╰"], 24),
+            "s",
+        );
+        let roles: Vec<&str> = page
+            .create_surface
+            .components
+            .iter()
+            .filter_map(|component| match &component.body {
+                Body::Block { role, .. } => Some(role.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(roles, vec!["text"], "{page:?}");
     }
 }
