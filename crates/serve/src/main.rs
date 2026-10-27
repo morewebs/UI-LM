@@ -24,6 +24,8 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{Ipv4Addr, SocketAddrV4, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+
+mod keys;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
@@ -227,7 +229,18 @@ fn handle(mut stream: TcpStream, state: &Arc<Mutex<Snapshot>>, keys: &Path) -> R
         Vec::new()
     };
 
-    match (method.as_str(), path.as_str()) {
+    // A binding arrives on the query string (`/keys?binding=Ctrl%2BN`) because a URL is
+    // what a button can carry without a template; a typed message arrives as the body.
+    let (route, query) = path
+        .split_once('?')
+        .map_or((path.as_str(), ""), |(route, query)| (route, query));
+    let binding = query
+        .split('&')
+        .filter_map(|pair| pair.split_once('='))
+        .find(|(name, _)| *name == "binding")
+        .and_then(|(_, value)| decode_percent(value));
+
+    match (method.as_str(), route) {
         ("GET", "/") => {
             let html = state
                 .lock()
@@ -247,6 +260,25 @@ fn handle(mut stream: TcpStream, state: &Arc<Mutex<Snapshot>>, keys: &Path) -> R
                 .expect("the snapshot lock is never poisoned")
                 .state_json();
             respond(&mut stream, "200 OK", "application/json", json.as_bytes())
+        }
+        ("POST", "/keys") if binding.is_some() => {
+            let binding = binding.unwrap_or_default();
+            let Some(bytes) = keys::keystrokes(&binding) else {
+                return respond(
+                    &mut stream,
+                    "400 Bad Request",
+                    "text/plain; charset=utf-8",
+                    b"this page names a binding this viewer cannot send",
+                );
+            };
+            let mut file = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(keys)
+                .with_context(|| format!("cannot open the control file {}", keys.display()))?;
+            file.write_all(&bytes)?;
+            file.flush()?;
+            respond(&mut stream, "204 No Content", "text/plain", b"")
         }
         ("POST", "/keys") => {
             // Appending is the whole protocol: the recorder reads what is new.
@@ -332,12 +364,48 @@ document.getElementById('type').addEventListener('submit', async (event) => {{
   await fetch('/keys', {{method: 'POST', body: field.value + '\r'}});
   field.value = '';
 }});
+document.addEventListener('click', async (event) => {{
+  const button = event.target.closest('[data-binding]');
+  if (!button) {{ return; }}
+  event.preventDefault();
+  const binding = button.dataset.binding;
+  const response = await fetch('/keys?binding=' + encodeURIComponent(binding), {{method: 'POST'}});
+  document.getElementById('status').textContent = response.ok
+    ? 'sent ' + binding
+    : 'this page cannot send ' + binding;
+}});
 poll();
 </script>
 </body>
 </html>
 "#
     )
+}
+
+/// A percent-decoded query value.
+///
+/// `+` is kept as itself rather than read as a space: every binding this page sends is
+/// encoded by the browser's `encodeURIComponent`, which encodes a real space as `%20` and
+/// leaves the `+` of `Ctrl+N` to be encoded as `%2B`. Reading a raw `+` as a space would
+/// turn `Ctrl+N` into `Ctrl N` for any client that encodes it the other way.
+fn decode_percent(text: &str) -> Option<String> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'%' => {
+                let hex = text.get(index + 1..index + 3)?;
+                out.push(u8::from_str_radix(hex, 16).ok()?);
+                index += 3;
+            }
+            byte => {
+                out.push(byte);
+                index += 1;
+            }
+        }
+    }
+    String::from_utf8(out).ok()
 }
 
 /// The port a URL names, for the tests.
@@ -441,5 +509,77 @@ mod tests {
 
         assert!(response.starts_with("HTTP/1.1 204"), "{response}");
         assert_eq!(std::fs::read(&keys).unwrap(), b"hello\r");
+    }
+
+    #[test]
+    fn a_clicked_binding_becomes_the_bytes_of_its_key() {
+        // What the browser does when a button on the page is pressed: one POST naming the
+        // binding, and the program receives that key.
+        let state = Arc::new(Mutex::new(Snapshot::default()));
+        let dir = tempfile::tempdir().unwrap();
+        let keys = dir.path().join("keys.txt");
+
+        let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let handle_state = Arc::clone(&state);
+        let handle_keys = keys.clone();
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            handle(stream, &handle_state, &handle_keys).unwrap();
+        });
+
+        let mut client = TcpStream::connect(address).unwrap();
+        write!(
+            client,
+            "POST /keys?binding=Ctrl%2BN HTTP/1.1\r\nHost: localhost\r\n\
+             Content-Length: 0\r\n\r\n"
+        )
+        .unwrap();
+        let mut response = String::new();
+        client.read_to_string(&mut response).unwrap();
+        server.join().unwrap();
+
+        assert!(response.starts_with("HTTP/1.1 204"), "{response}");
+        assert_eq!(std::fs::read(&keys).unwrap(), vec![0x0e], "Ctrl+N is 0x0E");
+    }
+
+    #[test]
+    fn a_binding_the_viewer_cannot_send_is_refused() {
+        let state = Arc::new(Mutex::new(Snapshot::default()));
+        let dir = tempfile::tempdir().unwrap();
+        let keys = dir.path().join("keys.txt");
+
+        let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let handle_state = Arc::clone(&state);
+        let handle_keys = keys.clone();
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            handle(stream, &handle_state, &handle_keys).unwrap();
+        });
+
+        let mut client = TcpStream::connect(address).unwrap();
+        write!(
+            client,
+            "POST /keys?binding=F7 HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\n\r\n"
+        )
+        .unwrap();
+        let mut response = String::new();
+        client.read_to_string(&mut response).unwrap();
+        server.join().unwrap();
+
+        assert!(response.starts_with("HTTP/1.1 400"), "{response}");
+        assert!(
+            !keys.exists() || std::fs::read(&keys).unwrap().is_empty(),
+            "nothing may be typed when the binding is not understood"
+        );
+    }
+
+    #[test]
+    fn a_percent_encoded_binding_decodes_and_a_plus_stays_a_plus() {
+        assert_eq!(decode_percent("Ctrl%2BN").as_deref(), Some("Ctrl+N"));
+        assert_eq!(decode_percent("Ctrl+N").as_deref(), Some("Ctrl+N"));
+        assert_eq!(decode_percent("a%20b").as_deref(), Some("a b"));
+        assert_eq!(decode_percent("%zz"), None);
     }
 }

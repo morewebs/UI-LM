@@ -83,6 +83,11 @@ section.page > header {{ color: #6f6f76; font-size: 11px; letter-spacing: .08em;
 .diff .remove {{ color: #d87373; }}
 .diff .context {{ color: #9a9aa2; }}
 .tabs {{ color: #6f6f76; margin-bottom: 6px; }}
+button.action {{ display: flex; gap: 10px; align-items: baseline; width: 100%;
+        text-align: left; background: #14141a; color: inherit; border: 1px solid #2a2a31;
+        border-radius: 8px; padding: 5px 9px; margin: 3px 0; font: inherit; cursor: pointer; }}
+button.action:hover {{ border-color: #4a4a55; background: #191922; }}
+button.action .target {{ color: #8ab4f8; margin-left: auto; }}
 .tabs span.active {{ color: #d6d6d7; }}
 </style>
 </head>
@@ -144,10 +149,16 @@ fn render_component(out: &mut String, component: &Component) {
                 );
             }
             for shortcut in shortcuts {
+                // A shortcut is drawn as a button, not as a row: the page already says
+                // which key does the thing, and a button is the one place a reader expects
+                // to be able to press it. `data-binding` carries the key as the page spells
+                // it; whatever serves the page decides what that means.
                 let _ = writeln!(
                     out,
-                    "<div class=\"tool\"><span class=\"name\">{}</span>\
-                     <span class=\"target\">{}</span></div>",
+                    "<button class=\"action\" data-binding=\"{}\">\
+                     <span class=\"name\">{}</span>\
+                     <span class=\"target\">{}</span></button>",
+                    escape(&shortcut.key),
                     escape(&shortcut.label),
                     escape(&shortcut.key)
                 );
@@ -366,5 +377,21 @@ mod tests {
         let second = html.find("second").unwrap();
         assert!(first < second, "pages must keep their order");
         assert_eq!(html.matches("class=\"page\"").count(), 2);
+    }
+
+    #[test]
+    fn a_shortcut_is_drawn_as_a_button_carrying_its_binding() {
+        // The page says which key does the thing; the button carries exactly that spelling
+        // so whatever serves the page can decide what it means.
+        // The keys are right-aligned, the way the application draws them.
+        let page = page_of(&[
+            "│ Resume Session              Ctrl+R │",
+            "│ Agent Dashboard         /dashboard │",
+        ]);
+        let html = render_page(&page, "t");
+        assert!(html.contains("class=\"action\""), "{html}");
+        assert!(html.contains("data-binding=\"Ctrl+R\""), "{html}");
+        assert!(html.contains("data-binding=\"/dashboard\""), "{html}");
+        assert!(html.contains("Resume Session"), "{html}");
     }
 }
