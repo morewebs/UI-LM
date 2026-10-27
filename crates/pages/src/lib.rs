@@ -425,6 +425,15 @@ pub enum Body {
         /// version the vocabulary on the strength of one screen.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         tabs: Vec<String>,
+        /// Label-and-key rows the block holds, when it draws a shortcut list.
+        ///
+        /// Read off the application's startup card, where three rows share a right
+        /// edge: `Resume session … ctrl+r`, `New worktree … ctrl+w`, `Quit … ctrl+q`.
+        /// A runtime can render those as real command buttons, and a model reading
+        /// them learns a binding rather than a line of text. Kept on the `Block`
+        /// because the card also holds prose, so the block is not itself a table.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        shortcuts: Vec<Shortcut>,
     },
     /// A block that reads as an edit to a file.
     ///
@@ -662,6 +671,7 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
                         lines: text.to_vec(),
                         spans: segment_spans,
                         tabs: tabs_of(text),
+                        shortcuts: shortcuts_of(text),
                     },
                 )
             };
@@ -996,6 +1006,99 @@ fn blocks(lines: &[String]) -> Vec<(usize, usize)> {
     found
 }
 
+/// One row of a shortcut list: what it does, and the key that does it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct Shortcut {
+    /// The action, as drawn: `Resume session`.
+    pub label: String,
+    /// The binding, as drawn: `ctrl+r`.
+    pub key: String,
+}
+
+/// The shortcut rows a block holds.
+///
+/// A row is two fields separated by a wide gap where the right field ends at the same
+/// column as at least one other row — that shared edge is what a shortcut list has and
+/// a paragraph does not. Rows that merely contain a wide gap are left alone.
+fn shortcuts_of(lines: &[String]) -> Vec<Shortcut> {
+    let candidates: Vec<(usize, String, String)> = lines
+        .iter()
+        .filter_map(|line| {
+            let stripped = strip_borders(line);
+            let (gap, width) = wide_gap(&stripped)?;
+            let label = stripped[..gap].trim();
+            let key = stripped[gap + width..].trim();
+            if label.is_empty() || key.is_empty() || key.chars().count() > 24 {
+                return None;
+            }
+            Some((
+                gap + width + key.chars().count(),
+                label.to_owned(),
+                key.to_owned(),
+            ))
+        })
+        .collect();
+
+    // The right edge that at least two rows share.
+    let mut edges: Vec<(usize, usize)> = Vec::new();
+    for (edge, _, _) in &candidates {
+        match edges.iter_mut().find(|(seen, _)| seen == edge) {
+            Some((_, count)) => *count += 1,
+            None => edges.push((*edge, 1)),
+        }
+    }
+    let shared = edges
+        .iter()
+        .filter(|(_, count)| *count >= 2)
+        .map(|(edge, _)| *edge)
+        .max();
+    let Some(edge) = shared else {
+        return Vec::new();
+    };
+    candidates
+        .into_iter()
+        .filter(|(row_edge, _, _)| *row_edge == edge)
+        .map(|(_, label, key)| Shortcut { label, key })
+        .collect()
+}
+
+/// A line without the panel borders an application draws around content.
+fn strip_borders(line: &str) -> String {
+    let trimmed = line.trim();
+    let trimmed = trimmed
+        .strip_prefix(['│', '┃'])
+        .unwrap_or(trimmed)
+        .trim_start();
+    trimmed
+        .strip_suffix(['│', '┃'])
+        .unwrap_or(trimmed)
+        .trim_end()
+        .to_owned()
+}
+
+/// Where a line's first wide gap starts, and how wide it is.
+fn wide_gap(line: &str) -> Option<(usize, usize)> {
+    let mut start = None;
+    let mut width = 0;
+    for (index, character) in line.char_indices() {
+        if character == ' ' {
+            if start.is_none() {
+                start = Some(index);
+            }
+            width += 1;
+            continue;
+        }
+        if let Some(begin) = start {
+            if width >= 2 && begin > 0 {
+                return Some((begin, width));
+            }
+        }
+        start = None;
+        width = 0;
+    }
+    None
+}
+
 /// The tab strip a panel's block carries, or nothing when it has none.
 ///
 /// A tab strip is a line of two or more names separated by wide gaps, sitting directly
@@ -1171,6 +1274,7 @@ mod tests {
                 rows: [0, 1],
                 lines: vec!["one".to_owned()],
                 tabs: Vec::new(),
+                shortcuts: Vec::new(),
                 spans: vec![Vec::new()],
             }
         );
@@ -1181,6 +1285,7 @@ mod tests {
                 rows: [2, 4],
                 lines: vec!["two".to_owned(), "three".to_owned()],
                 tabs: Vec::new(),
+                shortcuts: Vec::new(),
                 spans: vec![Vec::new(), Vec::new()],
             }
         );
@@ -1557,6 +1662,7 @@ mod tests {
                             rows: [0, 1],
                             lines: vec!["ab".to_owned()],
                             tabs: Vec::new(),
+                            shortcuts: Vec::new(),
                             spans: vec![vec![InlineSpan {
                                 start: 0,
                                 end: 9,
@@ -1747,5 +1853,50 @@ mod tests {
             tabs.is_empty(),
             "a rule is what makes a tab strip: {tabs:?}"
         );
+    }
+
+    #[test]
+    fn the_startup_card_reports_its_shortcut_pairs() {
+        // Three rows sharing a right edge, as the real card draws them, inside borders.
+        let page = page_from_frame(
+            &frame_of(
+                &[
+                    "│ Resume session                    ctrl+r │",
+                    "│ New worktree                      ctrl+w │",
+                    "│ Quit                              ctrl+q │",
+                ],
+                52,
+            ),
+            "s",
+        );
+        let pairs = page
+            .create_surface
+            .components
+            .iter()
+            .find_map(|component| match &component.body {
+                Body::Block { shortcuts, .. } => Some(shortcuts.clone()),
+                _ => None,
+            })
+            .expect("the card must be a block");
+        assert_eq!(pairs.len(), 3, "{pairs:?}");
+        assert_eq!(pairs[0].label, "Resume session");
+        assert_eq!(pairs[0].key, "ctrl+r");
+        assert_eq!(pairs[2].key, "ctrl+q");
+    }
+
+    #[test]
+    fn prose_with_a_wide_gap_is_not_a_shortcut_list() {
+        // One row cannot share an edge with itself.
+        let page = page_from_frame(&frame_of(&["hello there    world"], 40), "s");
+        let pairs = page
+            .create_surface
+            .components
+            .iter()
+            .find_map(|component| match &component.body {
+                Body::Block { shortcuts, .. } => Some(shortcuts.clone()),
+                _ => None,
+            })
+            .expect("the prose must be a block");
+        assert!(pairs.is_empty(), "{pairs:?}");
     }
 }
