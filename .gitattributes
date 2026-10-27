@@ -2,3 +2,7 @@
 # checkout must not rewrite them for the platform's line endings. The test also
 # normalises, because one guard for this was not enough the first time.
 crates/pages/tests/fixtures/*.json text eol=lf
+
+# The recorded session is parsed line by line on every platform, and a checkout is the
+# one place its line endings could change without anyone editing it.
+crates/pages/tests/fixtures/**/*.json* text eol=lf

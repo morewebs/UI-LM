@@ -1,4 +1,12 @@
 target/
+
+# Captures are research data and stay out of the repository: one session is small, a
+# corpus is not, and where a corpus should live is a decision nobody has made yet.
 *.jsonl
 sessions/
 frame-store/
+
+# One recorded screen is checked in as test input, so CI tests the page model against
+# captured bytes rather than against frames the model built itself. The exception is
+# named exactly rather than by directory, so it cannot grow into a corpus by accident.
+!crates/pages/tests/fixtures/session/frames.jsonl
