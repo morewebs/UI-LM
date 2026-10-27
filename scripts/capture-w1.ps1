@@ -175,6 +175,91 @@ function Stop-CaptureTree {
     Invoke-Quietly { Stop-Process -Id $Id -Force -ErrorAction SilentlyContinue }
 }
 
+# Stops a recorder this script started and did not stop itself.
+#
+# Called from the loop's `finally`, so the cases it covers are the ones the session
+# body cannot: a throw between `Start-Process` and the session's own cleanup (the
+# frame parsing is the likely one - a session killed at its ceiling can leave a
+# half-written last line in `frames.jsonl`), and an operator's Ctrl-C. Either way a
+# recorder left alive keeps driving the application with nobody sampling it.
+#
+# Two searches, because the two failure modes leave different evidence. The handle
+# this script holds covers the session that was running. A recorder this script
+# started but never recorded a handle for - the throw landed between `Start-Process`
+# and the line that assigns it - is found by its executable path instead. Only
+# `$CaptureExe` is stopped, so nothing else on the machine is touched; the cost is
+# that two runs of this script at once would stop each other's recorder, which is
+# already a mistake worth failing loudly.
+function Stop-LiveRecorders {
+    param([System.Diagnostics.Process]$Own)
+    $notes = @()
+    if ($null -ne $Own) {
+        $alive = $false
+        try { $alive = -not $Own.HasExited } catch { $alive = $false }
+        if ($alive) {
+            Stop-CaptureTree -Id $Own.Id
+            $notes += "stopped the recorder this session started (pid $($Own.Id))"
+        }
+    }
+    $strays = @()
+    try {
+        $recorderName = Split-Path -Leaf $CaptureExe
+        $strays = @(Get-CimInstance -ClassName Win32_Process -Filter "Name = '$recorderName'" -ErrorAction Stop |
+            Where-Object { [int]$_.ProcessId -ne $PID -and $_.ExecutablePath -eq $CaptureExe })
+    } catch {
+        $strays = @()
+    }
+    foreach ($stray in $strays) {
+        Stop-CaptureTree -Id ([int]$stray.ProcessId)
+        $notes += "stopped a recorder on $CaptureExe that was still running (pid $($stray.ProcessId))"
+    }
+    if ($notes.Count -eq 0) { return 'no recorder was left running' }
+    return ($notes -join '; ')
+}
+
+# `1 entry` rather than `1 entries`, for text that goes into the index and the report.
+function Format-Count {
+    param([int]$Count, [string]$Singular, [string]$Plural)
+    if ($Count -eq 1) { return "1 $Singular" }
+    return "$Count $Plural"
+}
+
+# A Windows command line is one string, and `Start-Process -ArgumentList` joins an
+# array with single spaces and quotes nothing. An element that holds a space - a user
+# profile under `C:\Users\John Smith`, a scratch directory under a path with one -
+# therefore reaches the recorder as two arguments, and the run dies on the first
+# session with an argument the recorder does not accept. Each element is quoted here
+# the way `CommandLineToArgvW` reads it back: wrap when it is empty or holds a space
+# or a quote, double the backslash run that precedes an embedded quote, and double a
+# trailing backslash run so it cannot escape the closing quote.
+function ConvertTo-CommandLineArgument {
+    param([string]$Value)
+    if ($Value -ne '' -and $Value -notmatch '[\s"]') { return $Value }
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.Append('"')
+    $backslashes = 0
+    foreach ($character in $Value.ToCharArray()) {
+        if ($character -eq [char]'\') { $backslashes = $backslashes + 1; continue }
+        if ($character -eq [char]'"') {
+            [void]$sb.Append('\' * ((2 * $backslashes) + 1))
+            [void]$sb.Append('"')
+            $backslashes = 0
+            continue
+        }
+        if ($backslashes -gt 0) { [void]$sb.Append('\' * $backslashes); $backslashes = 0 }
+        [void]$sb.Append($character)
+    }
+    if ($backslashes -gt 0) { [void]$sb.Append('\' * (2 * $backslashes)) }
+    [void]$sb.Append('"')
+    return $sb.ToString()
+}
+
+# The one argument string `Start-Process` needs, every element quoted.
+function ConvertTo-CommandLine {
+    param([string[]]$Arguments)
+    return (@($Arguments | ForEach-Object { ConvertTo-CommandLineArgument -Value ([string]$_) }) -join ' ')
+}
+
 function New-ScratchProject {
     param([string]$Path)
     if (Test-Path -LiteralPath $Path) {
@@ -244,6 +329,87 @@ function Restore-GrokConfig {
     return "rewritten during the session (permission_mode=$mode default_reasoning_effort=$effort), restored"
 }
 
+# The directories a trust list names, and how many of them there are. Counted rather
+# than eyeballed, because "the file was restored" is a claim about a count.
+function Get-TrustEntries {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path)) { return @() }
+    $text = [System.IO.File]::ReadAllText($Path)
+    return @([regex]::Matches($text, "(?m)^\[folders\.'(.*)'\]") | ForEach-Object { $_.Groups[1].Value })
+}
+
+function Get-TrustEntryCount {
+    param([string]$Path)
+    return @(Get-TrustEntries -Path $Path).Count
+}
+
+# Puts one of the application's own configuration files back, byte for byte, and says
+# which of the three cases happened: nothing to do, the file was rewritten, or the
+# file was deleted during the run and had to be recreated.
+function Restore-GrokFile {
+    param([string]$Path, [byte[]]$Backup)
+    if (-not (Test-Path -LiteralPath $Path)) {
+        [System.IO.File]::WriteAllBytes($Path, $Backup)
+        return 'deleted during the run, restored'
+    }
+    $current = [System.IO.File]::ReadAllBytes($Path)
+    if ([System.Convert]::ToBase64String($current) -eq [System.Convert]::ToBase64String($Backup)) {
+        return 'unchanged'
+    }
+    [System.IO.File]::WriteAllBytes($Path, $Backup)
+    return 'rewritten during the run, restored'
+}
+
+# The trust list the application writes when its folder-trust card is answered.
+#
+# This is the second file the application modifies during a capture, and the one the
+# first version of this script missed. Every session starts in a fresh scratch
+# directory, so the card is shown for a directory the application has never been
+# told to trust, and answering it - which every scenario's prologue Enter does, and
+# which earlier passes answered with whatever Enter happened to arrive - writes
+# `[folders.'<scratch>']` into `~/.grok/trusted_folders.toml`. Left alone, one run
+# adds an entry per session and every re-run adds more.
+#
+# Restored exactly like the config: after every session, and again in the `finally`.
+function Restore-GrokTrust {
+    param([string]$Path, [byte[]]$Backup)
+    if ($null -ne $Backup) { return (Restore-GrokFile -Path $Path -Backup $Backup) }
+    # There was no trust list before the run. One that names only our own scratch
+    # directories was created by this capture and is removed; one that names anything
+    # else was not, so it is left where it is and named for a human to look at.
+    if (-not (Test-Path -LiteralPath $Path)) { return 'no trust list before or after the run' }
+    $entries = @(Get-TrustEntries -Path $Path)
+    $foreign = @($entries | Where-Object { -not $_.StartsWith($WorkRoot, [System.StringComparison]::OrdinalIgnoreCase) })
+    if ($foreign.Count -gt 0) {
+        return "no trust list before the run, but one exists now and names $(Format-Count -Count $foreign.Count -Singular 'entry' -Plural 'entries') outside $WorkRoot; left in place for inspection"
+    }
+    Remove-Item -LiteralPath $Path -Force
+    return "no trust list before the run; removed the $(Format-Count -Count $entries.Count -Singular 'entry' -Plural 'entries') the application created for $WorkRoot"
+}
+
+# Copies a pre-run snapshot to disk as well as keeping it in memory.
+#
+# The in-memory copy dies with this process. A run that is force-killed - the console
+# window closed, a `Stop-Process` from task manager, a reboot - gets no `finally`, and
+# would otherwise leave both configuration files rewritten with nothing to put back.
+# A snapshot already on disk is never overwritten: the earliest one is the one taken
+# before any capture touched the file. If that early snapshot already names scratch
+# directories it is not pristine, and it is called out rather than quietly trusted.
+function Save-GrokSnapshot {
+    param([string]$Path, [byte[]]$Backup, [string]$Name)
+    if ($null -eq $Backup) { return "$Name did not exist before the run, so there was nothing to snapshot" }
+    $target = Join-Path $WorkRoot ($Name + '.original.toml')
+    if (Test-Path -LiteralPath $target) {
+        $scratch = @(Get-TrustEntries -Path $target | Where-Object { $_.StartsWith($WorkRoot, [System.StringComparison]::OrdinalIgnoreCase) })
+        if ($scratch.Count -gt 0) {
+            return "a snapshot already sits at $target but names $(Format-Count -Count $scratch.Count -Singular 'directory' -Plural 'directories') under ${WorkRoot}: it is not a pristine snapshot, is not used to restore anything, and should be checked by hand"
+        }
+        return "a snapshot already sits at $target; left as it is"
+    }
+    [System.IO.File]::WriteAllBytes($target, $Backup)
+    return "snapshot of $Path written to $target"
+}
+
 # What a session's frames say about themselves, without decoding a grid: the frame
 # count, how many distinct screens they show, how many were drawn on the alternate
 # screen, and how many rows changed in total.
@@ -302,9 +468,25 @@ New-Item -ItemType Directory -Force -Path (Join-Path $WorkRoot 'keys') | Out-Nul
 if ($null -ne $env:NO_COLOR) { Remove-Item Env:\NO_COLOR | Out-Null }
 
 # The application's own configuration, as it stands before any session runs.
-$GrokConfig = Join-Path $env:USERPROFILE '.grok\config.toml'
+#
+# Two files, not one. `config.toml`, because the application persists its UI mode
+# into it: during the W1 probe `--reasoning-effort low` and a Shift-Tab both rewrote
+# the machine owner's defaults. And `trusted_folders.toml`, because answering the
+# folder-trust card writes a trust entry for the directory that was trusted - and
+# every session runs in a fresh scratch directory, so every session answers that
+# card. A run that snapshots only the first leaves the second holding one entry per
+# session, and the next run adds another one per session on top of those.
+$GrokConfig  = Join-Path $env:USERPROFILE '.grok\config.toml'
+$GrokTrust   = Join-Path $env:USERPROFILE '.grok\trusted_folders.toml'
 $configBackup = $null
 if (Test-Path -LiteralPath $GrokConfig) { $configBackup = [System.IO.File]::ReadAllBytes($GrokConfig) }
+$trustBackup = $null
+if (Test-Path -LiteralPath $GrokTrust) { $trustBackup = [System.IO.File]::ReadAllBytes($GrokTrust) }
+$trustCountBefore = Get-TrustEntryCount -Path $GrokTrust
+
+"capture-w1: config: $(Save-GrokSnapshot -Path $GrokConfig -Backup $configBackup -Name 'config')"
+"capture-w1: trust:  $(Save-GrokSnapshot -Path $GrokTrust -Backup $trustBackup -Name 'trusted_folders')"
+"capture-w1: trust list holds $(Format-Count -Count $trustCountBefore -Singular 'entry' -Plural 'entries') before the run; a full run must leave it holding that many"
 
 $selected = $Scenarios
 if ($Only -ne '') {
@@ -329,163 +511,208 @@ $runStarted = Get-Date
 "capture-w1: $($selected.Count) scenario(s), recorder $CaptureExe"
 "capture-w1: sessions in $SessionsRoot"
 
-foreach ($scenario in $selected) {
-    $sessionName = $scenario.name
-    if ($Tag -ne '') { $sessionName = "$sessionName-$Tag" }
-    $outDir = Join-Path $SessionsRoot $sessionName
-    $scratch = Join-Path $WorkRoot ('cwd\' + $sessionName)
-    $keysPath = Join-Path $WorkRoot ('keys\' + $sessionName + '.txt')
-    $stdoutPath = Join-Path $WorkRoot ('keys\' + $sessionName + '.out.txt')
-    $stderrPath = Join-Path $WorkRoot ('keys\' + $sessionName + '.err.txt')
-    $framesPath = Join-Path $outDir 'frames.jsonl'
+# The session loop runs inside `try`, with a `finally` that outlives it. A capture
+# changes two files of the machine owner's configuration and leaves a recorder
+# driving the application, so the way this loop ends must not decide whether that
+# state is put back. Throwing out of the loop (the frame parsing of a session killed
+# at its ceiling is the likely place: its last line can be half-written) and an
+# operator's Ctrl-C both skip the per-session restore; the `finally` does not.
+$activeRecorder = $null
 
-    $keyLines = $Prologue + @($scenario.keys) + $ExitTail
-    $keyText = ($keyLines -join "`r`n") + "`r`n"
+try {
+    foreach ($scenario in $selected) {
+        $sessionName = $scenario.name
+        if ($Tag -ne '') { $sessionName = "$sessionName-$Tag" }
+        $outDir = Join-Path $SessionsRoot $sessionName
+        $scratch = Join-Path $WorkRoot ('cwd\' + $sessionName)
+        $keysPath = Join-Path $WorkRoot ('keys\' + $sessionName + '.txt')
+        $stdoutPath = Join-Path $WorkRoot ('keys\' + $sessionName + '.out.txt')
+        $stderrPath = Join-Path $WorkRoot ('keys\' + $sessionName + '.err.txt')
+        $framesPath = Join-Path $outDir 'frames.jsonl'
 
-    if ($DryRun) {
-        "--- $sessionName (max $($scenario.max)s, prompt=$($scenario.prompt))"
-        "    args: $($scenario.args -join ' ')"
-        $keyLines | ForEach-Object { "    key: $_" }
-        continue
-    }
+        $keyLines = $Prologue + @($scenario.keys) + $ExitTail
+        $keyText = ($keyLines -join "`r`n") + "`r`n"
 
-    "== $sessionName -- $($scenario.note)"
-
-    if (Test-Path -LiteralPath $outDir) { Remove-Item -LiteralPath $outDir -Recurse -Force }
-    New-ScratchProject -Path $scratch
-    Write-Utf8File -Path $keysPath -Text $keyText
-    if (Test-Path -LiteralPath $stdoutPath) { Remove-Item -LiteralPath $stdoutPath -Force }
-    if (Test-Path -LiteralPath $stderrPath) { Remove-Item -LiteralPath $stderrPath -Force }
-
-    # `--cwd` is not a detail. portable-pty 0.9 gives a child whose command builder
-    # names no directory the value of cwd.or(%USERPROFILE%), and the recorder used to
-    # pass none, so a session spawned from a scratch directory still ran in the user's
-    # home: the tool screens were the home directory's, and one scenario created
-    # `made.txt` there. The driver now sets the child's directory itself - the
-    # recorder's own cwd unless `--cwd` says otherwise - so it is named here on
-    # purpose: `--cwd` to the recorder puts the child in the scratch project whatever
-    # directory this script was launched from, and the application's own `--cwd`
-    # tells grok the same project explicitly, which is how the captured sessions were
-    # driven. Both are passed rather than either alone.
-    $captureArgs = @(
-        'record', '--rows', "$Rows", '--cols', "$Cols", '--out', $outDir, '--script', $keysPath, '--cwd', $scratch, '--', $GrokExe, '--cwd', $scratch
-    ) + @($scenario.args)
-
-    $clock = [System.Diagnostics.Stopwatch]::StartNew()
-    $process = Start-Process -FilePath $CaptureExe -ArgumentList $captureArgs -WorkingDirectory $scratch -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
-
-    # Sample the frame stream while the session runs. The recorder's own record has
-    # no timestamps, so the arrival times measured here are the only evidence of
-    # what the frame rate actually was.
-    $arrivals = New-Object System.Collections.ArrayList
-    $lastLength = -1
-    $killed = $false
-    while (-not $process.HasExited) {
-        $length = -1
-        if (Test-Path -LiteralPath $framesPath) {
-            try { $length = (Get-Item -LiteralPath $framesPath).Length } catch { $length = $lastLength }
+        if ($DryRun) {
+            "--- $sessionName (max $($scenario.max)s, prompt=$($scenario.prompt))"
+            "    args: $($scenario.args -join ' ')"
+            $keyLines | ForEach-Object { "    key: $_" }
+            continue
         }
-        if ($length -ne $lastLength) {
-            [void]$arrivals.Add([int]$clock.Elapsed.TotalMilliseconds)
-            $lastLength = $length
+
+        "== $sessionName -- $($scenario.note)"
+
+        if (Test-Path -LiteralPath $outDir) { Remove-Item -LiteralPath $outDir -Recurse -Force }
+        New-ScratchProject -Path $scratch
+        Write-Utf8File -Path $keysPath -Text $keyText
+        if (Test-Path -LiteralPath $stdoutPath) { Remove-Item -LiteralPath $stdoutPath -Force }
+        if (Test-Path -LiteralPath $stderrPath) { Remove-Item -LiteralPath $stderrPath -Force }
+
+        # `--cwd` is not a detail. portable-pty 0.9 gives a child whose command builder
+        # names no directory the value of cwd.or(%USERPROFILE%), and the recorder used to
+        # pass none, so a session spawned from a scratch directory still ran in the user's
+        # home: the tool screens were the home directory's, and one scenario created
+        # `made.txt` there. The driver now sets the child's directory itself - the
+        # recorder's own cwd unless `--cwd` says otherwise - so it is named here on
+        # purpose: `--cwd` to the recorder puts the child in the scratch project whatever
+        # directory this script was launched from, and the application's own `--cwd`
+        # tells grok the same project explicitly, which is how the captured sessions were
+        # driven. Both are passed rather than either alone.
+        $captureArgs = @(
+            'record', '--rows', "$Rows", '--cols', "$Cols", '--out', $outDir, '--script', $keysPath, '--cwd', $scratch, '--', $GrokExe, '--cwd', $scratch
+        ) + @($scenario.args)
+
+        $clock = [System.Diagnostics.Stopwatch]::StartNew()
+        # Quoted, not handed over as an array. `-ArgumentList` joins an array with single
+        # spaces and quotes nothing, so a scratch directory or a session directory under a
+        # path that holds a space (`C:\Users\John Smith\AppData\...`) would arrive at the
+        # recorder as two arguments and the run would die here. See
+        # ConvertTo-CommandLineArgument.
+        $captureCommandLine = ConvertTo-CommandLine -Arguments $captureArgs
+        $process = Start-Process -FilePath $CaptureExe -ArgumentList $captureCommandLine -WorkingDirectory $scratch -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+        # Named before the sampling loop, so the `finally` can stop it whatever happens
+        # between here and the end of the session.
+        $activeRecorder = $process
+
+        # Sample the frame stream while the session runs. The recorder's own record has
+        # no timestamps, so the arrival times measured here are the only evidence of
+        # what the frame rate actually was.
+        $arrivals = New-Object System.Collections.ArrayList
+        $lastLength = -1
+        $killed = $false
+        while (-not $process.HasExited) {
+            $length = -1
+            if (Test-Path -LiteralPath $framesPath) {
+                try { $length = (Get-Item -LiteralPath $framesPath).Length } catch { $length = $lastLength }
+            }
+            if ($length -ne $lastLength) {
+                [void]$arrivals.Add([int]$clock.Elapsed.TotalMilliseconds)
+                $lastLength = $length
+            }
+            if ($clock.Elapsed.TotalSeconds -gt $scenario.max) {
+                $killed = $true
+                Stop-CaptureTree -Id $process.Id
+                break
+            }
+            Start-Sleep -Milliseconds 100
         }
-        if ($clock.Elapsed.TotalSeconds -gt $scenario.max) {
-            $killed = $true
-            Stop-CaptureTree -Id $process.Id
-            break
+        $exitCode = $null
+        if ($process.HasExited) {
+            try { [void]$process.WaitForExit(20000) } catch {}
+            $exitCode = $process.ExitCode
         }
-        Start-Sleep -Milliseconds 100
-    }
-    $exitCode = $null
-    if ($process.HasExited) {
-        try { [void]$process.WaitForExit(20000) } catch {}
-        $exitCode = $process.ExitCode
-    }
-    $clock.Stop()
-    $wall = [math]::Round($clock.Elapsed.TotalSeconds, 1)
+        $clock.Stop()
+        $wall = [math]::Round($clock.Elapsed.TotalSeconds, 1)
 
-    $stats = Get-FrameStats -Path $framesPath
-    $recordPath = Join-Path $outDir 'session.json'
-    $hasRecord = Test-Path -LiteralPath $recordPath
-    $startedAt = $null
-    $endedAt = $null
-    if ($hasRecord) {
-        try {
-            $rec = ((Read-SessionText -Path $recordPath)) | ConvertFrom-Json
-            $startedAt = $rec.started_at
-            $endedAt = $rec.ended_at
-        } catch {}
-    }
-    $stdoutText = ''
-    if (Test-Path -LiteralPath $stdoutPath) { $stdoutText = ((Get-Content -LiteralPath $stdoutPath) -join ' / ') }
-    $stderrText = ''
-    if (Test-Path -LiteralPath $stderrPath) { $stderrText = ((Get-Content -LiteralPath $stderrPath) -join ' / ') }
-    $endsWith = 'unknown'
-    if ($killed) { $endsWith = 'killed after ' + $scenario.max + 's' }
-    elseif ($stdoutText -match 'the program exited') { $endsWith = 'the program exited' }
-    elseif ($stdoutText -match 'interrupted') { $endsWith = 'interrupted' }
-
-    # Put the application's configuration back before anything else runs: what this
-    # session did to it must not reach the next one.
-    $configNote = Restore-GrokConfig -Path $GrokConfig -Backup $configBackup
-
-    $row = [ordered]@{
-        name = $sessionName
-        scenario = $scenario.name
-        note = $scenario.note
-        grok_args = @($scenario.args)
-        prompt_session = [bool]$scenario.prompt
-        sessions_dir = 'sessions/w1/' + $sessionName
-        rows = $Rows
-        cols = $Cols
-        frames = $stats.frames
-        unique_screens = $stats.unique_screens
-        alt_screen_frames = $stats.alt_screen_frames
-        changed_rows_total = $stats.changed_rows_total
-        first_seq = $stats.first_seq
-        last_seq = $stats.last_seq
-        runs_in_last_frame = $stats.runs_in_last_frame
-        wall_seconds = $wall
-        ended = $endsWith
-        exit_code = $exitCode
-        has_session_json = $hasRecord
-        started_at = $startedAt
-        ended_at = $endedAt
-        frame_arrivals_ms = @($arrivals)
-        recorder_stdout = $stdoutText
-        recorder_stderr = $stderrText
-        config_written = $configNote
-        cost = $null
-    }
-    $indexRows = @(@($indexRows) | Where-Object { $_.name -ne $sessionName }) + @([pscustomobject]$row)
-
-    "   frames=$($stats.frames) unique=$($stats.unique_screens) alt=$($stats.alt_screen_frames) wall=${wall}s ended=$endsWith record=$hasRecord"
-    if ($configNote -ne 'unchanged') { "   config: $configNote" }
-    if ($stderrText -ne '') { "   stderr: $stderrText" }
-
-    # The index is rewritten after every session, so a run that is interrupted
-    # still has an index for every session it finished.
-    $promptSessions = @(@($indexRows) | Where-Object { $_.prompt_session }).Count
-    $index = [ordered]@{
-        version = 1
-        generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-        application = $GrokExe
-        recorded_with = 'ui-lm-capture record'
-        geometry = "${Rows}x${Cols}"
-        cost = $null
-        cost_note = 'SessionRecord.cost is null for every session: the TUI stream carries no usage events, so nothing priced these runs. Quota must be read from the xAI account; no dollar figure is invented here.'
-        totals = [ordered]@{
-            sessions = @($indexRows).Count
-            frames = [int](@($indexRows) | Measure-Object -Property frames -Sum).Sum
-            unique_screens = [int](@($indexRows) | Measure-Object -Property unique_screens -Sum).Sum
-            alt_screen_frames = [int](@($indexRows) | Measure-Object -Property alt_screen_frames -Sum).Sum
-            prompt_sessions = $promptSessions
-            wall_seconds = [math]::Round((@($indexRows) | Measure-Object -Property wall_seconds -Sum).Sum, 1)
+        $stats = Get-FrameStats -Path $framesPath
+        $recordPath = Join-Path $outDir 'session.json'
+        $hasRecord = Test-Path -LiteralPath $recordPath
+        $startedAt = $null
+        $endedAt = $null
+        if ($hasRecord) {
+            try {
+                $rec = ((Read-SessionText -Path $recordPath)) | ConvertFrom-Json
+                $startedAt = $rec.started_at
+                $endedAt = $rec.ended_at
+            } catch {}
         }
-        not_captured = @($NotCaptured)
-        sessions = @(@($indexRows) | Sort-Object -Property name)
+        $stdoutText = ''
+        if (Test-Path -LiteralPath $stdoutPath) { $stdoutText = ((Get-Content -LiteralPath $stdoutPath) -join ' / ') }
+        $stderrText = ''
+        if (Test-Path -LiteralPath $stderrPath) { $stderrText = ((Get-Content -LiteralPath $stderrPath) -join ' / ') }
+        $endsWith = 'unknown'
+        if ($killed) { $endsWith = 'killed after ' + $scenario.max + 's' }
+        elseif ($stdoutText -match 'the program exited') { $endsWith = 'the program exited' }
+        elseif ($stdoutText -match 'interrupted') { $endsWith = 'interrupted' }
+
+        # Put the application's configuration back before anything else runs: what this
+        # session did to it must not reach the next one. Both files - the UI mode in
+        # `config.toml`, and the trust entry the prologue's Enter has just added for this
+        # session's scratch directory.
+        $configNote = Restore-GrokConfig -Path $GrokConfig -Backup $configBackup
+        $trustNote = Restore-GrokTrust -Path $GrokTrust -Backup $trustBackup
+
+        $row = [ordered]@{
+            name = $sessionName
+            scenario = $scenario.name
+            note = $scenario.note
+            grok_args = @($scenario.args)
+            prompt_session = [bool]$scenario.prompt
+            sessions_dir = 'sessions/w1/' + $sessionName
+            rows = $Rows
+            cols = $Cols
+            frames = $stats.frames
+            unique_screens = $stats.unique_screens
+            alt_screen_frames = $stats.alt_screen_frames
+            changed_rows_total = $stats.changed_rows_total
+            first_seq = $stats.first_seq
+            last_seq = $stats.last_seq
+            runs_in_last_frame = $stats.runs_in_last_frame
+            wall_seconds = $wall
+            ended = $endsWith
+            exit_code = $exitCode
+            has_session_json = $hasRecord
+            started_at = $startedAt
+            ended_at = $endedAt
+            frame_arrivals_ms = @($arrivals)
+            recorder_stdout = $stdoutText
+            recorder_stderr = $stderrText
+            config_written = $configNote
+            cost = $null
+        }
+        $indexRows = @(@($indexRows) | Where-Object { $_.name -ne $sessionName }) + @([pscustomobject]$row)
+
+        "   frames=$($stats.frames) unique=$($stats.unique_screens) alt=$($stats.alt_screen_frames) wall=${wall}s ended=$endsWith record=$hasRecord"
+        if ($configNote -ne 'unchanged') { "   config: $configNote" }
+        if ($trustNote -ne 'unchanged') { "   trust: $trustNote" }
+        if ($stderrText -ne '') { "   stderr: $stderrText" }
+
+        # The index is rewritten after every session, so a run that is interrupted
+        # still has an index for every session it finished.
+        $promptSessions = @(@($indexRows) | Where-Object { $_.prompt_session }).Count
+        $index = [ordered]@{
+            version = 1
+            generated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            application = $GrokExe
+            recorded_with = 'ui-lm-capture record'
+            geometry = "${Rows}x${Cols}"
+            cost = $null
+            cost_note = 'SessionRecord.cost is null for every session: the TUI stream carries no usage events, so nothing priced these runs. Quota must be read from the xAI account; no dollar figure is invented here.'
+            exit_code_note = 'exit_code is the recorder''s own exit status, not the application''s. It is null whenever the recorder did not exit - the kill at a scenario''s ceiling is the case this script creates - and it is null in every row of the W1 index. The application''s exit status, where it reports one, survives only as text in recorder_stderr (the two rows carrying "exited with status -1073741510", STATUS_CONTROL_C_EXIT, are s20-prompt-text and s22-prompt-text-minimal).'
+            totals = [ordered]@{
+                sessions = @($indexRows).Count
+                frames = [int](@($indexRows) | Measure-Object -Property frames -Sum).Sum
+                unique_screens = [int](@($indexRows) | Measure-Object -Property unique_screens -Sum).Sum
+                alt_screen_frames = [int](@($indexRows) | Measure-Object -Property alt_screen_frames -Sum).Sum
+                prompt_sessions = $promptSessions
+                wall_seconds = [math]::Round((@($indexRows) | Measure-Object -Property wall_seconds -Sum).Sum, 1)
+            }
+            not_captured = @($NotCaptured)
+            sessions = @(@($indexRows) | Sort-Object -Property name)
+        }
+        Write-Utf8File -Path $IndexPath -Text (($index | ConvertTo-Json -Depth 8) + "`r`n")
     }
-    Write-Utf8File -Path $IndexPath -Text (($index | ConvertTo-Json -Depth 8) + "`r`n")
+}
+finally {
+    # Whatever ended the loop - the last session, a throw, an operator's Ctrl-C -
+    # two things happen before this script exits: both of the application's
+    # configuration files go back to the bytes they held before the first session,
+    # and no recorder is left alive driving the application with nobody sampling it.
+    # The per-session restore in the loop is the normal path; this is the path for
+    # everything that skips it.
+    $recorderNote = Stop-LiveRecorders -Own $activeRecorder
+    if ($null -ne $configBackup) {
+        $configFinal = Restore-GrokFile -Path $GrokConfig -Backup $configBackup
+    } elseif (Test-Path -LiteralPath $GrokConfig) {
+        $configFinal = 'no config.toml before the run, but one exists now; left in place for inspection'
+    } else {
+        $configFinal = 'no config.toml before or after the run'
+    }
+    $trustFinal = Restore-GrokTrust -Path $GrokTrust -Backup $trustBackup
+    $trustCountAfter = Get-TrustEntryCount -Path $GrokTrust
+    "capture-w1: config:   $configFinal -- $GrokConfig"
+    "capture-w1: trust:    $trustFinal -- $GrokTrust holds $(Format-Count -Count $trustCountAfter -Singular 'entry' -Plural 'entries'), $(Format-Count -Count $trustCountBefore -Singular 'entry' -Plural 'entries') before the run"
+    "capture-w1: recorder: $recorderNote"
 }
 
 if ($DryRun) { return }

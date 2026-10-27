@@ -1,4 +1,4 @@
-﻿{
+{
     "version":  1,
     "generated_at":  "2026-10-27T11:49:40Z",
     "application":  "C:\\Users\\moreweb\\.grok\\bin\\grok.exe",
@@ -6,6 +6,7 @@
     "geometry":  "50x160",
     "cost":  null,
     "cost_note":  "SessionRecord.cost is null for every session: the TUI stream carries no usage events, so nothing priced these runs. Quota must be read from the xAI account; no dollar figure is invented here.",
+    "exit_code_note":  "exit_code is the recorder's own exit status, not the application's. It is null whenever the recorder did not exit - the kill at a scenario's ceiling is the case this script creates - and it is null in every row of the W1 index. The application's exit status, where it reports one, survives only as text in recorder_stderr (the two rows carrying \"exited with status -1073741510\", STATUS_CONTROL_C_EXIT, are s20-prompt-text and s22-prompt-text-minimal).",
     "totals":  {
                    "sessions":  35,
                    "frames":  526,
