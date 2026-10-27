@@ -46,6 +46,7 @@
 //! the command builder is given.
 
 use std::collections::VecDeque;
+use std::ffi::OsString;
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, SyncSender, TryRecvError, TrySendError};
@@ -86,22 +87,86 @@ pub fn added_environment(overrides: &[(String, String)]) -> Vec<(String, String)
     added
 }
 
-/// The environment the child actually runs with: this process's own environment,
-/// with [`added_environment`] applied over it.
+/// The rendering environment of a child session: an allowlist of the variables that
+/// decide how a program draws, taken from this process's own environment with
+/// [`added_environment`] applied over them.
 ///
-/// This is the list a session record has to carry. The command builder inherits the
-/// recorder's environment as the base and then adds or replaces the pairs it was
-/// given, so the child's environment is not the driver's defaults — it is the
-/// recorder's whole environment plus those. Reading the defaults as "the environment
-/// of the session" is how the harness's `NO_COLOR=1` produced 35 monochrome captures
-/// that the record did not mention.
+/// This is the list a session record carries, and it is deliberately an allowlist of
+/// six names rather than the environment. A session is a shareable artefact — this
+/// project exists to produce a frame dataset other people read — and the capture
+/// path is exactly where a credential is exported in the recorder's environment so
+/// that the application under capture can run (`XAI_API_KEY` and its like). The
+/// whole environment therefore cannot be persisted: it would put that credential in
+/// `session.json`, where nothing would ever remove it and nothing would say it was
+/// there. House ground rule 1 is that secrets are never stored, so what a session
+/// records is a secret-free description of what the program's *rendering*
+/// environment was — `RECORDED_ENV`, the variables that decide colour, glyph width
+/// and locale — and nothing else. Everything else the child inherits or is given is
+/// not recorded, and cannot be recovered from the record.
+///
+/// The whole environment was recorded verbatim before this allowlist existed. That
+/// also made the field say something true: the child inherits the recorder's
+/// environment and the driver's defaults are applied over it, so the defaults alone
+/// were never the child's environment, and reading them as such is how the harness's
+/// `NO_COLOR=1` produced 35 monochrome captures the record did not mention. The
+/// allowlist keeps that lesson: it is read from the process environment, not from
+/// [`DEFAULT_ENV`], so an inherited `NO_COLOR` is still recorded.
 ///
 /// The order is a process environment's order: inherited pairs where they were,
 /// replacements in place, additions appended. On Windows a variable is replaced
 /// whatever case it is written in, because Windows has one variable per name.
+///
+/// Entries are read with `std::env::vars_os`, never `vars`: `vars` panics on an entry
+/// whose name or value is not Unicode, and an environment entry is not required to be
+/// Unicode — on Unix a value is any bytes but NUL. A recorder that panicked while
+/// assembling its record would lose the session it was about to start. A pair that
+/// cannot be represented as strings is skipped by `selected_environment` instead.
 pub fn child_environment(overrides: &[(String, String)]) -> Vec<(String, String)> {
-    let mut environment: Vec<(String, String)> = std::env::vars().collect();
+    selected_environment(std::env::vars_os(), overrides)
+}
+
+/// The environment variables a session record keeps: the ones that decide how a
+/// program draws.
+///
+/// `TERM` and `COLORTERM` say what the terminal promises (colour depth, therefore
+/// what the application is willing to emit); `NO_COLOR` says the user asked for none
+/// of it; `LANG`/`LC_ALL`/`LC_CTYPE` decide the locale, which decides glyph width,
+/// case folding and whether a cell is one column or two. Those are the facts a frame
+/// needs beside it; a `PATH` or an API key is not.
+const RECORDED_ENV: [&str; 6] = [
+    "TERM",
+    "COLORTERM",
+    "NO_COLOR",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+];
+
+/// The pairs [`child_environment`] keeps, from an environment supplied rather than
+/// read.
+///
+/// Split out as a pure function so the two things that matter about it can be tested
+/// without depending on, or mutating, the test process's own environment: that only
+/// allowlisted names survive, and that an entry which is not Unicode is skipped
+/// rather than panicking. `parent` is what `std::env::vars_os` yields — nothing here
+/// requires either half of a pair to be a `String`.
+///
+/// A pair whose name or value is not Unicode is skipped: a JSON string cannot hold
+/// it, and the record is a description of the environment rather than a replay of it.
+/// An override outside the allowlist is dropped for the same reason a non-allowlisted
+/// inherited variable is — the record is the rendering environment, and the driver's
+/// additions are recorded separately, in [`added_environment`], where an override's
+/// existence is what a reader looks for.
+fn selected_environment(
+    parent: impl IntoIterator<Item = (OsString, OsString)>,
+    overrides: &[(String, String)],
+) -> Vec<(String, String)> {
+    let mut environment: Vec<(String, String)> =
+        parent.into_iter().filter_map(recordable_pair).collect();
     for (key, value) in added_environment(overrides) {
+        if !is_rendering_variable(&key) {
+            continue;
+        }
         match environment
             .iter_mut()
             .find(|(name, _)| same_variable(name, &key))
@@ -111,6 +176,24 @@ pub fn child_environment(overrides: &[(String, String)]) -> Vec<(String, String)
         }
     }
     environment
+}
+
+/// One environment pair as the record can hold it, or `None` if it is not a name and
+/// value the record keeps.
+fn recordable_pair((name, value): (OsString, OsString)) -> Option<(String, String)> {
+    let name = name.into_string().ok()?;
+    if !is_rendering_variable(&name) {
+        return None;
+    }
+    let value = value.into_string().ok()?;
+    Some((name, value))
+}
+
+/// Whether `name` is a variable a session records — see [`RECORDED_ENV`].
+fn is_rendering_variable(name: &str) -> bool {
+    RECORDED_ENV
+        .iter()
+        .any(|allowed| same_variable(name, allowed))
 }
 
 /// Whether two environment variable names are the same variable on this platform.
@@ -329,11 +412,12 @@ impl Driver {
     /// reading its output.
     ///
     /// The child inherits this process's environment, then [`DEFAULT_ENV`] is
-    /// applied, then `cfg.env` — so the caller can override the defaults. That merge
-    /// is [`child_environment`], which is what a session records: the record says
-    /// what the child saw, not what this driver added to it. It runs in
-    /// [`SessionConfig::working_directory`], which is the caller's directory or the
-    /// recorder's own, never `portable-pty`'s home-directory default.
+    /// applied, then `cfg.env` — so the caller can override the defaults. What a
+    /// session says about that environment is [`child_environment`]: the rendering
+    /// allowlist of the merged environment, not the whole thing (see its doc for
+    /// why). It runs in [`SessionConfig::working_directory`], which is the caller's
+    /// directory or the recorder's own, never `portable-pty`'s home-directory
+    /// default.
     pub fn spawn(cfg: &SessionConfig) -> Result<Self> {
         let pair = portable_pty::native_pty_system()
             .openpty(pty_size(cfg.rows, cfg.cols))
@@ -669,12 +753,16 @@ mod tests {
     }
 
     #[test]
-    fn the_environment_a_session_records_is_the_one_the_child_gets() {
-        // The record's `child_env` was added because `env` — the driver's two
-        // defaults — is not the environment the child saw: the child inherits the
-        // whole recorder environment and the defaults are applied over it. Both
-        // halves of that sentence are checked here, because reading the defaults as
-        // the session's environment is what let `NO_COLOR=1` through unnoticed.
+    fn the_environment_a_session_records_is_only_the_rendering_allowlist() {
+        // `env` — the driver's two defaults — is not the environment the child saw:
+        // the child inherits the recorder's environment and the defaults are applied
+        // over it. That distinction was a defect and it is settled elsewhere. What is
+        // checked here is the *other* half of the same field: what the record says
+        // about that environment is an allowlist of the variables that decide how the
+        // program draws, never the whole environment. A session is a shareable
+        // artefact, and a capture path is exactly where a credential is exported so
+        // that the application under capture can run — persisting everything would
+        // write that credential into `session.json`.
         assert_eq!(
             added_environment(&[]),
             vec![
@@ -692,42 +780,183 @@ mod tests {
             "an override replaces the default rather than being added twice"
         );
 
-        // The merged environment is the process's own, plus those: a variable the
-        // driver never mentions is still in it — that is the half that was missing —
-        // and the driver's defaults are present with the override applied.
+        // The record is the process's own environment, filtered to the rendering
+        // allowlist and merged with those: the driver's defaults are present with the
+        // override applied, a caller's rendering override is present, and a variable
+        // that has nothing to do with drawing is not.
+        //
+        // The allowlist is written out here rather than imported from the code under
+        // test: it is the specification, and a test that read the list from the
+        // implementation would agree with any list the implementation chose.
+        const RENDERING_VARIABLES: [&str; 6] = [
+            "TERM",
+            "COLORTERM",
+            "NO_COLOR",
+            "LANG",
+            "LC_ALL",
+            "LC_CTYPE",
+        ];
+        let recorded = child_environment(&[
+            ("NO_COLOR".to_owned(), "1".to_owned()),
+            ("LC_ALL".to_owned(), "C.UTF-8".to_owned()),
+        ]);
+        assert!(
+            recorded
+                .iter()
+                .any(|(name, value)| same_variable(name, "TERM") && value == "xterm-256color"),
+            "the driver's own defaults are rendered variables, so the record keeps them"
+        );
+        assert!(
+            recorded
+                .iter()
+                .any(|(name, value)| same_variable(name, "NO_COLOR") && value == "1"),
+            "a caller override of a rendering variable is the record's description of how \
+             the program was told to draw: {recorded:?}"
+        );
+        assert!(
+            recorded
+                .iter()
+                .any(|(name, value)| same_variable(name, "LC_ALL") && value == "C.UTF-8"),
+            "the locale is a rendering variable: it decides glyph width and case folding"
+        );
         let inherited = if cfg!(windows) { "Path" } else { "PATH" };
         assert!(
             std::env::var_os(inherited).is_some(),
             "the test needs one variable this process is guaranteed to have"
         );
-        let merged = child_environment(&[("NO_COLOR".to_owned(), String::new())]);
         assert!(
-            merged
+            !recorded
                 .iter()
                 .any(|(name, _)| same_variable(name, inherited)),
-            "a variable the driver never mentions is still in the environment the child \
-             inherits, so a record of the defaults alone says nothing about it"
+            "a variable that is not rendering-relevant must not be in the record however \
+             this process happens to have it: {recorded:?}"
         );
         assert!(
-            merged
+            recorded.iter().all(|(name, _)| RENDERING_VARIABLES
                 .iter()
-                .any(|(name, value)| same_variable(name, "TERM") && value == "xterm-256color"),
-            "the driver's own defaults are applied over the inherited environment"
-        );
-        assert!(
-            merged
-                .iter()
-                .any(|(name, value)| same_variable(name, "NO_COLOR") && value.is_empty()),
-            "and so is a caller override: clearing a variable is how a capture refuses to \
-             let this harness's `NO_COLOR=1` reach the application"
+                .any(|allowed| same_variable(name, allowed))),
+            "the record must hold nothing outside the allowlist: {recorded:?}"
         );
         assert_eq!(
-            merged
+            recorded
                 .iter()
                 .filter(|(name, _)| same_variable(name, "TERM"))
                 .count(),
             1,
             "a variable appears once: a process environment has one entry per name"
+        );
+    }
+
+    /// An `OsString` that is not valid Unicode, in the shape the platform can really
+    /// produce one.
+    ///
+    /// On Unix a value is any bytes but NUL and `PATH=$'\xff'` is an ordinary
+    /// assignment, so an environment entry that is not UTF-8 is not hypothetical; on
+    /// Windows it is an unpaired surrogate in the wide form, which `OsString` keeps
+    /// and `to_str` rejects. `std::env::vars` panics on either, inside the iterator,
+    /// where nothing on the recorder's side can catch it.
+    fn non_unicode() -> OsString {
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStringExt;
+            OsString::from_vec(vec![0xff, 0xfe])
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::ffi::OsStringExt;
+            OsString::from_wide(&[0xd800])
+        }
+    }
+
+    /// An environment as a process hands it over: named pairs, no reading of this
+    /// process's own environment and nothing global mutated for the test.
+    fn environment(pairs: &[(&str, &str)]) -> Vec<(OsString, OsString)> {
+        pairs
+            .iter()
+            .map(|(name, value)| (OsString::from(name), OsString::from(value)))
+            .collect()
+    }
+
+    #[test]
+    fn a_secret_shaped_variable_is_not_in_the_environment_a_session_records() {
+        // The defect this rules out: a capture is run with `XAI_API_KEY` (or whatever
+        // the application needs) exported in the recorder's environment, and the
+        // record's `child_env` persisted the whole environment verbatim — into
+        // `session.json`, of a directory whose whole purpose is to be handed to
+        // somebody else.
+        //
+        // Through the pure selection rather than the process environment: the test
+        // must not depend on, or mutate, whatever this machine happens to export.
+        let parent = environment(&[
+            ("TERM", "xterm-256color"),
+            ("XAI_API_KEY", "xai-not-a-real-key"),
+            ("NO_COLOR", "1"),
+            ("LANG", "en_GB.UTF-8"),
+            ("PATH", "/usr/local/bin:/usr/bin"),
+            ("LC_ALL", "C.UTF-8"),
+            ("HOME", "/home/someone"),
+            ("LC_CTYPE", "UTF-8"),
+            ("COLORTERM", "truecolor"),
+        ]);
+        // A caller override is filtered too: `env` records what the driver was asked
+        // to add, so nothing is lost by refusing to carry a non-rendering override
+        // into the allowlist.
+        let recorded = selected_environment(
+            parent,
+            &[
+                ("TERM".to_owned(), "xterm-16color".to_owned()),
+                ("OPENAI_API_KEY".to_owned(), "sk-not-a-real-key".to_owned()),
+            ],
+        );
+        assert_eq!(
+            recorded,
+            vec![
+                ("TERM".to_owned(), "xterm-16color".to_owned()),
+                ("NO_COLOR".to_owned(), "1".to_owned()),
+                ("LANG".to_owned(), "en_GB.UTF-8".to_owned()),
+                ("LC_ALL".to_owned(), "C.UTF-8".to_owned()),
+                ("LC_CTYPE".to_owned(), "UTF-8".to_owned()),
+                ("COLORTERM".to_owned(), "truecolor".to_owned()),
+            ],
+            "the record is exactly the rendering allowlist, in environment order, with the \
+             caller's override applied in place"
+        );
+        for secret in ["XAI_API_KEY", "OPENAI_API_KEY", "PATH", "HOME"] {
+            assert!(
+                !recorded.iter().any(|(name, _)| same_variable(name, secret)),
+                "{secret} must not be in the environment a session records"
+            );
+        }
+    }
+
+    #[test]
+    fn a_non_unicode_environment_entry_is_skipped_rather_than_panicking() {
+        // `std::env::vars()` panics on an entry that is not Unicode — inside the
+        // iterator, so it takes the recorder down at the point it builds its record.
+        // The entry is skipped instead: a name or value that is not a string cannot be
+        // written to JSON as one, and the record is a description of the environment,
+        // not a replay of it.
+        //
+        // The same pure path the recorder takes, with the parent environment supplied:
+        // an unpaired surrogate on Windows and a non-UTF-8 byte on Unix are both what
+        // `vars_os` really yields there.
+        let parent = vec![
+            (OsString::from("TERM"), OsString::from("xterm-256color")),
+            (non_unicode(), OsString::from("1")),
+            (OsString::from("NO_COLOR"), non_unicode()),
+            (OsString::from("LANG"), OsString::from("C.UTF-8")),
+        ];
+        let recorded = selected_environment(parent, &[]);
+        assert_eq!(
+            recorded,
+            vec![
+                ("TERM".to_owned(), "xterm-256color".to_owned()),
+                ("LANG".to_owned(), "C.UTF-8".to_owned()),
+                // The driver's own `COLORTERM` default is still applied: the pair that
+                // could not be described was dropped, not the whole merge.
+                ("COLORTERM".to_owned(), "truecolor".to_owned()),
+            ],
+            "an entry that is not Unicode is skipped, and the rest still records"
         );
     }
 

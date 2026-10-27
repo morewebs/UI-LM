@@ -180,13 +180,16 @@ fn record(args: Record) -> Result<ExitCode> {
         // this process's own directory.
         cwd: args.cwd,
     };
-    // What the child will actually see and where it will run, resolved before the
+    // What the child will see and where it will run, resolved before the
     // session is opened: `working_directory` is the driver's own resolution (the
     // flag, or this recorder's directory), so the record cannot disagree with the
     // spawn, and a directory that is not one fails the run before anything is
-    // created. `child_environment` is the merged environment for the same reason:
-    // the child inherits this process's environment and the driver's defaults are
-    // applied over it, so the defaults alone are not what the program ran with.
+    // created. `child_environment` is the rendering allowlist of the environment for
+    // the same reason — the child inherits this process's environment and the
+    // driver's defaults are applied over it, so the defaults alone are not what the
+    // program ran with — and an allowlist rather than the environment itself
+    // because a session is a shareable artefact and this recorder is run with
+    // whatever credential the application needs exported.
     let child_cwd = cfg.working_directory()?;
     let child_env = child_environment(&cfg.env);
     // The record is known before the session runs, except for how it ended: the

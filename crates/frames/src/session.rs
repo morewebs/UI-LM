@@ -70,20 +70,30 @@ pub struct SessionRecord {
     /// harness exported `NO_COLOR=1`, the child inherited it, the application
     /// honoured it, and the first W1 captures came back monochrome while this field
     /// — read as "the environment of the session" — said nothing about it.
-    /// [`SessionRecord::child_env`] is the merged environment, and it is what a
-    /// reader reproducing a session has to use.
+    /// [`SessionRecord::child_env`] is the rendering environment the child ran in,
+    /// and it is what a reader reproducing a session has to use.
     ///
     /// Pairs rather than a map: the order is the order a process environment has,
     /// a variable may be set twice, and sorting it to make it a map would hide
     /// which of the two the program saw.
     pub env: Vec<(String, String)>,
-    /// The environment the program actually ran with.
+    /// The rendering environment the program ran with: an allowlist of the variables
+    /// that decide how it draws — `TERM`, `COLORTERM`, `NO_COLOR`, `LANG`, `LC_ALL`,
+    /// `LC_CTYPE` — taken from the recorder's own environment with the additions in
+    /// [`SessionRecord::env`] applied over them, in the order a process environment
+    /// has.
     ///
-    /// The recorder's own environment with the additions in
-    /// [`SessionRecord::env`] applied over it, in the order a process environment
-    /// has. Recorded because a screen is only reproducible in the environment it
-    /// was drawn in, and "the child inherited whatever the recorder happened to
-    /// have" is not an environment anyone can reproduce a year later.
+    /// An allowlist and not the whole environment, deliberately. A session directory
+    /// is meant to be shared — the frames are the dataset this project exists to
+    /// produce — and a capture run is exactly the place where a credential is
+    /// exported in the recorder's environment so that the application under capture
+    /// can run (`XAI_API_KEY` and its like). Recording the environment verbatim would
+    /// write that credential into this file, where nothing would ever remove it and
+    /// nothing would say it was there. House ground rule 1: secrets are never stored.
+    /// The six names above are what a frame needs beside it to be reproducible — the
+    /// promises a terminal made and the locale that decided glyph widths — and
+    /// anything else the child inherited is not recorded, and cannot be recovered
+    /// from the record.
     ///
     /// Empty for a session written before this field existed; for those, `env` is
     /// all that is on disk and it is not the whole environment.
