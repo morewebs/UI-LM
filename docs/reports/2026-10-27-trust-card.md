@@ -41,14 +41,25 @@ Three things are worth naming:
   the second block explains the risk; a renderer that keeps them as separate blocks can
   lay them out as a title and a body rather than one paragraph.
 
+## The declined path: there is nothing to see
+
+The card was re-captured and answered with `n` instead of Enter. The application **exits**:
+the recorder reports the program stopped, and the session's last frames hold a cleared
+screen. There is no "declined" screen, no error message and no fallback prompt — the choice
+is to trust the directory and start, or not to start.
+
+Two consequences worth having on record:
+
+- A capture script that does not accept the card records the card, not the application. The
+  prologue keystroke is load-bearing, which is why every scenario in this project begins
+  with one.
+- A rig that wants to observe the declined path has nothing to observe; the interesting
+  evidence is the exit, and the recorder already reports it on stderr without failing.
+
 ## What this does not do
 
-- It does not answer the card. Every recording so far either sends the prologue Enter
-  that accepts the default or stops before it; a scenario that *declines* has not been
-  captured, so the declined path — and whatever the application draws after it — is
-  unknown.
-- The card's own styling is not described beyond per-span attributes; whether the
-  selected choice is drawn differently is not established, because the capture has no
-  selection state to compare.
+- The card's own styling is not described beyond per-span attributes; whether the selected
+  choice is drawn differently is not established, because the capture has no selection
+  state to compare.
 - The card blocks the session until answered, which is why it is worth having a scripted
   prologue: a capture without one measures the card, not the application.
