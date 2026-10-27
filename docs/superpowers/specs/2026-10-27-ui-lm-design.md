@@ -57,7 +57,7 @@ Everything below serves these. Each has a number attached by §7.5.
 
 ## 2. What it is, concretely
 
-Four artefacts, one repository (`Projects/ui-lm`):
+Four artefacts, one repository (`Projects/UI-LM`):
 
 1. **`ui-lm-capture`** — drives a TUI in a PTY, reconstructs the cell grid with a
    VT100 emulator, stores frames deterministically, and aligns frames to the
@@ -419,7 +419,7 @@ So they can be challenged while reading:
 8. **Four students, not two** (C5 puts the knee at ~3B; `8B-A1B` straddles latency and
    quality).
 9. **K5 added** — emulator fidelity as a kill criterion.
-10. **Naming**: `Projects/ui-lm`, catalogue `moreweb.terminal/v1`, envelope pinned to
+10. **Naming**: `Projects/UI-LM`, catalogue `moreweb.terminal/v1`, envelope pinned to
     A2UI v0.9.1.
 11. **Volatile-span masking** as a rig requirement rather than a cleaning step.
 12. **The screen enumeration is a W2 deliverable**, not a W0 guess — the golden set is
