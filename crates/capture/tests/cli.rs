@@ -174,6 +174,61 @@ fn record_writes_frames_changed_rows_and_session() {
     assert!(record.ended_at.is_some(), "a finished capture says when");
 }
 
+/// The fixture for the failing-child test: draws a line, then exits non-zero.
+///
+/// The line matters as much as the code: it is what makes the session a real one,
+/// so the test can show that a written session and a failing program are two
+/// different facts rather than one.
+fn fails_after_drawing() -> Vec<String> {
+    if cfg!(windows) {
+        vec!["cmd".into(), "/c".into(), "echo done & exit 3".into()]
+    } else {
+        vec!["sh".into(), "-c".into(), "echo done; exit 3".into()]
+    }
+}
+
+#[test]
+fn a_non_zero_child_exit_is_reported_but_not_propagated() {
+    let _watchdog = arm_watchdog("a_non_zero_child_exit_is_reported_but_not_propagated");
+    let out = tempfile::tempdir().unwrap();
+    let output = recorder(out.path())
+        .arg("--")
+        .args(fails_after_drawing())
+        .output()
+        .unwrap();
+
+    // The recorder's exit code describes the recorder's job, and its job is to
+    // write the session — which it did. A scenario that deliberately kills the
+    // application must not read as a failed capture to the script running it.
+    assert!(
+        output.status.success(),
+        "a written session is a successful capture, however the program ended; the \
+         recorder exited {}",
+        output.status
+    );
+
+    // The child's failure still has to be visible for triage: on stderr, where it
+    // cannot be mistaken for the recorder's own verdict, and naming the code.
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr
+            .lines()
+            .any(|line| line.contains("exited with status 3")),
+        "the child's exit status must still be reported on stderr: {stderr:?}"
+    );
+
+    // And the session is the real thing: a record, and the frames the child drew
+    // before it stopped. A capture failure is distinguishable from a failing
+    // program precisely because it leaves no `session.json`, not by the code.
+    let (record, frames) =
+        read_frames(out.path()).expect("a capture of a failing program still writes its record");
+    assert!(
+        !frames.is_empty(),
+        "the child drew a line before it exited, so the session has the frame it drew"
+    );
+    assert!(record.ended_at.is_some(), "the record says how it ended");
+}
+
 #[test]
 fn a_scripted_keystroke_is_written_through_to_the_child() {
     let _watchdog = arm_watchdog("a_scripted_keystroke_is_written_through_to_the_child");

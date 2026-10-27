@@ -308,15 +308,17 @@ fn record(args: Record) -> Result<ExitCode> {
         ended.describe(QUIESCE_GAP),
     );
 
-    // The child's own exit code, for a caller scripting a run: a capture of a
-    // program that failed is still a session worth reading, but the failure belongs
-    // to the caller as well. An interrupted capture says nothing about the child —
-    // it was killed for being slow — so it exits successfully.
+    // The child's own exit status is reported, not propagated. This process's exit
+    // code describes *this* process's job, and the job is done: the session was
+    // written. A scenario that deliberately kills the application would otherwise
+    // read as a failed capture to the script running it, and a capture that really
+    // did fail needs no code to say so — it leaves no `session.json`. So the status
+    // goes to stderr, where triage can still see it and where it cannot be mistaken
+    // for the recorder's own verdict.
     if matches!(ended, Ended::StreamEnded) {
         if let Some(code) = driver.try_wait()? {
             if code != 0 {
                 eprintln!("warning: {:?} exited with status {code}", cfg.command);
-                return Ok(ExitCode::from(u8::try_from(code).unwrap_or(1)));
             }
         }
     }
