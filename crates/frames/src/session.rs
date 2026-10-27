@@ -10,6 +10,12 @@
 //! The format is a contract with everything downstream. The validator compares
 //! these frames against the application's own draw buffer and the training set is
 //! built from them, so a change here changes what every recorded session means.
+//!
+//! A capture killed before it ends has frames but no record, so the two files are
+//! read by two functions: `read_frames` for a finished session, and
+//! `read_orphaned_frames` for the stream a kill left behind. A directory describes
+//! one capture, and `SessionWriter::new` clears the previous run's record rather
+//! than letting two captures share a directory.
 
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
@@ -106,13 +112,27 @@ pub struct SessionWriter {
 impl SessionWriter {
     /// Opens a session in `dir`, creating the directory if it is not there.
     ///
-    /// The frame stream starts empty. A session directory holds one session, and
-    /// appending to a stream left by an earlier run would put two captures in one
-    /// file where no `seq` numbering can untangle them. The record is *not* written
-    /// here: nothing is known about how the session ended until it does.
+    /// The frame stream starts empty, and so does the directory: a record left by
+    /// an earlier run is removed. A session directory describes exactly one capture,
+    /// and reusing one must not leave the previous run's record beside this run's
+    /// fresh stream — that directory would read as a complete session made of one
+    /// capture's facts and another's frames, which is worse than either alone.
+    ///
+    /// An existing record is removed rather than refused. Reusing an output path is
+    /// normal, and failing there would break an interrupted-and-retried capture for
+    /// no reason the caller can act on. The record is *not* written here either:
+    /// nothing is known about how this session ended until it does.
     pub fn new(dir: &Path, record: SessionRecord) -> io::Result<Self> {
         fs::create_dir_all(dir)?;
         let frames = BufWriter::new(File::create(dir.join(FRAMES_FILE))?);
+        // Ignore a missing record — the usual case, and the whole point of reuse
+        // being safe — but do not swallow any other error: a record that exists and
+        // cannot be deleted would leave two captures in one directory.
+        match fs::remove_file(dir.join(SESSION_FILE)) {
+            Ok(()) => {}
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e),
+        }
         Ok(Self {
             dir: dir.to_path_buf(),
             record,
@@ -187,6 +207,14 @@ fn staging_path(path: &Path) -> PathBuf {
 
 /// Reads a session directory: its record, and every frame that parses.
 ///
+/// A directory with no record is not a session this function can return: the
+/// record is written only by `finish`, and a capture killed before it ended never
+/// got to say what it was. That is reported as `NotFound` naming `session.json`, so
+/// a caller can tell an incomplete capture — which still has frames worth reading,
+/// via `read_orphaned_frames` — from a directory that was never a session at all.
+/// The record is deliberately not synthesised: a partial session and a finished one
+/// must stay distinguishable.
+///
 /// A line that is not a frame is skipped with a warning naming it, rather than
 /// failing the read. Capture is killed mid-write more often than it is stopped
 /// cleanly, and the usual casualty is the last line of the stream: half an object,
@@ -201,11 +229,43 @@ fn staging_path(path: &Path) -> PathBuf {
 /// survive.
 pub fn read_frames(dir: &Path) -> io::Result<(SessionRecord, Vec<Frame>)> {
     let record_path = dir.join(SESSION_FILE);
-    let record: SessionRecord = serde_json::from_str(&fs::read_to_string(&record_path)?)
-        .map_err(|e| invalid_data(&record_path, &e))?;
+    let text = match fs::read_to_string(&record_path) {
+        Ok(text) => text,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                format!(
+                    "{}: no session record; the capture did not finish \
+                     (read_orphaned_frames reads the frames it did write)",
+                    record_path.display()
+                ),
+            ));
+        }
+        Err(e) => return Err(e),
+    };
+    let record: SessionRecord =
+        serde_json::from_str(&text).map_err(|e| invalid_data(&record_path, &e))?;
+    Ok((record, read_frame_lines(&dir.join(FRAMES_FILE))?))
+}
 
-    let frames_path = dir.join(FRAMES_FILE);
-    let mut lines = BufReader::new(File::open(&frames_path)?);
+/// Reads the frames of a capture that was killed before it could finish.
+///
+/// Capture is stopped by Ctrl-C at least as often as it ends by itself, and every
+/// append is flushed for exactly that case: the frames written before the signal
+/// arrived are the session. `read_frames` cannot return them, because there is no
+/// record to return beside them and inventing one would make an incomplete capture
+/// look like a finished one. This is the reader that says so — it takes the stream
+/// on its own, with the same tolerance for an unreadable line as `read_frames`.
+///
+/// It returns `NotFound` when there is no `frames.jsonl` either: a directory with
+/// neither file is not a capture in any state.
+pub fn read_orphaned_frames(dir: &Path) -> io::Result<Vec<Frame>> {
+    read_frame_lines(&dir.join(FRAMES_FILE))
+}
+
+/// Reads a frame stream line by line, keeping every line that parses as a frame.
+fn read_frame_lines(frames_path: &Path) -> io::Result<Vec<Frame>> {
+    let mut lines = BufReader::new(File::open(frames_path)?);
     let mut frames = Vec::new();
     let mut skipped = 0usize;
     let mut number = 0usize;
@@ -237,7 +297,7 @@ pub fn read_frames(dir: &Path) -> io::Result<(SessionRecord, Vec<Frame>)> {
             skipped
         );
     }
-    Ok((record, frames))
+    Ok(frames)
 }
 
 /// A parse failure as an I/O error naming the file it came from.
@@ -420,6 +480,86 @@ mod tests {
         assert!(
             !dir.path().join("session.json.tmp").exists(),
             "the staging file must be renamed away, not left beside the record"
+        );
+    }
+
+    #[test]
+    fn reusing_a_directory_leaves_only_the_new_capture() {
+        // Reusing an output directory is normal — a script that captures the same
+        // command twice writes to the same path. What must not survive is the
+        // previous run's record: a directory holding run A's record beside run B's
+        // truncated stream reads as a complete session that never happened, and
+        // says nothing to a caller about which capture it is looking at.
+        let dir = tempdir().unwrap();
+
+        let mut first = SessionWriter::new(dir.path(), rec()).unwrap();
+        first
+            .append(&frame_from_chars(0, 1, 1, &[vec!['a']]))
+            .unwrap();
+        first.finish(None).unwrap();
+        assert!(
+            dir.path().join("session.json").exists(),
+            "the first capture finished, so its record is on disk"
+        );
+
+        let mut second = SessionWriter::new(dir.path(), rec()).unwrap();
+        assert!(
+            !dir.path().join("session.json").exists(),
+            "reuse must drop the previous run's record; a directory describes one capture"
+        );
+
+        second
+            .append(&frame_from_chars(0, 1, 1, &[vec!['b']]))
+            .unwrap();
+        second
+            .append(&frame_from_chars(1, 1, 1, &[vec!['c']]))
+            .unwrap();
+        second.finish(None).unwrap();
+
+        let (_, frames) = read_frames(dir.path()).unwrap();
+        assert_eq!(
+            frames,
+            vec![
+                frame_from_chars(0, 1, 1, &[vec!['b']]),
+                frame_from_chars(1, 1, 1, &[vec!['c']]),
+            ],
+            "the directory must hold the second run's frames and only those"
+        );
+    }
+
+    #[test]
+    fn a_capture_killed_before_finish_reads_as_orphaned_frames() {
+        // A kill never reaches `finish`, so there is no record — and the frames are
+        // still there, flushed one per append precisely so a kill preserves them.
+        // A reader that can only open a finished session would throw them away.
+        let dir = tempdir().unwrap();
+        let mut w = SessionWriter::new(dir.path(), rec()).unwrap();
+        w.append(&frame_from_chars(0, 1, 1, &[vec!['a']])).unwrap();
+        w.append(&frame_from_chars(1, 1, 1, &[vec!['b']])).unwrap();
+        // The kill: the writer is dropped without `finish`. Every append already
+        // flushed its line, so closing the file changes nothing on disk.
+        drop(w);
+        assert!(!dir.path().join("session.json").exists());
+
+        assert_eq!(
+            read_orphaned_frames(dir.path()).unwrap(),
+            vec![
+                frame_from_chars(0, 1, 1, &[vec!['a']]),
+                frame_from_chars(1, 1, 1, &[vec!['b']]),
+            ],
+            "the flushed frames of a killed capture are the session"
+        );
+
+        // The same directory is still not a complete session: an incomplete capture
+        // has to stay distinguishable from a finished one, and the error has to say
+        // which file is missing so the caller knows that is why.
+        let err = read_frames(dir.path()).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::NotFound);
+        let message = err.to_string();
+        assert!(
+            message.contains("session.json"),
+            "the NotFound must name the record, so an incomplete capture is distinguishable \
+             from a directory that is not a session: {message}"
         );
     }
 
