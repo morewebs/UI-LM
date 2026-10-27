@@ -184,6 +184,18 @@ struct Record {
     /// which is honest rather than wrong.
     #[arg(long, value_name = "DIR")]
     events: Option<PathBuf>,
+
+    /// Stop the session after this many milliseconds, even if the program is still
+    /// running.
+    ///
+    /// Without this a session ends when the program exits or when the recorder is
+    /// killed, and a killed recorder leaves no `session.json` — the frames survive
+    /// but the session reads as interrupted. A timed stop ends the loop normally, so
+    /// the record is written and the run is reproducible: a capture that is meant to
+    /// observe three seconds of a program should say three seconds, not wait for a
+    /// scenario to talk the program into quitting.
+    #[arg(long, value_name = "MILLIS")]
+    stop_after: Option<u64>,
 }
 
 fn main() -> ExitCode {
@@ -370,10 +382,19 @@ fn record(args: Record) -> Result<ExitCode> {
     // The clock a frame's `at_ms` is measured from: the moment the recording loop
     // starts, which is as close to "the session began" as the recorder can know.
     let started = Instant::now();
+    let stop_after = args.stop_after.map(Duration::from_millis);
 
     let ended = loop {
         if signal::interrupted() {
             break Ended::Interrupted;
+        }
+        // A timed stop is checked first: a session that was asked to run for a fixed
+        // span should end on that span even if output is still arriving, and what has
+        // settled so far is exactly what it was asked to observe.
+        if let Some(limit) = stop_after {
+            if started.elapsed() >= limit {
+                break Ended::Stopped;
+            }
         }
 
         let (bytes_read, stream_ended) = match driver.read_some(&mut buffer) {
@@ -435,7 +456,7 @@ fn record(args: Record) -> Result<ExitCode> {
         }
 
         if stream_ended {
-            break Ended::StreamEnded;
+            break Ended::ProgramExited;
         }
 
         // The script's next keystroke, if it is due — and after this pass's frame, so
@@ -546,8 +567,18 @@ fn record(args: Record) -> Result<ExitCode> {
     // did fail needs no code to say so — it leaves no `session.json`. So the status
     // goes to stderr, where triage can still see it and where it cannot be mistaken
     // for the recorder's own verdict.
-    if matches!(ended, Ended::StreamEnded) {
-        if let Some(code) = driver.try_wait()? {
+    if matches!(ended, Ended::ProgramExited) {
+        // The stream ending usually means the child has exited, but "closed its
+        // output" and "was reaped" are not the same instant: asking once loses the
+        // status on a loaded machine, and the warning this exists to print then goes
+        // missing. A short wait costs nothing and makes the report reliable.
+        let mut status = driver.try_wait()?;
+        let deadline = Instant::now() + Duration::from_millis(500);
+        while status.is_none() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(10));
+            status = driver.try_wait()?;
+        }
+        if let Some(code) = status {
             if code != 0 {
                 eprintln!("warning: {:?} exited with status {code}", cfg.command);
             }
@@ -560,19 +591,22 @@ fn record(args: Record) -> Result<ExitCode> {
 #[derive(Clone, Copy, Debug)]
 enum Ended {
     /// The child's output stream ended, so the program had exited.
-    StreamEnded,
+    ProgramExited,
     /// An interrupt asked the capture to stop.
     Interrupted,
+    /// The session reached the span `--stop-after` asked for.
+    Stopped,
 }
 
 impl Ended {
     /// How an ending is described on stderr, since the two mean different things.
     fn describe(self, gap: Duration) -> String {
         match self {
-            Self::StreamEnded => "the program exited".to_owned(),
+            Self::ProgramExited => "the program exited".to_owned(),
             Self::Interrupted => {
                 format!("interrupted; frames settled up to the last {gap:?} of quiet")
             }
+            Self::Stopped => "reached the span `--stop-after` asked for".to_owned(),
         }
     }
 }

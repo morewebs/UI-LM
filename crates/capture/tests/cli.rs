@@ -667,3 +667,26 @@ fn an_interrupt_finishes_the_session_instead_of_leaving_it_unfinished() {
     );
     assert!(record.ended_at.is_some(), "the record says how it ended");
 }
+
+#[test]
+fn a_timed_stop_ends_the_session_and_writes_its_record() {
+    // The reason this exists: every capture before it ended when the program exited
+    // or when the recorder was killed, and a killed recorder leaves frames with no
+    // session.json. A timed stop is a normal ending, so the session is complete.
+    let _watchdog = arm_watchdog("a_timed_stop_ends_the_session_and_writes_its_record");
+    let out = tempfile::tempdir().unwrap();
+    let status = recorder(out.path())
+        .args(["--stop-after", "1200", "--"])
+        .args(draws_then_waits())
+        .status()
+        .unwrap();
+    assert!(status.success(), "the recorder failed: {status}");
+
+    let (record, frames) =
+        read_frames(out.path()).expect("a timed stop must leave a finished session");
+    assert!(!frames.is_empty(), "the child drew before the stop");
+    assert!(
+        record.ended_at.is_some(),
+        "a finished session records when it ended: {record:?}"
+    );
+}
