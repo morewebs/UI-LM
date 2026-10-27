@@ -884,7 +884,9 @@ fn as_meter(lines: &[String]) -> Option<MeterParts> {
     let limit_value = number(limit)?;
     let label = words
         .iter()
-        .position(|word| *word == "│")
+        // Both separators, because which one an application draws depends on the
+        // terminal it thinks it is talking to, and a label is worth reading either way.
+        .position(|word| *word == "│" || *word == "|")
         .map(|bar| words[bar + 1..].join(" "))
         .filter(|label| !label.is_empty());
     Some(MeterParts {
