@@ -1,0 +1,60 @@
+{
+  "version": "v0.9.1",
+  "createSurface": {
+    "surfaceId": "golden",
+    "catalogId": "moreweb.terminal/v1",
+    "root": "root",
+    "components": [
+      {
+        "id": "root",
+        "component": "Column",
+        "source": "seen",
+        "children": [
+          "block-dac02fcfa49cf206",
+          "block-0ba563efe700b705",
+          "block-81287792b29aab9a"
+        ]
+      },
+      {
+        "id": "block-dac02fcfa49cf206",
+        "component": "Block",
+        "source": "seen",
+        "role": "text",
+        "rows": [
+          0,
+          1
+        ],
+        "lines": [
+          "Grok Build 1.0.70"
+        ]
+      },
+      {
+        "id": "block-0ba563efe700b705",
+        "component": "Block",
+        "source": "seen",
+        "role": "prompt",
+        "rows": [
+          2,
+          4
+        ],
+        "lines": [
+          "> what file is in this folder",
+          "  This folder is empty."
+        ]
+      },
+      {
+        "id": "block-81287792b29aab9a",
+        "component": "Block",
+        "source": "seen",
+        "role": "text",
+        "rows": [
+          5,
+          6
+        ],
+        "lines": [
+          "  Waiting for responseâ€¦ 0.4s"
+        ]
+      }
+    ]
+  }
+}
