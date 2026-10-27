@@ -93,6 +93,24 @@ enum Command {
     Summarize(Summarize),
     /// Check a corpus against the promises the volatile mask makes.
     Audit(Summarize),
+    /// Print the page a recorded frame describes, as an A2UI message.
+    Page(PageArgs),
+}
+
+/// Which frame to describe.
+#[derive(Debug, Args)]
+struct PageArgs {
+    /// The session directory holding the frame.
+    #[arg(long, value_name = "DIR")]
+    session: PathBuf,
+
+    /// Which frame, by sequence number. Defaults to the session's last frame.
+    #[arg(long)]
+    seq: Option<u32>,
+
+    /// The surface id to write. Defaults to the session directory's own name.
+    #[arg(long, value_name = "ID")]
+    surface: Option<String>,
 }
 
 /// What the corpus reader is asked about.
@@ -179,7 +197,40 @@ fn run(command: Command) -> Result<ExitCode> {
         Command::Record(args) => record(args),
         Command::Summarize(args) => summarise(&args.sessions),
         Command::Audit(args) => audit(&args.sessions),
+        Command::Page(args) => page(&args),
     }
+}
+
+/// Prints the page one recorded frame describes.
+///
+/// A killed capture is readable here for the same reason it is summarisable: its
+/// frames are real screens, and the last one is often the most interesting.
+fn page(args: &PageArgs) -> Result<ExitCode> {
+    let frames = match ui_lm_frames::read_frames(&args.session) {
+        Ok((_, frames)) => frames,
+        Err(_) => ui_lm_frames::read_orphaned_frames(&args.session)
+            .with_context(|| format!("failed to read the session {}", args.session.display()))?,
+    };
+    let frame = match args.seq {
+        Some(seq) => frames
+            .iter()
+            .find(|frame| frame.seq == seq)
+            .with_context(|| format!("the session has no frame {}", seq))?,
+        None => frames
+            .last()
+            .with_context(|| format!("the session {} holds no frames", args.session.display()))?,
+    };
+    let surface = args.surface.clone().unwrap_or_else(|| {
+        args.session
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "session".to_owned())
+    });
+    let envelope = ui_lm_pages::page_from_frame(frame, &surface);
+    let json =
+        serde_json::to_string_pretty(&envelope).context("failed to serialise the page as JSON")?;
+    println!("{json}");
+    Ok(ExitCode::SUCCESS)
 }
 
 /// Checks a corpus against the mask's own promises, and fails if any frame breaks one.

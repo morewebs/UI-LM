@@ -446,8 +446,10 @@ dependencies = [
  "anyhow",
  "clap",
  "portable-pty",
+ "serde_json",
  "tempfile",
  "ui-lm-frames",
+ "ui-lm-pages",
  "vt100",
 ]
 
@@ -459,6 +461,15 @@ dependencies = [
  "serde_json",
  "tempfile",
  "vt100",
+]
+
+[[package]]
+name = "ui-lm-pages"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "ui-lm-frames",
 ]
 
 [[package]]

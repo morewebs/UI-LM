@@ -9,8 +9,17 @@ This repository is the first component only — **the instrument, not the model*
 | Crate | Responsibility |
 |---|---|
 | `crates/frames` | The styled cell grid, its run-length codec, the `Frame` model (changed rows, volatile spans, cursor, alt-screen), and the session store (`session.json` + `frames.jsonl`) |
-| `crates/capture` | The PTY driver (`portable-pty` + `vt100`), the 150 ms quiescer, the volatile-span classifier, and the `ui-lm-capture` binary |
+| `crates/capture` | The PTY driver (`portable-pty` + `vt100`), the 150 ms quiescer, the volatile-span classifier, the event tap, and the `ui-lm-capture` binary |
 | `crates/validate` | `ui-lm-validate` — compares recorded frames against the application's own draw buffer (the K5 check) |
+| `crates/pages` | The first IR: a frame becomes an A2UI `createSurface` message using the `moreweb.terminal/v1` catalogue |
+
+The page slice is deliberately minimal. It finds blocks — runs of non-blank rows — and emits
+one `Block` per block with its row span, its lines, and a role, every one marked `source:
+"seen"`. There is no `Diff`, `Table`, `Meter`, `ToolCall` or `Thought` yet, no actions, and
+no `guessed` or `carried` provenance, because nothing has been reconstructed or carried so
+far. A block's id is derived from its own text rather than its position, so a block that
+scrolls keeps its id. Role detection reads only a block's first line, so a turn whose prompt
+line sits below other text is reported as `text`.
 
 Plus two operator scripts: `scripts/capture-w1.ps1` (a scripted capture session) and `scripts/k5-dump.md` (how to build a throwaway patched fork that dumps its draw buffer, and how to compare).
 

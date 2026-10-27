@@ -7,10 +7,12 @@ license.workspace = true
 
 [dependencies]
 ui-lm-frames = { path = "../frames" }
+ui-lm-pages = { path = "../pages" }
 portable-pty = "0.9"
 vt100 = "0.15"
 clap = { version = "4", features = ["derive"] }
 anyhow.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
