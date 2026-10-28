@@ -113,3 +113,30 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
   of its four checks.
 - **No vocabulary from one screen.** Components and roles are added with three screens of
   evidence, or not at all.
+## Where it stands at the end of the month
+
+Seven scripts, about six minutes, every axis green: five evaluation axes (kind, text, styling,
+provenance, round trip on both reader and model pages), 683 components with 0 differences and 0
+contradictions, five consecutive clean fresh batches, a three-platform release verified by download.
+
+### Attempts that were made and abandoned, so they are not repeated
+
+Each of these was tried, measured, and reverted. The reason matters more than the outcome.
+
+| attempt | why it failed |
+|---|---|
+| widen the pane rule so a dialog would not mask a split | the obstacle was not the box guard but the single-block precondition; the change did nothing |
+| give panes their styling (reader only) | worked — 25 of 26 lines per pane — but the model pages have no panes in five sessions, so `fields` went from 0 to 12 differing |
+| give panes styling on both sides at once | the label path's pane condition is the blocker; changing one side first makes every axis worse |
+| drive `tmux` with keystrokes to build a specific layout | the prefix and its command need **separate writes**; in one write the text lands in the shell |
+| add the pane field to `Column` | 11 construction sites; moved to `Surface` (5), which landed |
+
+**The pattern in the failures is order and symmetry:** every change that made one side of a mapping
+richer before the other could follow was reverted, and every change that added an inert field first
+landed.
+
+### The one thing worth doing next
+
+Make the label path split panes the same way the reader does — one condition in
+`crates/pages/src/labeled.rs` — and change both sides in a single commit. That is the whole of
+ADR 0004's first step, and three rounds of evidence say it cannot be done half at a time.
