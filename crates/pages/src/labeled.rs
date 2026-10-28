@@ -236,7 +236,7 @@ pub fn page_from_labels(text: &[String], labels: &[String], surface: &str) -> En
     // reader and not by this path is the model losing a component it was never shown — the
     // measured cost of that gap was a model tying the floor on every split screen.
     if components.len() == 1 {
-        if let Some((left, right)) = crate::as_panes(text) {
+        if let Some((left, right, _column)) = crate::as_panes(text) {
             let first_id = block_id(&left);
             let second_id = block_id(&right);
             if first_id != second_id {

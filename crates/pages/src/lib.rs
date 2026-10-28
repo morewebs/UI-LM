@@ -814,7 +814,7 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
     // project already describes carries two such columns and would be torn in half. That is
     // the tree-branch mistake, refused this time before it cost a hundred frames.
     if components.len() == 2 {
-        if let Some((left, right)) = as_panes(&lines) {
+        if let Some((left, right, column)) = as_panes(&lines) {
             let first_id = block_id(&left);
             let second_id = block_id(&right);
             if first_id != second_id {
@@ -832,7 +832,18 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
                 } else {
                     Provenance::Carried
                 };
-                let pane = |id: String, lines: Vec<String>, source: Provenance| Component {
+                let left_spans: Vec<Vec<InlineSpan>> = spans
+                    .iter()
+                    .map(|row| pane_spans(row, 0, column + 1))
+                    .collect();
+                let right_spans: Vec<Vec<InlineSpan>> = spans
+                    .iter()
+                    .map(|row| pane_spans(row, column + 1, usize::MAX))
+                    .collect();
+                let pane = |id: String,
+                            lines: Vec<String>,
+                            source: Provenance,
+                            spans: Vec<Vec<InlineSpan>>| Component {
                     id,
                     component: "Block".to_owned(),
                     source,
@@ -842,7 +853,7 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
                         tabs: Vec::new(),
                         shortcuts: Vec::new(),
                         properties: Vec::new(),
-                        spans: vec![Vec::new(); lines.len()],
+                        spans,
                         lines,
                     },
                 };
@@ -855,8 +866,8 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
                             children: vec![first_id.clone(), second_id.clone()],
                         },
                     },
-                    pane(first_id, left, first_source),
-                    pane(second_id, right, second_source),
+                    pane(first_id, left, first_source, left_spans),
+                    pane(second_id, right, second_source, right_spans),
                 ];
             }
         }
@@ -880,7 +891,21 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
 /// first nor the last thing on the row. A drawing with box borders is refused outright: the
 /// panels this project already describes are drawn with two such columns, and splitting them
 /// would undo work already measured.
-pub(crate) fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>)> {
+/// The part of a row's styling that falls inside one pane.
+fn pane_spans(row: &[InlineSpan], from: usize, to: usize) -> Vec<InlineSpan> {
+    row.iter()
+        .filter_map(|span| {
+            let start = usize::from(span.start).max(from);
+            let end = usize::from(span.end).min(to);
+            (start < end).then(|| InlineSpan {
+                start: u16::try_from(start - from).unwrap_or(u16::MAX),
+                end: u16::try_from(end - from).unwrap_or(u16::MAX),
+                style: span.style.clone(),
+            })
+        })
+        .collect()
+}
+pub(crate) fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>, usize)> {
     if lines.len() < 8 {
         return None;
     }
@@ -922,7 +947,7 @@ pub(crate) fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>)> {
         .iter()
         .map(|line| line.chars().skip(column + 1).collect::<String>())
         .collect();
-    Some((left, right))
+    Some((left, right, column))
 }
 /// Copies the styling a reader observed onto a page that was judged somewhere else.
 ///
@@ -950,6 +975,27 @@ pub fn graft_spans(page: &mut Envelope, reader: &Envelope) {
             by_row.insert(rows[0] as usize + offset, line_spans);
         }
     }
+    // Two panes claim the same rows, so the row-keyed copy below cannot tell them apart — it gave
+    // one pane the other's styling. Panes share ids with their reader counterparts because both
+    // pages derive the id from the pane's own text, so they are copied by id and skipped below.
+    for component in &mut page.create_surface.components {
+        let pane_id = match &component.body {
+            Body::Block { role, .. } if role == "pane" => component.id.clone(),
+            _ => continue,
+        };
+        let theirs = reader
+            .create_surface
+            .components
+            .iter()
+            .find(|candidate| candidate.id == pane_id)
+            .and_then(|candidate| match &candidate.body {
+                Body::Block { spans, .. } => Some(spans.clone()),
+                _ => None,
+            });
+        if let (Some(theirs), Body::Block { spans, .. }) = (theirs, &mut component.body) {
+            *spans = theirs;
+        }
+    }
     for component in &mut page.create_surface.components {
         if let Body::Diff { rows, lines, .. } = &mut component.body {
             let first = rows[0] as usize;
@@ -959,9 +1005,16 @@ pub fn graft_spans(page: &mut Envelope, reader: &Envelope) {
             continue;
         }
         if let Body::Block {
-            rows, spans, lines, ..
+            role,
+            rows,
+            spans,
+            lines,
+            ..
         } = &mut component.body
         {
+            if role == "pane" {
+                continue;
+            }
             let first = rows[0] as usize;
             *spans = (0..lines.len())
                 .map(|offset| by_row.get(&(first + offset)).cloned().unwrap_or_default())
