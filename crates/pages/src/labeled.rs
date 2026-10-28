@@ -101,6 +101,24 @@ pub fn page_from_labels(text: &[String], labels: &[String], surface: &str) -> En
 /// The component a run of rows becomes, given what it was called.
 fn body_for(label: &str, lines: &[String], rows: [u16; 2]) -> (String, Body) {
     let text = lines.to_vec();
+    // A reasoning line says what it is: the application draws `♦ Thought for 3.0s`, and the
+    // reader has always recognised it from the text rather than from a decision. The model
+    // deciding "tool call" for such a row must not turn it into one, or the page claims the
+    // reasoning was a tool. Measured: 0 of 17 reasoning lines reproduced while this rule
+    // depended on the model's label.
+    if text.len() == 1 {
+        let calls = tool_calls(&text);
+        if calls.len() == 1 && calls[0].tool.eq_ignore_ascii_case("thought") {
+            return (
+                "Thought".to_owned(),
+                Body::Thought {
+                    rows,
+                    text: calls[0].text.clone(),
+                    seconds: thought_seconds(&calls[0].text),
+                },
+            );
+        }
+    }
     match label {
         "ToolCall" => {
             let calls = tool_calls(&text);
