@@ -906,10 +906,11 @@ fn page_from_lines(
     // A split screen whose panes hold something structured is read one pane at a time: reading it
     // as one flow puts an agent's meter and tool calls in the same list as the shell beside it.
     // Panes of plain text are already handled above and must not be re-read.
-    let structured = components
-        .iter()
-        .any(|component| component.component != "Column" && component.component != "Block");
-    if allow_split && structured {
+    // The decision is the **line-based** gate, the same function the label path calls, so the two
+    // cannot disagree about which screens are split. Keying it on this path's own components
+    // instead (`any kind that is not Block`) meant the reader split screens the label path did not,
+    // on exactly the frames where one found a tool line the other did not.
+    if allow_split && panes_hold_structure(&lines) {
         if let Some((left, right, column)) = as_panes(&lines) {
             let left_spans: Vec<Vec<InlineSpan>> = spans
                 .iter()
