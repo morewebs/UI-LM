@@ -424,6 +424,31 @@ fn dataset(args: &DatasetArgs) -> Result<ExitCode> {
             args.sessions.len()
         );
     }
+    // "Structured" turned out to be a weak word: the application draws a shortcut strip on
+    // nearly every screen, so almost everything qualifies. What is actually rare is a screen
+    // holding a component the text alone does not reveal, and that number is worth printing
+    // next to the other rather than leaving a reader to assume the first means the second.
+    let deep = pairs
+        .iter()
+        .filter(|(_, target)| {
+            serde_json::from_str::<serde_json::Value>(target)
+                .ok()
+                .and_then(|page| {
+                    page["createSurface"]["components"]
+                        .as_array()
+                        .map(|components| {
+                            components.iter().any(|component| {
+                                !matches!(component["component"].as_str(), Some("Block" | "Column"))
+                            })
+                        })
+                })
+                .unwrap_or(false)
+        })
+        .count();
+    println!(
+        "{deep} of {} pair(s) hold a meter, a tool call, a diff or a reasoning line",
+        pairs.len()
+    );
     if repeated > 0 {
         println!("{repeated} repeated screen(s) left out");
     }

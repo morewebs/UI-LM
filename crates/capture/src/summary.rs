@@ -350,15 +350,16 @@ pub fn training_pairs(dir: &Path, structured_only: bool) -> std::io::Result<Vec<
         .collect())
 }
 
-/// Whether a page holds a component beyond a container or a run of text.
+/// Whether a page holds something a converter has to recognise.
 ///
-/// A block counts as structure when it carries something a converter has to *recognise*: a
-/// role it did not get from being prose (a panel, an input box), a tab strip, a shortcut
-/// list, or a named property. This matters because of how the reader sees a bordered box —
-/// the whole box arrives as one `Block`, so a panel holding a meter and a tool line looks
-/// like plain text to a test that only counts component kinds, and the export threw such a
-/// screen away. Measured on a purpose-built drawing: the corpus dropped the one screen that
-/// carried a panel with a shortcut list in it.
+/// A page qualifies when it carries a component the text alone does not reveal — a meter, a
+/// tool call, a diff, a reasoning line — or a block holding a shortcut list or a tab strip.
+///
+/// Two things are deliberately *not* enough. A bordered panel on its own is a box: it says
+/// where something is, not what it means. Named properties are not enough either, because
+/// the reader takes any short `Word: value` line as one, so ordinary prose qualifies and the
+/// gate stops discriminating — measured: with properties counted, 34 of 36 pairs passed and
+/// the filter had lost its teeth.
 pub fn has_structure(page: &ui_lm_pages::Envelope) -> bool {
     page.create_surface.components.iter().any(|component| {
         if component.component != "Column" && component.component != "Block" {
@@ -366,17 +367,8 @@ pub fn has_structure(page: &ui_lm_pages::Envelope) -> bool {
         }
         match &component.body {
             ui_lm_pages::Body::Block {
-                role,
-                tabs,
-                shortcuts,
-                properties,
-                ..
-            } => {
-                *role != "text"
-                    || !tabs.is_empty()
-                    || !shortcuts.is_empty()
-                    || !properties.is_empty()
-            }
+                tabs, shortcuts, ..
+            } => !tabs.is_empty() || !shortcuts.is_empty(),
             _ => false,
         }
     })

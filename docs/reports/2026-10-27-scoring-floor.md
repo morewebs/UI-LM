@@ -152,3 +152,21 @@ The `shape-app` session held no pair, and that turned out to be a defect rather 
 The filter now counts a block as structure when it carries a role other than `text`, a tab strip, a shortcut list or a named property. Re-tested against the drawing: **1 pair written** where before there were none.
 
 **The deeper gap is not fixed.** A meter and a tool line drawn inside a panel are still invisible to the page model, because they are lines of text inside it rather than components, so a model trained on these pairs would never learn to recognise them there. Splitting the interior of a box into its own components is the change that would fix it, and it is not written.
+
+## Structure is common and shallow
+
+With panels counted, the structured gate went from 20 to **34 of 36** pairs. That is not a better corpus; it is a weaker gate, and the reason is visible once the pairs are broken down:
+
+| what the pair carries | pairs |
+|---|---|
+| anything the gate calls structure | 34 of 36 |
+| a shortcut list or tab strip | 30 of 36 |
+| **a meter, a tool call, a diff or a reasoning line** | **15 of 36** |
+
+The application draws a shortcut strip on nearly every screen, so almost any screenshot qualifies. The export now prints both numbers, because "structured" alone would let a reader assume the first means the second.
+
+Near-duplicates are also real at this size: one repeated screen was left out of the 36.
+
+The gate was then tightened to semantic kinds plus shortcut lists and tab strips, excluding named properties — the reader takes any short `Word: value` line as a property, so prose qualified and the gate stopped discriminating. It still admits 30 of 36 for the reason above, which is honest: most Grok screens really do carry a shortcut strip.
+
+The number to grow is the last one, not the first.
