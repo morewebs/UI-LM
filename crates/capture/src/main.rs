@@ -223,6 +223,10 @@ struct RenderArgs {
     /// The HTML file to write.
     #[arg(long, value_name = "FILE")]
     out: PathBuf,
+
+    /// Draw pages built by a model instead of the reader.
+    #[arg(long, value_name = "FILE")]
+    model: Option<PathBuf>,
 }
 
 /// The two sessions to score against each other.
@@ -895,6 +899,42 @@ fn render(args: &RenderArgs) -> Result<ExitCode> {
             args.session.display()
         );
     }
+    // A page drawn in a browser is the thing a person actually sees, so it is the one place
+    // the model has to be able to reach. `render` grew a `--model` for the same reason
+    // `page --all` did: a flag that exists everywhere else and not here is a path nobody
+    // notices is missing until someone opens the file and sees the reader's judgement.
+    let pages = match &args.model {
+        Some(path) => {
+            let model = ui_lm_model::Model::load(path)?;
+            let frames = match ui_lm_frames::read_frames(&args.session) {
+                Ok((_, frames)) => frames,
+                Err(_) => ui_lm_frames::read_orphaned_frames(&args.session)?,
+            };
+            let surface = args
+                .session
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "session".to_owned());
+            let mut appeared: std::collections::HashSet<String> = Default::default();
+            frames
+                .iter()
+                .map(|frame| {
+                    let text = ui_lm_capture::summary::frame_text(frame);
+                    let mut page = model.page(&text, &surface);
+                    graft_spans(&mut page, &ui_lm_pages::page_from_frame(frame, &surface));
+                    for component in &mut page.create_surface.components {
+                        component.source = if appeared.insert(component.id.clone()) {
+                            ui_lm_pages::Provenance::Seen
+                        } else {
+                            ui_lm_pages::Provenance::Carried
+                        };
+                    }
+                    page
+                })
+                .collect()
+        }
+        None => pages,
+    };
     let title = args
         .session
         .file_name()
