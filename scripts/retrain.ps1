@@ -10,7 +10,10 @@
 # It takes a while: every scenario waits for a real program to draw and settle.
 
 param(
-    [string]$Model = "models/page.json"
+    [string]$Model = "models/page.json",
+    # How many independent recording batches to train on. Each batch is a full set of
+    # scenarios, so this is the knob on corpus size.
+    [int]$TrainBatches = 2
 )
 
 # A child program can print a warning on stderr — a console control event, a missing hook —
@@ -50,7 +53,7 @@ function Record-Diffs([string]$name) {
 
 # Two training batches.
 $trainSessions = @()
-foreach ($batch in 1..2) {
+foreach ($batch in 1..$TrainBatches) {
     $log = Join-Path $sessionRoot "corpus-$batch.txt"
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "scripts\build-corpus.ps1") -Keep -Out (Join-Path $sessionRoot "corpus$batch") *> $log
     # `-Out` is where the pairs are written; the recordings are kept in the script's own
