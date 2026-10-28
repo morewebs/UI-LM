@@ -79,6 +79,11 @@ fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
         .map(|(row, label)| {
             let line = text.get(row).map(|line| line.trim()).unwrap_or("");
             match label.as_str() {
+                // A row can only open a diff if it is drawn as one. `-- (empty)` from a
+                // package listing is not a removal, and calling it one split a two-row
+                // screen into two blocks — the same lesson as the meter guard: a label that
+                // decides grouping has to be right before the grouping happens.
+                "Diff" if !(line.starts_with("+ ") || line.starts_with("- ")) => "Block".to_owned(),
                 // A thought is a row the application marks as one: it carries the mark and
                 // says so — `♦ Thought for 0.6s`. Anything else that merely starts with a
                 // non-ASCII glyph is not a thought, and a table whose status column uses
