@@ -99,6 +99,8 @@ enum Command {
     Score(ScoreArgs),
     /// Draw a page back as terminal text.
     Tui(TuiArgs),
+    /// Check the label path against the reader's own answers.
+    SelfCheck(SelfCheckArgs),
     /// Score a page built from text alone against the pages the recorder produces.
     Baseline(BaselineArgs),
     /// Write the training pairs a recording holds: the screen's text, and its page.
@@ -113,6 +115,17 @@ enum Command {
     Compare(CompareArgs),
 }
 
+/// Feeds the label path the reader's own answers, to find where the two disagree.
+#[derive(Debug, Args)]
+struct SelfCheckArgs {
+    /// Session directories holding frames.
+    #[arg(long = "session", value_name = "DIR", required = true)]
+    sessions: Vec<PathBuf>,
+
+    /// Which frames to list, worst first.
+    #[arg(long, value_name = "N", default_value_t = 0)]
+    worst: usize,
+}
 /// What to score, and which model to score with.
 #[derive(Debug, Args)]
 struct ScoreArgs {
@@ -359,6 +372,7 @@ fn run(command: Command) -> Result<ExitCode> {
         Command::Baseline(args) => baseline(&args),
         Command::Score(args) => score(&args),
         Command::Tui(args) => tui(&args),
+        Command::SelfCheck(args) => self_check(&args),
         Command::Dataset(args) => dataset(&args),
         Command::Render(args) => render(&args),
     }
@@ -455,6 +469,72 @@ fn tui(args: &TuiArgs) -> Result<ExitCode> {
         "round trip: {same}/{rows} line(s) of content came back ({share:.1}%), {drawn} drawn"
     );
     Ok(ExitCode::SUCCESS)
+}
+fn self_check(args: &SelfCheckArgs) -> Result<ExitCode> {
+    let mut total = 0.0f64;
+    let mut frames = 0usize;
+    let mut worst: Vec<(f64, String, String)> = Vec::new();
+    for session in &args.sessions {
+        let loaded = match ui_lm_frames::read_frames(session) {
+            Ok((_, frames)) => frames,
+            Err(_) => ui_lm_frames::read_orphaned_frames(session)?,
+        };
+        for frame in &loaded {
+            let surface = format!("frame-{}", frame.seq);
+            let text = ui_lm_capture::summary::frame_text(frame);
+            if text.trim().is_empty() {
+                continue;
+            }
+            let lines: Vec<String> = text.lines().map(|line| line.to_owned()).collect();
+            let real = ui_lm_pages::page_from_frame(frame, &surface);
+            // The reader's own answer, one label per row: whatever kind it built for a row,
+            // and `Block` for rows no component claims. If the label path is faithful, giving
+            // it these labels must rebuild the same page — so every point of difference is a
+            // place where the label path loses something the reader keeps.
+            let mut labels = vec!["Block".to_owned(); lines.len()];
+            for component in &real.create_surface.components {
+                if let Some((first, end)) = rows_of_component(component) {
+                    for row in first..end.min(labels.len()) {
+                        labels[row] = component.component.clone();
+                    }
+                }
+            }
+            let rebuilt = ui_lm_pages::page_from_labels(&lines, &labels, &surface);
+            let score = ui_lm_pages::compare(&real, &rebuilt).weighted_structure();
+            total += score;
+            frames += 1;
+            if score < 1.0 {
+                worst.push((score, session.display().to_string(), surface));
+            }
+        }
+    }
+    if frames == 0 {
+        bail!("no frames to check");
+    }
+    println!(
+        "label path given the reader's own answers: {:.1}% over {} frame(s)",
+        total / frames as f64 * 100.0,
+        frames
+    );
+    worst.sort_by(|left, right| left.0.total_cmp(&right.0));
+    for (score, session, surface) in worst.iter().take(args.worst) {
+        println!("  {:.1}%  {session} {surface}", score * 100.0);
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+/// The rows a component says it covers, when it says.
+fn rows_of_component(component: &ui_lm_pages::Component) -> Option<(usize, usize)> {
+    use ui_lm_pages::Body;
+    let rows = match &component.body {
+        Body::Column { .. } => return None,
+        Body::Block { rows, .. }
+        | Body::Diff { rows, .. }
+        | Body::ToolCall { rows, .. }
+        | Body::Thought { rows, .. }
+        | Body::Meter { rows, .. } => *rows,
+    };
+    Some((rows[0] as usize, rows[1] as usize))
 }
 fn score(args: &ScoreArgs) -> Result<ExitCode> {
     let model = ui_lm_model::Model::load(&args.model)?;
