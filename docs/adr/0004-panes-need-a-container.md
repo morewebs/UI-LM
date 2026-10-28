@@ -396,3 +396,31 @@ The page-level split was applied again on top, and the remaining gaps are exactl
 | round trip | 4 sessions (tmux/vim splits, both paths) |
 
 Reverted the split, kept the renderer. The list is now **two items**, not three.
+## The length hypothesis, tested and wrong
+
+The four failing round-trip recordings were thought to be "plain two-pane screens" that the ordinary
+pass handles, so the re-read was gated on `components.len() > 2` — apply the split only when the page
+already found structure.
+
+Measured, with that gate:
+
+```
+tui             87.6%
+assembly        95.9%
+provenance      13 contradiction(s)
+fields          15 differing
+round trip      4 sessions below 100%
+round trip/model 1 session below 100%
+```
+
+**The gate does not exclude the screens it was written for.** Those vim and tmux recordings build more
+than two components in the ordinary pass, so the condition is true for them and they are split anyway.
+A hypothesis about which screens are "plain" is not the same as a measurement of what the ordinary
+pass produces, and this one was written down without the measurement.
+
+Reverted. Green: every check passing, both round trips 0 sessions below 100%.
+
+**What the next attempt needs is a table, not a rule:** for each of the six split recordings, the
+component count and kinds the ordinary pass produces, printed once. Then the gate is chosen from data
+instead of from a guess — which is exactly how the divider column was solved in round 110, and it
+worked in one round there.
