@@ -59,7 +59,7 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 | the page carries the screen's styling | 6,303 spans on the training batch; reaches HTML, terminal and the live view |
 | provenance is honest | 967 components, 0 contradictions |
 | the model generalises off its training application | trained on one application, 100% on 141 frames from 13 other programs |
-| the download works | v0.3.1 verified by downloading, unzipping and scoring |
+| the download works | **v0.5.0** verified by downloading, unzipping and running `fields` and `tui --model` |
 
 ## What is not proven
 
