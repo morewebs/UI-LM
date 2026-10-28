@@ -107,3 +107,16 @@ converter fails on.
 
 That is the more useful finding: the corpus needs *harder* screens, not more of them. More
 sessions of the same shape would only sharpen the average, not the model.
+
+## Only a third of pairs are worth training on
+
+The export can now be asked for screens that carry structure (`dataset --structured`). On the corpus built this session:
+
+```
+17 pair(s) written       (the plain export)
+ 6 pair(s) written       (--structured)
+```
+
+So **six of seventeen pairs** — 35% — describe something a converter has to recognise. The rest describe prose, which copying already reproduces. `--structured` is pinned by tests: the fixture's screen, which holds a meter and a tool call, survives the filter.
+
+This is the change that makes a corpus worth having: the number that matters is not how many pairs were recorded, but how many of them are hard.

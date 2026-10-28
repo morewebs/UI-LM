@@ -319,7 +319,7 @@ fn screen_text(frame: &Frame) -> Vec<String> {
 /// Frames that describe an empty screen are left out. A blank screen has a page — a page
 /// with nothing in it — and teaching a model to produce one from nothing is teaching it
 /// the least interesting half of the problem.
-pub fn training_pairs(dir: &Path) -> std::io::Result<Vec<(String, String)>> {
+pub fn training_pairs(dir: &Path, structured_only: bool) -> std::io::Result<Vec<(String, String)>> {
     let frames = match read_frames(dir) {
         Ok((_, frames)) => frames,
         Err(_) => read_orphaned_frames(dir)?,
@@ -338,10 +338,24 @@ pub fn training_pairs(dir: &Path) -> std::io::Result<Vec<(String, String)>> {
             if text.trim().is_empty() {
                 return None;
             }
+            // Three quarters of settled screens carry only prose, and a pair whose target
+            // is one block of text teaches nothing that copying already gives. A caller
+            // that wants the screens worth learning from asks for the minority.
+            if structured_only && !has_structure(page) {
+                return None;
+            }
             let target = serde_json::to_string(page).ok()?;
             Some((text, target))
         })
         .collect())
+}
+
+/// Whether a page holds a component beyond a container or a run of text.
+pub fn has_structure(page: &ui_lm_pages::Envelope) -> bool {
+    page.create_surface
+        .components
+        .iter()
+        .any(|component| component.component != "Column" && component.component != "Block")
 }
 
 #[cfg(test)]

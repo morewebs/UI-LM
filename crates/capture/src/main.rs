@@ -128,6 +128,14 @@ struct DatasetArgs {
     #[arg(long, value_name = "FILE")]
     out: PathBuf,
 
+    /// Keep only screens that hold a component beyond plain text.
+    ///
+    /// Measured on a real corpus: 20 of 26 settled screens were prose, and a pair whose
+    /// target is one block of text teaches nothing that copying already gives. The pairs
+    /// worth having are the minority, and they are the ones a converter fails on.
+    #[arg(long)]
+    structured: bool,
+
     /// Replace the account name, home directory and session identifiers in each pair.
     ///
     /// The frames are left as recorded, because they are evidence. The pair is what gets
@@ -388,7 +396,7 @@ fn baseline(args: &BaselineArgs) -> Result<ExitCode> {
 fn dataset(args: &DatasetArgs) -> Result<ExitCode> {
     let mut pairs = Vec::new();
     for session in &args.sessions {
-        let found = ui_lm_capture::summary::training_pairs(session)
+        let found = ui_lm_capture::summary::training_pairs(session, args.structured)
             .with_context(|| format!("failed to read the session {}", session.display()))?;
         if found.is_empty() {
             eprintln!(
