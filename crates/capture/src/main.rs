@@ -103,6 +103,8 @@ enum Command {
     SelfCheck(SelfCheckArgs),
     /// Compare the parts of a page that compare does not look at.
     Fields(FieldsArgs),
+    /// Show rows where the model's label differs from the reader's kind.
+    Disagree(DisagreeArgs),
     /// Check that pages carry provenance honestly across a sequence.
     Provenance(ProvenanceArgs),
     /// Score a page built from text alone against the pages the recorder produces.
@@ -125,6 +127,21 @@ struct ProvenanceArgs {
     /// Session directories holding frames.
     #[arg(long = "session", value_name = "DIR", required = true)]
     sessions: Vec<PathBuf>,
+}
+/// Shows the rows where the model's label differs from the kind the reader built.
+#[derive(Debug, Args)]
+struct DisagreeArgs {
+    /// Session directories holding frames.
+    #[arg(long = "session", value_name = "DIR", required = true)]
+    sessions: Vec<PathBuf>,
+
+    /// The model to ask.
+    #[arg(long, value_name = "FILE", default_value = "models/page.json")]
+    model: PathBuf,
+
+    /// How many differing rows to show.
+    #[arg(long, value_name = "N", default_value_t = 12)]
+    show: usize,
 }
 /// Compares the parts of a page that `compare` does not look at.
 #[derive(Debug, Args)]
@@ -422,6 +439,7 @@ fn run(command: Command) -> Result<ExitCode> {
         Command::Tui(args) => tui(&args),
         Command::SelfCheck(args) => self_check(&args),
         Command::Fields(args) => fields(&args),
+        Command::Disagree(args) => disagree(&args),
         Command::Provenance(args) => provenance(&args),
         Command::Dataset(args) => dataset(&args),
         Command::Render(args) => render(&args),
@@ -590,6 +608,61 @@ fn provenance(args: &ProvenanceArgs) -> Result<ExitCode> {
 /// tab strip, the shortcut list, the named properties and every span of styling. Those are what a
 /// runtime draws differently from prose, so they get their own comparison rather than riding
 /// along untested under a perfect score.
+fn disagree(args: &DisagreeArgs) -> Result<ExitCode> {
+    let model = ui_lm_model::Model::load(&args.model)?;
+    let mut rows = 0usize;
+    let mut differing = 0usize;
+    let mut shown = 0usize;
+    println!("{:<10} {:<10} {}", "reader", "model", "row");
+    for session in &args.sessions {
+        let loaded = match ui_lm_frames::read_frames(session) {
+            Ok((_, frames)) => frames,
+            Err(_) => ui_lm_frames::read_orphaned_frames(session)?,
+        };
+        for frame in &loaded {
+            let text = ui_lm_capture::summary::frame_text(frame);
+            if text.trim().is_empty() {
+                continue;
+            }
+            let lines: Vec<String> = text.lines().map(|line| line.to_owned()).collect();
+            let labels = model.labels(&lines);
+            // The reader's answer for each row: the kind of the component that covers it, and
+            // `Block` for rows nothing claims — which is what the label path assumes too.
+            let real = ui_lm_pages::page_from_frame(frame, "frame");
+            let mut reader_kind = vec!["Block".to_owned(); lines.len()];
+            for component in &real.create_surface.components {
+                if let Some((first, end)) = rows_of_component(component) {
+                    for row in first..end.min(lines.len()) {
+                        reader_kind[row] = component.component.clone();
+                    }
+                }
+            }
+            for (row, line) in lines.iter().enumerate() {
+                if line.trim().is_empty() {
+                    continue;
+                }
+                rows += 1;
+                if labels[row] != reader_kind[row] {
+                    differing += 1;
+                    if shown < args.show {
+                        println!(
+                            "{:<10} {:<10} {}",
+                            reader_kind[row],
+                            labels[row],
+                            line.trim_end()
+                        );
+                        shown += 1;
+                    }
+                }
+            }
+        }
+    }
+    println!(
+        "{differing} of {rows} non-blank row(s) differ ({:.1}%)",
+        differing as f64 / rows.max(1) as f64 * 100.0
+    );
+    Ok(ExitCode::SUCCESS)
+}
 fn fields(args: &FieldsArgs) -> Result<ExitCode> {
     let model = ui_lm_model::Model::load(&args.model)?;
     let mut checked = 0usize;
