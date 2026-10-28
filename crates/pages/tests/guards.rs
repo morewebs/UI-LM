@@ -223,3 +223,42 @@ fn a_box_border_is_not_a_tree_branch() {
     let tree = page_of(&["└── vt100 v0.15.2"], "Block");
     assert_eq!(kinds(&tree).len(), 1);
 }
+#[test]
+fn a_real_bordered_popup_is_one_panel() {
+    // Recorded from tmux's `display-popup`, not drawn for this test. The window's four borders
+    // and its contents are one component; a tree-branch rule once split the bottom border off
+    // and the model fell to 90.5% against a floor of 100%.
+    let screen = include_str!("fixtures/screens/tmux-popup.txt");
+    let text: Vec<String> = screen.lines().map(|line| line.to_owned()).collect();
+    let labels = vec!["Block".to_owned(); text.len()];
+    let page = ui_lm_pages::page_from_labels(&text, &labels, "popup");
+    let panels = page
+        .create_surface
+        .components
+        .iter()
+        .filter(|component| {
+            matches!(&component.body, ui_lm_pages::Body::Block { role, .. } if role == "panel")
+        })
+        .collect::<Vec<_>>();
+    let kinds = kinds(&page);
+    assert_eq!(panels.len(), 1, "one panel: {kinds:?}");
+}
+
+#[test]
+fn a_real_popup_over_panes_keeps_its_overlay() {
+    // Also recorded: a popup drawn across a two-pane split. The overlay survives as a panel;
+    // the panes beneath it are a known limitation, recorded rather than asserted away.
+    let screen = include_str!("fixtures/screens/tmux-panes-popup.txt");
+    let text: Vec<String> = screen.lines().map(|line| line.to_owned()).collect();
+    let labels = vec!["Block".to_owned(); text.len()];
+    let page = ui_lm_pages::page_from_labels(&text, &labels, "popup-panes");
+    let panels = page
+        .create_surface
+        .components
+        .iter()
+        .filter(|component| {
+            matches!(&component.body, ui_lm_pages::Body::Block { role, .. } if role == "panel")
+        })
+        .count();
+    assert_eq!(panels, 1, "the overlay is a panel: {:?}", kinds(&page));
+}

@@ -1,0 +1,8 @@
+﻿moreweb@DESKTOP-H6G9MSV:/mnt/c/Users/moreweb/Documents/Workspaces/moreweb/Projects/UI-LM$
+                         ┌──────────────────────────────────────────┐
+                         │FLOATING-TMUX-POPUP                       │
+                         │                                          │
+                         │                                          │
+                         │                                          │
+                         └──────────────────────────────────────────┘
+[ch6] 0:bash*                                                  "DESKTOP-H6G9MSV" 18:01 28-Oct-26

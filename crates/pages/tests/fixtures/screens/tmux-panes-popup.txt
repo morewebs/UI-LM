@@ -1,0 +1,26 @@
+﻿moreweb@DESKTOP-H6G9MSV:/mnt/c/Users/moreweb/Doc│moreweb@DESKTOP-H6G9MSV:/mnt/c/Users/moreweb/Do
+uments/Workspaces/moreweb/Projects/UI-LM$       │cuments/Workspaces/moreweb/Projects/UI-LM$
+                                                │
+                                                │
+                                                │
+                                                │
+                                                │
+                                                │
+                                                │
+                           ┌──────────────────────────────────────┐
+                           │POPUP-OVER-PANES                      │
+                           │                                      │
+                           │                                      │
+                           └──────────────────────────────────────┘
+                                                │
+                                                │
+                                                │
+                                                │
+                                                │
+                                                │
+                                                │
+                                                │
+                                                │
+                                                │
+                                                │
+[ch7] 0:bash*                                                  "DESKTOP-H6G9MSV" 18:05 28-Oct-26
