@@ -140,3 +140,22 @@ but not the absent panes.
 **The whole attempt was reverted**, and the finding is the point: pane styling cannot be fixed
 without giving the label path the same pane split, which is the container work this ADR describes.
 Listed as another entry in its cost rather than a separate defect.
+## Attempted, and the estimate held: it does not fit the tail of a round
+
+Started the change and tried a cheaper shape than the ADR first proposed — the grouping on
+`Surface` rather than on `Column`, since `Surface` has five construction sites against eleven.
+
+It went the way the estimate said it would: the field rippled through both page builders, then
+through `Surface` literals inside test modules, one at a time, each found by the compiler. At the
+point where the round's remaining budget ran out, the tree was mid-change and **nothing useful was
+committed**.
+
+Everything was reverted. `cargo test` green, `fields` 0 differing, tree clean, HEAD unchanged.
+
+**Two things are now established by trying rather than by arguing:** the change is mechanical and
+does not fight the design — the compiler walked me through every site without a single conceptual
+problem — and it is genuinely too large for the last third of a round. The next attempt should start
+at the top of a round, or be split into "add the field everywhere, no behaviour" followed by
+"use it" in a second.
+
+That second shape is better than what I tried today, and it is what the next attempt will do.
