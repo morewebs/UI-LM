@@ -116,3 +116,27 @@ rule.
 
 **Half a day, with a failing test at each step.** That estimate is the honest answer to "why not
 this afternoon", and it belongs in the ADR next to the evidence.
+## What the attempt found before it was reverted: panes carry no styling
+
+Before building the container, one smaller question was tested on the `vimdiff` screen: do panes carry
+the colour the screen drew? They do not — **both panes reported 0 styled lines**, because the pane
+path builds its spans empty. A `vimdiff` window shows its changes in red and green, and the page holds
+a plain block.
+
+A fix was written: slice each row's spans at the divider, shifting the right pane's offsets to zero.
+It worked — 25 of 26 lines styled in each pane — and then broke something more interesting:
+
+```
+fields tui: 119 component(s) compared, 12 differing
+  Block role "pane"/"pane" ... spans 15/3
+```
+
+The **label path does not split panes the same way**. It only consults the pane rule when a screen
+produced a single component, so for `vimdiff` it produces no panes at all, and the model's copy cannot
+receive spans it has no components for. Grafting by row fails too: both panes claim the whole screen's
+rows, so the row-keyed copy lands the left pane's styling on both; matching by text fixes the pairing
+but not the absent panes.
+
+**The whole attempt was reverted**, and the finding is the point: pane styling cannot be fixed
+without giving the label path the same pane split, which is the container work this ADR describes.
+Listed as another entry in its cost rather than a separate defect.
