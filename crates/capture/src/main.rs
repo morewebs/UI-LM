@@ -206,6 +206,10 @@ struct PageArgs {
     #[arg(long, value_name = "ID")]
     surface: Option<String>,
 
+    /// Describe the frame with a trained model instead of the reader.
+    #[arg(long, value_name = "FILE")]
+    model: Option<PathBuf>,
+
     /// Describe every frame in order, one page per line, carrying provenance across
     /// them. Without this, one frame is described and every block in it is `seen`.
     #[arg(long)]
@@ -671,7 +675,16 @@ fn page(args: &PageArgs) -> Result<ExitCode> {
         }
         return Ok(ExitCode::SUCCESS);
     }
-    let envelope = ui_lm_pages::page_from_frame(frame, &surface);
+    // With a model, the frame is described by what the model reads from the screen's text
+    // rather than by the reader. Both go through the same page builder, so a difference
+    // between them is a difference in judgement and nothing else.
+    let envelope = match &args.model {
+        Some(path) => {
+            let model = ui_lm_model::Model::load(path)?;
+            model.page(&ui_lm_capture::summary::frame_text(frame), &surface)
+        }
+        None => ui_lm_pages::page_from_frame(frame, &surface),
+    };
     let json =
         serde_json::to_string_pretty(&envelope).context("failed to serialise the page as JSON")?;
     println!("{json}");
