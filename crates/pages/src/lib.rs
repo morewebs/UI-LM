@@ -916,6 +916,44 @@ pub(crate) fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>)> {
         .collect();
     Some((left, right))
 }
+/// Copies the styling a reader observed onto a page that was judged somewhere else.
+///
+/// The division this project states everywhere — judgement from the model, construction from
+/// the code that watched the screen — breaks if the styling does not travel with it. A model
+/// page carried no spans at all: measured over a training batch, 6,303 from the reader
+/// against 0 from the model, so everything the model described would have rendered in one
+/// colour. This function is in the page crate because every path that judges a page needs it:
+/// the CLI, the HTML renderer and the live viewer.
+pub fn graft_spans(page: &mut Envelope, reader: &Envelope) {
+    let mut by_row: std::collections::HashMap<usize, Vec<InlineSpan>> = Default::default();
+    for component in &reader.create_surface.components {
+        let (rows, spans) = match &component.body {
+            Body::Block { rows, spans, .. } => (*rows, spans.clone()),
+            Body::Diff { rows, lines } => (
+                *rows,
+                lines
+                    .iter()
+                    .map(|line| line.spans.clone())
+                    .collect::<Vec<_>>(),
+            ),
+            _ => continue,
+        };
+        for (offset, line_spans) in spans.into_iter().enumerate() {
+            by_row.insert(rows[0] as usize + offset, line_spans);
+        }
+    }
+    for component in &mut page.create_surface.components {
+        if let Body::Block {
+            rows, spans, lines, ..
+        } = &mut component.body
+        {
+            let first = rows[0] as usize;
+            *spans = (0..lines.len())
+                .map(|offset| by_row.get(&(first + offset)).cloned().unwrap_or_default())
+                .collect();
+        }
+    }
+}
 /// The lines of a block read as a diff, or `None` when the block is not one.
 ///
 /// A diff is recognised by carrying **both** a `+` line and a `-` line: those are

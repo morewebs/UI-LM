@@ -234,7 +234,13 @@ fn latest(session: &Path, model: Option<&ui_lm_model::Model>) -> Option<(usize, 
     // only in judgement.
     let frame = frames.last()?;
     let page = match model {
-        Some(model) => model.page(&text_of(frame), &title),
+        Some(model) => {
+            // Styling comes from the cells, judgement from the model: without the graft the
+            // live view of a model page had no colours at all.
+            let mut page = model.page(&text_of(frame), &title);
+            ui_lm_pages::graft_spans(&mut page, &ui_lm_pages::page_from_frame(frame, &title));
+            page
+        }
         None => ui_lm_pages::page_from_frame(frame, &title),
     };
     let json = serde_json::to_string(&page).unwrap_or_default();
