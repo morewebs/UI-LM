@@ -64,6 +64,47 @@ foreach ($name in @("diff-a", "diff-b")) {
     $trainSessions += Record-Diffs $name
 }
 
+# A diff is made of minus and plus lines, and the model has to see enough of them to be
+# able to produce the component at all. Two screens gave four rows out of eight thousand and
+# the model never learned it, so this records a dozen varied edit reports instead.
+$edits = @(
+    @("config.txt", "retries = 3", "retries = 5"),
+    @("server.toml", "port = 8080", "port = 9090"),
+    @("styles.css", "color: red", "color: navy"),
+    @("notes.md", "draft", "final"),
+    @("plan.py", "steps = 4", "steps = 6"),
+    @("readme.md", "install", "set up"),
+    @("data.csv", "12,7", "14,7"),
+    @("route.js", "path: /old", "path: /new"),
+    @("schema.sql", "INT", "BIGINT"),
+    @("make.sh", "make test", "make check"),
+    @("theme.json", '"dark"', '"darker"'),
+    @("limit.conf", "max = 100", "max = 250")
+)
+$variant = 0
+foreach ($edit in $edits) {
+    $variant += 1
+    $script = Join-Path $sessionRoot ("diff-$variant.py")
+    $body = @"
+import sys, time
+out = sys.stdout.buffer
+def line(t):
+    out.write(t.encode('utf-8') + b'\r\n'); out.flush()
+line('Changes to $($edit[0])')
+line('')
+line('  - $($edit[1])')
+line('  + $($edit[2])')
+line('')
+line('1 line changed')
+time.sleep(2)
+"@
+    Set-Content -LiteralPath $script -Value $body -Encoding UTF8
+    $out = Join-Path $sessionRoot "edit-$variant"
+    & $capture record --rows 16 --cols 70 --out $out --stop-after 3500 -- python $script *> $null
+    if (Test-Path (Join-Path $out "session.json")) { $trainSessions += $out }
+}
+Write-Host "recorded $($edits.Count) edit screens"
+
 # Training pairs.
 $pairs = Join-Path $sessionRoot "train.jsonl"
 $arguments = @("dataset", "--out", $pairs, "--scrub")

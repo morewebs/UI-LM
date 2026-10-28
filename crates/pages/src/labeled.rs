@@ -14,8 +14,8 @@
 //! a component the screen cannot justify.
 
 use crate::{
-    as_meter, block_id, properties_of, role_of, shortcuts_of, tabs_of, thought_seconds, tool_calls,
-    Body, Component, Envelope, Provenance, Surface, CATALOGUE_ID, ENVELOPE_VERSION,
+    as_diff, as_meter, block_id, properties_of, role_of, shortcuts_of, tabs_of, thought_seconds,
+    tool_calls, Body, Component, Envelope, Provenance, Surface, CATALOGUE_ID, ENVELOPE_VERSION,
 };
 
 /// Splits rows into runs of the same label, in the order drawn.
@@ -141,6 +141,16 @@ fn body_for(label: &str, lines: &[String], rows: [u16; 2]) -> (String, Body) {
                 );
             }
             ("ToolCall".to_owned(), Body::ToolCall { rows, calls })
+        }
+        // A diff is a run of rows that say what was removed and what was added. The model
+        // may call them that; the component is still only built if the rows really are a
+        // diff, because a page must not claim what the screen cannot justify.
+        "Diff" => {
+            let spans = vec![Vec::new(); text.len()];
+            match as_diff(&text, &spans) {
+                Some(lines) => ("Diff".to_owned(), Body::Diff { rows, lines }),
+                None => as_text(text, rows),
+            }
         }
         "Meter" => match as_meter(&text) {
             Some(meter) => (
