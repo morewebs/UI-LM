@@ -996,6 +996,14 @@ pub(crate) fn panes_hold_structure(lines: &[String]) -> bool {
     structured(&left) || structured(&right)
 }
 
+/// The two sides of a split screen, for a caller that has to feed them to something one at a time.
+///
+/// A model labels one row at a time, and on a split screen **a row holds two panes**: the same row
+/// can be a meter on the left and a path on the right. One label per row cannot describe that, which
+/// is why a paned screen has to be judged pane by pane.
+pub fn split_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>)> {
+    as_panes(lines).map(|(left, right, _column)| (left, right))
+}
 pub(crate) fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>, usize)> {
     if lines.len() < 8 {
         return None;
