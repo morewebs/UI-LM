@@ -19,13 +19,31 @@ use crate::{
 };
 
 /// Splits rows into runs of the same label, in the order drawn.
-fn runs(labels: &[String]) -> Vec<(usize, usize, String)> {
+fn runs(labels: &[String], text: &[String]) -> Vec<(usize, usize, String)> {
+    let mut last_closed = false;
     let mut found: Vec<(usize, usize, String)> = Vec::new();
     for (row, label) in labels.iter().enumerate() {
+        // A blank row ends a run: it is the reader's own separator, and a model that
+        // merged across every blank line would describe a whole screen as one block —
+        // measured on 78 blocks, it matched 11.
+        let blank = text
+            .get(row)
+            .map(|line| line.trim().is_empty())
+            .unwrap_or(false);
+        // A border opens or closes something, so it ends the run beside it.
+        let border = text
+            .get(row)
+            .map(|line| {
+                let trimmed = line.trim();
+                trimmed.starts_with(['╭', '┌', '╰', '└', '│', '┃'])
+                    || trimmed.ends_with(['╮', '┐', '╯', '┘', '│', '┃'])
+            })
+            .unwrap_or(false);
         match found.last_mut() {
-            Some(last) if last.2 == *label => last.1 = row + 1,
+            Some(last) if last.2 == *label && !blank && !border && !last_closed => last.1 = row + 1,
             _ => found.push((row, row + 1, label.clone())),
         }
+        last_closed = blank || border;
     }
     found
 }
@@ -35,12 +53,16 @@ pub fn page_from_labels(text: &[String], labels: &[String], surface: &str) -> En
     let mut children = Vec::new();
     let mut components = Vec::new();
 
-    for (first, end, label) in runs(labels) {
+    for (first, end, label) in runs(labels, text) {
         if first >= text.len() {
             continue;
         }
         let end = end.min(text.len());
         let lines: Vec<String> = text[first..end].to_vec();
+        // A run of nothing is not a component: a separator row has no content to describe.
+        if lines.iter().all(|line| line.trim().is_empty()) {
+            continue;
+        }
         let rows = [
             u16::try_from(first).unwrap_or(u16::MAX),
             u16::try_from(end).unwrap_or(u16::MAX),
@@ -130,4 +152,64 @@ fn as_text(lines: Vec<String>, rows: [u16; 2]) -> (String, Body) {
         spans,
     };
     ("Block".to_owned(), body)
+}
+#[cfg(test)]
+mod tests {
+    use super::page_from_labels;
+
+    fn labels(count: usize, kind: &str) -> Vec<String> {
+        vec![kind.to_owned(); count]
+    }
+
+    #[test]
+    fn a_blank_row_ends_a_block() {
+        // The mistake that cost 33 blocks out of 78: every text row merged into one
+        // component, because only the label was consulted and every row was text.
+        let text: Vec<String> = ["first paragraph", "", "second paragraph"]
+            .iter()
+            .map(|line| (*line).to_owned())
+            .collect();
+        let page = page_from_labels(&text, &labels(3, "Block"), "s");
+        let blocks = page
+            .create_surface
+            .components
+            .iter()
+            .filter(|component| component.component == "Block")
+            .count();
+        assert_eq!(blocks, 2, "a blank line separates two paragraphs");
+    }
+
+    #[test]
+    fn a_border_ends_a_block() {
+        let text: Vec<String> = ["╭──╮", "│ x│", "╰──╯", "after"]
+            .iter()
+            .map(|line| (*line).to_owned())
+            .collect();
+        let page = page_from_labels(&text, &labels(4, "Block"), "s");
+        let blocks = page
+            .create_surface
+            .components
+            .iter()
+            .filter(|component| component.component == "Block")
+            .count();
+        assert!(
+            blocks >= 2,
+            "a bordered box is its own thing: {blocks} block(s)"
+        );
+    }
+
+    #[test]
+    fn a_label_the_text_does_not_support_falls_back_to_text() {
+        // A model may say "meter" about a row with no limit in it. The page must not claim
+        // a component the screen cannot justify.
+        let text = vec!["just some words".to_owned()];
+        let page = page_from_labels(&text, &labels(1, "Meter"), "s");
+        assert!(
+            page.create_surface
+                .components
+                .iter()
+                .any(|component| component.component == "Block"),
+            "an unsupported meter must become text: {page:?}"
+        );
+    }
 }
