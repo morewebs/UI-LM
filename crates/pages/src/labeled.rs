@@ -96,7 +96,11 @@ fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
                 // package listing is not a removal, and calling it one split a two-row
                 // screen into two blocks — the same lesson as the meter guard: a label that
                 // decides grouping has to be right before the grouping happens.
-                "Diff" if !(line.starts_with("+ ") || line.starts_with("- ")) => "Block".to_owned(),
+                // A diff never decides where a block begins or ends. `as_text` already asks
+                // whether a finished block *is* a diff, which is the reader's own order of
+                // operations; letting the label group rows split one block of error text into
+                // five, and every attempt to fold those pieces back cost points elsewhere.
+                "Diff" => "Block".to_owned(),
                 // A thought is a row the application marks as one: it carries the mark and
                 // says so — `♦ Thought for 0.6s`. Anything else that merely starts with a
                 // non-ASCII glyph is not a thought, and a table whose status column uses
@@ -147,7 +151,37 @@ pub fn page_from_labels(text: &[String], labels: &[String], surface: &str) -> En
     let mut children = Vec::new();
     let mut components = Vec::new();
 
-    for (first, end, label) in runs(&adjusted(labels, text), text) {
+    // A run the guards demote can still sit between two ordinary blocks and stay split from
+    // them, because grouping happened on the raw label: PowerShell's error text is
+    // `+`-prefixed, so a stretch of it was labelled a diff, refused as one, and left as two
+    // extra blocks inside a single block of error output. Only that case is folded — a
+    // demoted diff into its immediate neighbours — because a general "fold what resembles
+    // what" rule destroyed distinctions elsewhere and cost 34 points when it was tried.
+    let mut runs = runs(&adjusted(labels, text), text);
+    let mut index = 0;
+    while index < runs.len() {
+        let (first, end, label) = runs[index].clone();
+        let kind = settled(&label, &text[first..end.min(text.len())]);
+        let demoted = label == "Diff" && kind == "Block";
+        if demoted && index > 0 {
+            let left = &mut runs[index - 1];
+            if settled(&left.2, &text[left.0..left.1.min(text.len())]) == "Block" {
+                left.1 = end;
+                runs.remove(index);
+                continue;
+            }
+        }
+        if demoted && index + 1 < runs.len() {
+            let right = runs[index + 1].clone();
+            if settled(&right.2, &text[right.0..right.1.min(text.len())]) == "Block" {
+                runs[index].1 = right.1;
+                runs.remove(index + 1);
+                continue;
+            }
+        }
+        index += 1;
+    }
+    for (first, end, label) in runs {
         if first >= text.len() {
             continue;
         }
