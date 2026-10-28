@@ -17,6 +17,9 @@
 //! that cares about column alignment would use the `rows` and per-span offsets every
 //! component already carries; this one is a readable proof, not a terminal emulator.
 
+mod terminal;
+pub use terminal::{render_terminal, round_trip, RoundTrip};
+
 use std::fmt::Write as _;
 
 use ui_lm_pages::{Body, Component, Envelope, InlineSpan};

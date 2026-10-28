@@ -97,6 +97,8 @@ enum Command {
     Page(PageArgs),
     /// Score the learned model against the pages the recorder produces.
     Score(ScoreArgs),
+    /// Draw a page back as terminal text.
+    Tui(TuiArgs),
     /// Score a page built from text alone against the pages the recorder produces.
     Baseline(BaselineArgs),
     /// Write the training pairs a recording holds: the screen's text, and its page.
@@ -130,6 +132,21 @@ struct ScoreArgs {
     misses: usize,
 }
 
+/// Draws a recorded screen back from its page, and says how much survived the round trip.
+#[derive(Debug, Args)]
+struct TuiArgs {
+    /// The session directory holding the frames.
+    #[arg(long, value_name = "DIR")]
+    session: PathBuf,
+
+    /// Which frame, by sequence number. Defaults to the session's last frame.
+    #[arg(long)]
+    seq: Option<u32>,
+
+    /// Draw every frame and report the round trip over all of them.
+    #[arg(long)]
+    all: bool,
+}
 /// Which recording to measure the floor on.
 #[derive(Debug, Args)]
 struct BaselineArgs {
@@ -341,6 +358,7 @@ fn run(command: Command) -> Result<ExitCode> {
         Command::Compare(args) => compare(&args),
         Command::Baseline(args) => baseline(&args),
         Command::Score(args) => score(&args),
+        Command::Tui(args) => tui(&args),
         Command::Dataset(args) => dataset(&args),
         Command::Render(args) => render(&args),
     }
@@ -390,6 +408,54 @@ fn component_texts(page: &ui_lm_pages::Envelope) -> Vec<(String, String)> {
 ///
 /// Two numbers side by side, because one alone says nothing: a model is only worth having
 /// if it beats doing nothing, and the margin is the whole claim.
+fn tui(args: &TuiArgs) -> Result<ExitCode> {
+    let frames = match ui_lm_frames::read_frames(&args.session) {
+        Ok((_, frames)) => frames,
+        Err(_) => ui_lm_frames::read_orphaned_frames(&args.session)?,
+    };
+    let chosen: Vec<&ui_lm_frames::Frame> = if args.all {
+        frames.iter().collect()
+    } else {
+        vec![match args.seq {
+            Some(seq) => frames
+                .iter()
+                .find(|frame| frame.seq == seq)
+                .with_context(|| {
+                    format!(
+                        "the session {} has no frame {}",
+                        args.session.display(),
+                        seq
+                    )
+                })?,
+            None => frames
+                .last()
+                .with_context(|| format!("{} holds no frames", args.session.display()))?,
+        }]
+    };
+    let mut same = 0usize;
+    let mut rows = 0usize;
+    let mut drawn = 0usize;
+    for frame in &chosen {
+        let screen = ui_lm_capture::summary::frame_text(frame);
+        let page = ui_lm_pages::page_from_frame(frame, "tui");
+        let trip = ui_lm_render::round_trip(&page, &screen);
+        same += trip.content_same;
+        rows += trip.content;
+        drawn += trip.drawn;
+        if !args.all {
+            print!("{}", ui_lm_render::render_terminal(&page));
+        }
+    }
+    let share = if rows == 0 {
+        100.0
+    } else {
+        same as f64 / rows as f64 * 100.0
+    };
+    eprintln!(
+        "round trip: {same}/{rows} line(s) of content came back ({share:.1}%), {drawn} drawn"
+    );
+    Ok(ExitCode::SUCCESS)
+}
 fn score(args: &ScoreArgs) -> Result<ExitCode> {
     let model = ui_lm_model::Model::load(&args.model)?;
     let mut ours = (0.0f64, 0usize);
