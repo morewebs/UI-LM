@@ -506,4 +506,24 @@ mod tests {
         }];
         assert!(frame_problems(&frame).is_empty());
     }
+    #[test]
+    fn a_mask_outside_the_screen_is_a_problem() {
+        // The audit has only ever been seen to pass. A check that cannot fail is not a check, so
+        // this asks it directly about a frame it should reject: a masked span on a row the screen
+        // does not have.
+        let mut frame = Frame::empty(10, 20);
+        frame.volatile = vec![Span {
+            row: 99,
+            col: 0,
+            len: 2,
+            reason: MaskReason::NoSemanticChange,
+        }];
+        let problems = frame_problems(&frame);
+        assert!(
+            problems
+                .iter()
+                .any(|problem| problem.contains("does not fit")),
+            "a span at row 99 on a ten-row screen must be a problem, not {problems:?}"
+        );
+    }
 }
