@@ -169,3 +169,34 @@ fn a_second_full_screen_application_splits_without_new_code() {
         .collect();
     assert_eq!(panes.len(), 2, "two panes, found by the same rule as vim");
 }
+#[test]
+fn numbered_tabs_are_tabs_and_a_table_row_is_not() {
+    // `1 one.txt  2 two.txt` is how most editors draw tab pages; without this it was
+    // described as a line of plain text and a runtime drew words instead of tabs. The rule
+    // needs the number on every field, so an ordinary table's first row stays a table row.
+    let page = page_of(&["1 one.txt  2 two.txt"], "Block");
+    let tabs = page
+        .create_surface
+        .components
+        .iter()
+        .filter_map(|component| match &component.body {
+            ui_lm_pages::Body::Block { tabs, .. } => Some(tabs.clone()),
+            _ => None,
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+    assert_eq!(tabs, ["one.txt", "two.txt"]);
+
+    let table = page_of(&["Item        Count    Price"], "Block");
+    let none = table
+        .create_surface
+        .components
+        .iter()
+        .filter_map(|component| match &component.body {
+            ui_lm_pages::Body::Block { tabs, .. } => Some(tabs.clone()),
+            _ => None,
+        })
+        .flatten()
+        .count();
+    assert_eq!(none, 0, "a table header is not a tab strip");
+}

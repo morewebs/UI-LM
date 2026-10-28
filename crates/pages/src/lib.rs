@@ -1488,6 +1488,36 @@ fn wide_gap(line: &str) -> Option<(usize, usize)> {
 /// columns of content: the rule is the thing that says "these are views, and what is
 /// below is what the selected one shows".
 fn tabs_of(lines: &[String]) -> Vec<String> {
+    // A tab strip is drawn two ways in the applications recorded here: names above a
+    // horizontal rule (an agent's overlay), or a numbered first line with no rule under it
+    // (`1 one.txt  2 two.txt`, how most editors draw tab pages). The second shape was
+    // described as plain text until this existed, so a runtime drew a tab strip as words.
+    // Narrow on purpose: every field must carry its number, or a table's first row would be
+    // read as tabs.
+    if let Some(first) = lines.first() {
+        let numbered = fields_of(first);
+        if numbered.len() >= 2
+            && numbered.iter().all(|field| {
+                field
+                    .chars()
+                    .next()
+                    .is_some_and(|first| first.is_ascii_digit())
+            })
+        {
+            return numbered
+                .iter()
+                .map(|field| {
+                    field
+                        .trim_start_matches(|character: char| {
+                            character.is_ascii_digit() || character == '#'
+                        })
+                        .trim()
+                        .to_owned()
+                })
+                .filter(|name| !name.is_empty())
+                .collect();
+        }
+    }
     let Some(rule) = lines.iter().position(|line| is_rule(line)) else {
         return Vec::new();
     };
