@@ -159,3 +159,26 @@ at the top of a round, or be split into "add the field everywhere, no behaviour"
 "use it" in a second.
 
 That second shape is better than what I tried today, and it is what the next attempt will do.
+## Step two, measured: the label path is the blocker, and the axes prove it
+
+Re-applied the reader half — panes declared on the surface, each pane's styling sliced at the
+divider — and it worked: `vimdiff` panes went from **0 styled lines to 25 of 26 each**.
+
+Then the `fields` axis, which does not care how the change *looks*:
+
+```
+fields tui: 119 component(s) compared, 12 differing
+```
+
+Before the change it was **0 differing**. Five sessions got worse, and the per-session split says
+exactly why: `wsl-vim-vsplit` 1, `wsl-vim-split` 3, `wsl-tmux-split` 3, `wsl-tmux-panes-popup` 4.
+In those sessions the model page has **no panes at all**, because the label path still consults the
+pane rule only when a screen produced a single component — so the reader now has richer panes and
+the model has none.
+
+Reverted. `fields` back to 0 differing, tests green, HEAD unchanged at the field-only commit.
+
+**The lesson is about order, and it took two rounds to run:** adding information to one side of a
+mapping that both sides must agree on makes every axis worse until the other side catches up. The
+next attempt does *both* sides in one change — the label path's pane condition is the first edit,
+not the last — or the reader half stays uncommitted until it is.
