@@ -130,7 +130,7 @@ struct DatasetArgs {
 
     /// Keep only screens that hold a component beyond plain text.
     ///
-    /// Measured on a real corpus: 20 of 26 settled screens were prose, and a pair whose
+    /// Measured on real corpora: most settled screens are prose, and a pair whose
     /// target is one block of text teaches nothing that copying already gives. The pairs
     /// worth having are the minority, and they are the ones a converter fails on.
     #[arg(long)]
