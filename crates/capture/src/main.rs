@@ -121,6 +121,13 @@ struct ScoreArgs {
     /// The model to score, as written by `scripts/train_model.py`.
     #[arg(long, value_name = "FILE", default_value = "models/page.json")]
     model: PathBuf,
+
+    /// Print up to this many components the model failed to reproduce, with their text.
+    ///
+    /// A score says how often the model is wrong; this says what it is wrong about, which is
+    /// the only thing that decides whether the next change is data, features or labels.
+    #[arg(long, value_name = "N", default_value_t = 0)]
+    misses: usize,
 }
 
 /// Which recording to measure the floor on.
@@ -331,6 +338,46 @@ fn run(command: Command) -> Result<ExitCode> {
     }
 }
 
+/// Each component of a page as its kind and the text it carries.
+///
+/// Read off the serialized page rather than the typed structure so that every kind is
+/// covered the same way — a diagnostic that skipped a kind would hide exactly the misses it
+/// exists to find.
+fn component_texts(page: &ui_lm_pages::Envelope) -> Vec<(String, String)> {
+    let json = match serde_json::to_value(page) {
+        Ok(json) => json,
+        Err(_) => return Vec::new(),
+    };
+    let components = match json["createSurface"]["components"].as_array() {
+        Some(components) => components,
+        None => return Vec::new(),
+    };
+    components
+        .iter()
+        .filter_map(|component| {
+            let kind = component["component"].as_str()?.to_owned();
+            if kind == "Column" {
+                return None;
+            }
+            let text = if let Some(lines) = component["lines"].as_array() {
+                lines
+                    .iter()
+                    .map(|line| line.as_str().unwrap_or_default().to_owned())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            } else if let Some(calls) = component["calls"].as_array() {
+                calls
+                    .iter()
+                    .map(|call| call["text"].as_str().unwrap_or_default().to_owned())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            } else {
+                component["text"].as_str().unwrap_or_default().to_owned()
+            };
+            Some((kind, text))
+        })
+        .collect()
+}
 /// Scores the learned model beside the do-nothing converter, on the same screens.
 ///
 /// Two numbers side by side, because one alone says nothing: a model is only worth having
@@ -340,6 +387,7 @@ fn score(args: &ScoreArgs) -> Result<ExitCode> {
     let mut ours = (0.0f64, 0usize);
     let mut floor = (0.0f64, 0usize);
     let mut kinds: std::collections::BTreeMap<String, (usize, usize)> = Default::default();
+    let mut misses: Vec<String> = Vec::new();
     let mut frames = 0usize;
 
     for session in &args.sessions {
@@ -366,6 +414,20 @@ fn score(args: &ScoreArgs) -> Result<ExitCode> {
                 entry.0 += kind.total;
                 entry.1 += kind.matched;
             }
+            // What the model got wrong, named. A score says how often; this says what.
+            if misses.len() < args.misses {
+                for (kind, text) in component_texts(&real) {
+                    if !component_texts(&predicted)
+                        .iter()
+                        .any(|(other_kind, other)| *other_kind == kind && *other == text)
+                    {
+                        misses.push(format!("{kind}: {text}"));
+                        if misses.len() >= args.misses {
+                            break;
+                        }
+                    }
+                }
+            }
             frames += 1;
         }
     }
@@ -382,6 +444,9 @@ fn score(args: &ScoreArgs) -> Result<ExitCode> {
     );
     for (kind, (total, matched)) in &kinds {
         println!("  {kind:<10} {matched}/{total} reproduced");
+    }
+    for miss in &misses {
+        println!("  missed {miss}");
     }
     Ok(ExitCode::SUCCESS)
 }
