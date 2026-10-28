@@ -613,7 +613,7 @@ fn disagree(args: &DisagreeArgs) -> Result<ExitCode> {
     let mut rows = 0usize;
     let mut differing = 0usize;
     let mut shown = 0usize;
-    println!("{:<10} {:<10} {}", "reader", "model", "row");
+    println!("{:<10} {:<10} row", "reader", "model");
     for session in &args.sessions {
         let loaded = match ui_lm_frames::read_frames(session) {
             Ok((_, frames)) => frames,
@@ -632,25 +632,29 @@ fn disagree(args: &DisagreeArgs) -> Result<ExitCode> {
             let mut reader_kind = vec!["Block".to_owned(); lines.len()];
             for component in &real.create_surface.components {
                 if let Some((first, end)) = rows_of_component(component) {
-                    for row in first..end.min(lines.len()) {
-                        reader_kind[row] = component.component.clone();
+                    for kind in reader_kind
+                        .iter_mut()
+                        .take(end.min(lines.len()))
+                        .skip(first)
+                    {
+                        *kind = component.component.clone();
                     }
                 }
             }
-            for (row, line) in lines.iter().enumerate() {
+            for (line, kind, label) in lines
+                .iter()
+                .zip(&reader_kind)
+                .zip(&labels)
+                .map(|((line, kind), label)| (line, kind, label))
+            {
                 if line.trim().is_empty() {
                     continue;
                 }
                 rows += 1;
-                if labels[row] != reader_kind[row] {
+                if *label != *kind {
                     differing += 1;
                     if shown < args.show {
-                        println!(
-                            "{:<10} {:<10} {}",
-                            reader_kind[row],
-                            labels[row],
-                            line.trim_end()
-                        );
+                        println!("{:<10} {:<10} {}", kind, label, line.trim_end());
                         shown += 1;
                     }
                 }
