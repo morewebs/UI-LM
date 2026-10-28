@@ -36,6 +36,7 @@ powershell -File scripts/check-fresh.ps1         # record new material and score
 powershell -File scripts/check-interaction.ps1   # typing into the live view reaches the program
 powershell -File scripts/check-race.ps1          # reads during a redraw, and a half-written frame
 powershell -File scripts/check-live-page.ps1     # the live page moves, a finished one holds still
+powershell -File scripts/check-render-scale.ps1  # exporting a session stays linear per page
 cargo test --workspace                           # 221 tests
 ```
 
