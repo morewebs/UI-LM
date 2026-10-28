@@ -916,12 +916,11 @@ pub(crate) fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>, us
     if lines.len() < 8 {
         return None;
     }
-    if lines
-        .iter()
-        .any(|line| line.contains(['╭', '╮', '╰', '╯', '┌', '┐', '└', '┘']))
-    {
-        return None;
-    }
+    // A framed panel used to be refused outright, because its border can be the column with the
+    // most hits. The measured table for an agent running in one pane of a split says otherwise:
+    // the real divider held 29 of 30 rows and every box border held one, so the corner rule was
+    // refusing a screen whose split was never ambiguous. The panel case is left to the hit
+    // threshold, and the guard tests that came with it.
     let width = lines.iter().map(|line| line.chars().count()).max()?;
     let mut best: Option<(usize, usize)> = None;
     for column in 1..width.saturating_sub(1) {

@@ -262,3 +262,31 @@ Reverted. `clippy`, `fmt` and `tests` green, HEAD unchanged.
 design, it is `as_panes` choosing the wrong column on a screen that is both framed and split. The next
 attempt starts there — one function, one screen, and a printed column table — rather than at the page
 level where three rounds have now been spent.
+## The table answered it in one line
+
+Printing the divider hits for the agent-in-a-split screen was the whole diagnosis:
+
+| column | rows with a divider | rows with content beside |
+|---|---|---|
+| **55** | **29 of 30** | 3 |
+| 52, 40, 36, 18, 2 | 1 each | 30 |
+
+The split was never ambiguous — the real divider held 29 of 30 rows. The only thing refusing it was
+the rule that **any box corner** on a screen disables panes, written for a framed panel whose border
+could win the vote. On this screen the border wins nothing: one row each.
+
+So the corner rule is gone, and the panel case is left to the hit threshold that already exists:
+
+| check | result |
+|---|---|
+| evaluation sets | 100% |
+| `fields`, TUI | 119 components, 0 differing |
+| known-hard screens | 100% and 96.0%, unchanged |
+
+The "content beside the divider" idea from the previous attempt was **also wrong**, and the table says
+why: the right pane of that screen is mostly blank, so only 3 of 30 rows have anything beside the
+divider. A rule I invented to replace the corner rule would have refused the very screen that
+motivated it.
+
+The container branch itself (read each side separately) is still to be applied on top of this; the
+`as_panes` blocker in front of it is now removed with a measurement.
