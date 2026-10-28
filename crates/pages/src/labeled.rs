@@ -51,12 +51,59 @@ fn runs(labels: &[String], text: &[String]) -> Vec<(usize, usize, String)> {
     found
 }
 
+/// Labels with the per-row evidence applied, before any grouping.
+///
+/// This has to run before `runs` rather than after: a label decides where one block ends and
+/// the next begins, so a label corrected after grouping cannot put a split block back
+/// together. Two of the three guards are therefore per row — a row that opens with a list
+/// glyph is not a thought, and a row that is not shaped like a use and a limit is not a
+/// meter — while the diff guard needs the whole run and stays in `settled`.
+fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
+    labels
+        .iter()
+        .enumerate()
+        .map(|(row, label)| {
+            let line = text.get(row).map(|line| line.trim()).unwrap_or("");
+            match label.as_str() {
+                "Thought" if line.starts_with(['○', '•', '●', '·', '▪', '◦']) => {
+                    "Block".to_owned()
+                }
+                "Meter" if !line.contains('/') || line.contains(';') => "Block".to_owned(),
+                other => other.to_owned(),
+            }
+        })
+        .collect()
+}
+
+/// The label a run of rows can actually support.
+///
+/// One piece of evidence is only available once the rows are grouped: a lone `+ New Agent` row
+/// is a button, not a diff, because a diff is a change and one line is not a change of
+/// anything. A diff therefore needs at least two changed rows.
+///
+/// These are the same structural checks the reader makes, applied to a label that came from
+/// somewhere else, so a model can be wrong about a row and the page still not claim something
+/// the screen cannot justify.
+fn settled(label: &str, lines: &[String]) -> String {
+    let changed = lines
+        .iter()
+        .filter(|line| {
+            let line = line.trim_start();
+            line.starts_with("+ ") || line.starts_with("- ")
+        })
+        .count();
+    match label {
+        "Diff" if changed < 2 => "Block".to_owned(),
+        other => other.to_owned(),
+    }
+}
+
 /// A page built from `labels`, one per row of `text`.
 pub fn page_from_labels(text: &[String], labels: &[String], surface: &str) -> Envelope {
     let mut children = Vec::new();
     let mut components = Vec::new();
 
-    for (first, end, label) in runs(labels, text) {
+    for (first, end, label) in runs(&adjusted(labels, text), text) {
         if first >= text.len() {
             continue;
         }
@@ -71,7 +118,7 @@ pub fn page_from_labels(text: &[String], labels: &[String], surface: &str) -> En
             u16::try_from(end).unwrap_or(u16::MAX),
         ];
 
-        let (kind, body) = body_for(label.as_str(), &lines, rows);
+        let (kind, body) = body_for(settled(&label, &lines).as_str(), &lines, rows);
         let id = block_id(&lines);
         children.push(id.clone());
         components.push(Component {

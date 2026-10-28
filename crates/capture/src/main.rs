@@ -221,6 +221,14 @@ struct PageArgs {
     /// them. Without this, one frame is described and every block in it is `seen`.
     #[arg(long)]
     all: bool,
+
+    /// Print the model's label for each row instead of building a page.
+    ///
+    /// When a page groups rows differently from the reader, the question is always which row
+    /// was labelled what; printing the labels answers it directly instead of by inference
+    /// from the groups.
+    #[arg(long)]
+    labels: bool,
 }
 
 /// What the corpus reader is asked about.
@@ -730,6 +738,18 @@ fn page(args: &PageArgs) -> Result<ExitCode> {
             .map(|name| name.to_string_lossy().into_owned())
             .unwrap_or_else(|| "session".to_owned())
     });
+    if args.labels {
+        let model = match &args.model {
+            Some(path) => ui_lm_model::Model::load(path)?,
+            None => bail!("--labels needs --model"),
+        };
+        let text = ui_lm_capture::summary::frame_text(frame);
+        let lines = text.lines().map(|line| line.to_owned()).collect::<Vec<_>>();
+        for (row, label) in model.labels(&lines).iter().enumerate() {
+            println!("{row:>3} {label:<10} {}", lines[row].trim_end());
+        }
+        return Ok(ExitCode::SUCCESS);
+    }
     // A whole session is printed as JSON lines, one page per frame: it is a stream
     // to be read in order, and indenting every page in a stream only costs bytes.
     if args.all {
