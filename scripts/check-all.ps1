@@ -98,6 +98,20 @@ foreach ($set in (Get-ChildItem -LiteralPath $evalRoot -Directory -ErrorAction S
 $rows += "  {0,-16} {1} session(s) below 100%" -f "round trip", $tuiFailures.Count
 if ($tuiFailures.Count -gt 0) { $failures += "round trip: " + ($tuiFailures -join ", ") }
 
+# The same measurement on the pages a model built. The reverse direction had only ever been
+# checked on the reader's page, so the loop a person actually uses — model judges, page draws
+# back — was never tested end to end.
+$modelTrip = @()
+foreach ($set in (Get-ChildItem -LiteralPath $evalRoot -Directory -ErrorAction SilentlyContinue)) {
+    foreach ($session in (Get-ChildItem -LiteralPath $set.FullName -Directory)) {
+        if (-not (Test-Path (Join-Path $session.FullName "session.json"))) { continue }
+        $line = (& $capture tui --session $session.FullName --all --model $model 2>&1 | Select-Object -Last 1) -join ""
+        if ($line -match "([\d.]+)%" -and [double]$Matches[1] -lt 100) { $modelTrip += $session.Name }
+    }
+}
+$rows += "  {0,-16} {1} session(s) below 100%" -f "round trip/model", $modelTrip.Count
+if ($modelTrip.Count -gt 0) { $failures += "round trip on model pages: " + ($modelTrip -join ", ") }
+
 if ($Fresh) {
     $line = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "scripts\check-fresh.ps1") 2>&1 |
         Select-Object -First 1) -join ""

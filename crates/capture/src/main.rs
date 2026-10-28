@@ -181,6 +181,14 @@ struct TuiArgs {
     /// Draw every frame and report the round trip over all of them.
     #[arg(long)]
     all: bool,
+
+    /// Draw pages built by a model instead of the reader.
+    ///
+    /// The reverse direction was only ever measured on the reader's pages, so the loop a person
+    /// actually uses — model judges the screen, the page draws back — had never been checked end
+    /// to end.
+    #[arg(long, value_name = "FILE")]
+    model: Option<PathBuf>,
 }
 /// Which recording to measure the floor on.
 #[derive(Debug, Args)]
@@ -493,7 +501,16 @@ fn tui(args: &TuiArgs) -> Result<ExitCode> {
     let mut drawn = 0usize;
     for frame in &chosen {
         let screen = ui_lm_capture::summary::frame_text(frame);
-        let page = ui_lm_pages::page_from_frame(frame, "tui");
+        let surface = format!("frame-{}", frame.seq);
+        let page = match &args.model {
+            Some(path) => {
+                let model = ui_lm_model::Model::load(path)?;
+                let mut page = model.page(&screen, &surface);
+                ui_lm_pages::graft_spans(&mut page, &ui_lm_pages::page_from_frame(frame, &surface));
+                page
+            }
+            None => ui_lm_pages::page_from_frame(frame, &surface),
+        };
         let trip = ui_lm_render::round_trip(&page, &screen);
         same += trip.content_same;
         rows += trip.content;

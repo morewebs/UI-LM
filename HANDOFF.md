@@ -55,7 +55,7 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 | claim | evidence |
 |---|---|
 | a screen's text becomes a page holding blocks, tool calls, meters, thoughts, diffs, panes | 42 evaluation sets, 100% |
-| a page draws back every line of content | 1,986/1,986 lines; split screens included |
+| a page draws back every line of content | 1,986/1,986 lines; split screens included; **the same on model-built pages** |
 | the page carries the screen's styling | 6,303 spans on the training batch; reaches HTML, terminal and the live view |
 | provenance is honest | 967 components, 0 contradictions |
 | the model generalises off its training application | trained on one application, 100% on 141 frames from 13 other programs |
