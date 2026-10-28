@@ -1183,6 +1183,18 @@ fn segments(lines: &[String], first: usize, last: usize) -> Vec<Segment> {
         let opens = opens_box(line);
         let closes = closes_box(line);
         let tool = is_tool_line(line);
+        // A row that is a use-and-limit is its own thing, even inside a paragraph. The model
+        // called one a `Meter` while the reader kept it inside the seven rows around it, and that
+        // single boundary was two points on the only recording with a meter in a pane.
+        if !tool && as_meter(std::slice::from_ref(line)).is_some() {
+            found.push(Segment {
+                first: row,
+                last: row + 1,
+                tool: false,
+                boxed: false,
+            });
+            continue;
+        }
 
         // A box that opens ends whatever stretch was running, and the box takes its own
         // first line; a box that closes ends its own stretch after the line.

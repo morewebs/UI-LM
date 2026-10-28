@@ -527,3 +527,28 @@ at a resolution that can now see it. The pre-container 96.0% was partly coarsene
 It belongs with the other assembly questions — a row the model calls a new block that the reader calls
 part of the one above it — and the guard for it must be derived, as ever, from a table of the rows
 where the two disagree rather than from a rule about what "looks like" a boundary.
+## Closed: one boundary, found by a table, worth six points
+
+The gap was row 1 of the agent screen. The model called it a `Meter`; the reader kept it inside the
+seven rows around it. The segmenter split stretches at tool lines and at boxes, and **not at meters**,
+so a use-and-limit inside a paragraph was swallowed by it.
+
+Adding one rule — a row that is a use-and-limit starts its own segment — moved the screen from
+**94.0% to 100.0%**, and did not disturb anything else:
+
+| check | result |
+|---|---|
+| evaluation sets | 100% |
+| assembly | 100% over 185 frames |
+| provenance | 688 components, 0 contradictions |
+| `fields` | 688 compared, 0 differing |
+| round trip, both paths | 0 sessions below 100% |
+| agent in a single pane | 100% |
+| **agent in a split pane** | **100%** |
+
+Both known-hard recordings now read perfectly, and the scoreboard's expectations have been raised to
+100.0 so that any future regression shows immediately.
+
+**The sequence that finally worked, for the record:** container (page level) → renderer → gates chosen
+from tables → label path → segmenter rule. Five rounds, each ending green, each removing one named
+obstacle. Every previous attempt had tried to do several of those at once.
