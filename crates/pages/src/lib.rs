@@ -2391,4 +2391,57 @@ mod tests {
             "a read is still a tool call: {page:?}"
         );
     }
+
+    #[test]
+    fn missing_the_only_meter_costs_more_than_missing_a_block() {
+        // The whole point of weighting: a page that reproduces every block and no meter is
+        // not a good page. With rarity weights, one missing meter outweighs ten missing
+        // blocks, so a page of pure blocks scores low however many blocks it has.
+        let score = Score {
+            components: 11,
+            matched: 10,
+            rows: 0,
+            rows_matched: 0,
+            by_kind: vec![
+                KindScore {
+                    kind: "Block".to_owned(),
+                    total: 10,
+                    matched: 10,
+                },
+                KindScore {
+                    kind: "Meter".to_owned(),
+                    total: 1,
+                    matched: 0,
+                },
+            ],
+        };
+        let weighted = score.weighted_structure();
+        assert!(
+            weighted < 0.5,
+            "every block and no meter is not half a page: {weighted}"
+        );
+    }
+
+    #[test]
+    fn a_perfect_page_scores_one_however_its_kinds_are_split() {
+        let score = Score {
+            components: 11,
+            matched: 11,
+            rows: 0,
+            rows_matched: 0,
+            by_kind: vec![
+                KindScore {
+                    kind: "Block".to_owned(),
+                    total: 10,
+                    matched: 10,
+                },
+                KindScore {
+                    kind: "Meter".to_owned(),
+                    total: 1,
+                    matched: 1,
+                },
+            ],
+        };
+        assert_eq!(score.weighted_structure(), 1.0);
+    }
 }
