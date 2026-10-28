@@ -43,6 +43,7 @@ powershell -File scripts/check-validate.ps1      # the validator agrees on a mat
 powershell -File scripts/check-hard.ps1         # the two screens that drove the pane container, both at 100%
 powershell -File scripts/check-corpus.ps1       # every recording here reads without an error
 powershell -File scripts/check-html.ps1         # every word the page holds reaches the browser document
+powershell -File scripts/check-audit.ps1        # every page row matches the screen it came from
 
 # All seven, in order, about six minutes. The audit is the evidence; nothing below is a claim
 # that has not been through it.

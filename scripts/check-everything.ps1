@@ -29,7 +29,8 @@ if (-not (Test-Path "target\debug\ui-lm-capture.exe")) {
 $all = @(
     @{ name = "gate";        script = "gate.ps1";        slow = $false },
     @{ name = "all";         script = "check-all.ps1";   slow = $false },
-    @{ name = "corpus";      script = "check-corpus.ps1"; slow = $false },
+@{ name = "corpus";      script = "check-corpus.ps1"; slow = $false },
+    @{ name = "audit";       script = "check-audit.ps1"; slow = $false },
     @{ name = "html";        script = "check-html.ps1";  slow = $false },
     @{ name = "hard";        script = "check-hard.ps1";  slow = $false },
     @{ name = "validate";    script = "check-validate.ps1"; slow = $false },
