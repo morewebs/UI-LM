@@ -451,3 +451,29 @@ The gate that matches the table is **"does any component have a kind other than 
 That last row is the honest cost: the page is now *structured correctly* and agrees with the model
 slightly less, because the two paths split the same screen into the same two panes but describe some
 of their content differently. The structure is right and the agreement is not yet.
+## The line-based gate: right idea, too permissive, reverted
+
+The 1.5-point gap was diagnosed exactly: the label path never received the container, so the reader
+split the agent screen and the model did not. Adding the label path with a gate computed **from the
+lines** — the reader's own `as_meter`, `tool_calls` and `as_diff` on each side — made the two paths
+agree, and the screen went 94.5% → **97.7%**, better than the 96.0% it had before any container.
+
+Then the sweep:
+
+```
+provenance       13 contradiction(s)
+fields           2 differing
+round trip       4 sessions below 100%
+round trip/model 4 sessions below 100%
+```
+
+**The line-based gate fires on the plain vim and tmux splits as well**, because those panes contain
+rows the detectors recognise — a `~` column, a slash, a glyph — so both paths now split screens that
+were already correct.
+
+Reverted to the committed state: every check passing, both round trips at 0.
+
+**What this narrows it to:** the gate needs to be *both* line-based (so the two paths agree) and
+narrow enough not to fire on a pager-style pane. The evidence for the right threshold is one table
+away — for each split recording, which detector fires on which row — and that is the same shape of
+measurement that solved the divider column and the component-count gate.
