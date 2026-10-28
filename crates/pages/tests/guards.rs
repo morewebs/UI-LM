@@ -200,3 +200,26 @@ fn numbered_tabs_are_tabs_and_a_table_row_is_not() {
         .count();
     assert_eq!(none, 0, "a table header is not a tab strip");
 }
+#[test]
+fn a_box_border_is_not_a_tree_branch() {
+    // `└── name` is a branch of a tree and starts a block; `└─────┘` closes a box and belongs to
+    // the block it closes. Both begin with the same two characters, and treating them alike split
+    // a multiplexer's popup into two components — 90.5% against a floor of 100%.
+    let popup = page_of(
+        &[
+            "        ┌────────────┐",
+            "        │POPUP TEXT  │",
+            "        └────────────┘",
+        ],
+        "Block",
+    );
+    assert_eq!(
+        kinds(&popup).len(),
+        1,
+        "a box is one component: {:?}",
+        kinds(&popup)
+    );
+
+    let tree = page_of(&["└── vt100 v0.15.2"], "Block");
+    assert_eq!(kinds(&tree).len(), 1);
+}
