@@ -724,6 +724,9 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
         },
     }];
     let mut children = Vec::new();
+    // Which children share the screen side by side. Filled only when the screen is split, so a
+    // consumer never has to infer panes from two components that happen to claim every row.
+    let mut panes: Vec<Vec<String>> = Vec::new();
     for (first, last) in blocks(&lines) {
         // A transcript block mixes prose with tool lines, so the block is split at
         // the tool lines: a run of tool lines is one `ToolCall`, and a run of
@@ -869,6 +872,10 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
                     pane(first_id, left, first_source, left_spans),
                     pane(second_id, right, second_source, right_spans),
                 ];
+                panes = vec![
+                    vec![components[1].id.clone()],
+                    vec![components[2].id.clone()],
+                ];
             }
         }
     }
@@ -880,7 +887,7 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
             catalog_id: CATALOGUE_ID.to_owned(),
             root: ROOT_ID.to_owned(),
             components,
-            panes: Vec::new(),
+            panes,
         },
     }
 }

@@ -160,6 +160,7 @@ fn settled(label: &str, lines: &[String]) -> String {
 /// A page built from `labels`, one per row of `text`.
 pub fn page_from_labels(text: &[String], labels: &[String], surface: &str) -> Envelope {
     let mut children = Vec::new();
+    let mut panes: Vec<Vec<String>> = Vec::new();
     let mut components = Vec::new();
 
     // A run the guards demote can still sit between two ordinary blocks and stay split from
@@ -243,6 +244,10 @@ pub fn page_from_labels(text: &[String], labels: &[String], surface: &str) -> En
                 };
                 children = vec![first_id.clone(), second_id.clone()];
                 components = vec![pane(first_id, left), pane(second_id, right)];
+                panes = vec![
+                    vec![components[0].id.clone()],
+                    vec![components[1].id.clone()],
+                ];
             }
         }
     }
@@ -262,7 +267,7 @@ pub fn page_from_labels(text: &[String], labels: &[String], surface: &str) -> En
             catalog_id: CATALOGUE_ID.to_owned(),
             root,
             components: all,
-            panes: Vec::new(),
+            panes,
         },
     }
 }

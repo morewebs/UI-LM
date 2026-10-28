@@ -212,3 +212,29 @@ column.
 The three-screen requirement is met: panes without overlays (vim, tmux), panes under an overlay
 (popup), and **panes holding components** (this one). The next step is the change the ADR already
 priced, and the rule learned in rounds 85–90 applies: both sides of the mapping in one commit.
+## Step one, landed: the page says which components share the screen
+
+The `panes` field was dead schema when it was added in round 87 — the styling fix ended up copying
+panes by id, so nothing ever filled it — and it was removed in round 91 for that reason. It is back,
+and this time **both builders fill it for every split they already detect**: the reader from the
+cells, the label path from the text, in one commit, which is the order three failed attempts taught.
+
+| check | result |
+|---|---|
+| evaluation sets | 100% |
+| `fields`, TUI | 119 components, 0 differing |
+| agent in a single pane | 100% |
+| agent in a split pane | 96.0% |
+| `vim` vertical split, panes in the JSON | **2 groups, both pages** |
+
+What this does **not** do is the container itself: a screen whose panes hold components still yields
+no grouping, because the split is only applied when the screen reduced to a single block. The target
+tests in `crates/pages/tests/panes_as_containers.rs` still fail, by design, and they run with
+`--ignored` to say so:
+
+```
+left: 0, right: 2 — two panes to look through
+```
+
+The next step is therefore exact: apply the split **before** segmentation, per side. The field, the
+ids and the styling all already work.
