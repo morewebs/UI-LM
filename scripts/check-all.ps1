@@ -71,6 +71,22 @@ if ($provenance.Count -gt 1) {
     if ($line -notmatch " 0 contradiction") { $failures += "provenance: $line" }
 }
 
+# What kind and text do not carry: role, tabs, shortcuts, properties and spans. `score` cannot
+# see these, so a page could report 100% while every diff in it had lost its colour — which is
+# exactly what happened until this check existed.
+$fields = @("fields")
+foreach ($set in (Get-ChildItem -LiteralPath $evalRoot -Directory -ErrorAction SilentlyContinue)) {
+    foreach ($session in (Get-ChildItem -LiteralPath $set.FullName -Directory)) {
+        if (Test-Path (Join-Path $session.FullName "session.json")) {
+            $fields += @("--session", $session.FullName)
+        }
+    }
+}
+if ($fields.Count -gt 1) {
+    $line = (& $capture @fields 2>&1 | Select-Object -First 1) -join ""
+    $rows += "  {0,-16} {1}" -f "fields", $line
+    if ($line -notmatch " 0 differing") { $failures += "fields: $line" }
+}
 # The reverse direction must return every line of content, on the same material.
 $tuiFailures = @()
 foreach ($set in (Get-ChildItem -LiteralPath $evalRoot -Directory -ErrorAction SilentlyContinue)) {
