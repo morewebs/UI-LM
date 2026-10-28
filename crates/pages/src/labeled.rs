@@ -21,6 +21,7 @@ use crate::{
 /// Splits rows into runs of the same label, in the order drawn.
 fn runs(labels: &[String], text: &[String]) -> Vec<(usize, usize, String)> {
     let mut last_closed = false;
+    let mut last_was_meter = false;
     let mut found: Vec<(usize, usize, String)> = Vec::new();
     for (row, label) in labels.iter().enumerate() {
         // A blank row ends a run: it is the reader's own separator, and a model that
@@ -55,11 +56,27 @@ fn runs(labels: &[String], text: &[String]) -> Vec<(usize, usize, String)> {
             })
             .unwrap_or(false);
         let starts = opens || named;
+        // A row that is a use-and-limit is its own run, exactly as the reader cuts it: the two paths
+        // must group a screen the same way, and the reader learned this rule a fortnight before
+        // this path did — which cost four fresh recordings their perfect score.
+        let meter = text
+            .get(row)
+            .is_some_and(|line| as_meter(std::slice::from_ref(line)).is_some());
         match found.last_mut() {
-            Some(last) if last.2 == *label && !blank && !starts && !last_closed => last.1 = row + 1,
+            Some(last)
+                if last.2 == *label
+                    && !blank
+                    && !starts
+                    && !last_closed
+                    && !meter
+                    && !last_was_meter =>
+            {
+                last.1 = row + 1
+            }
             _ => found.push((row, row + 1, label.clone())),
         }
         last_closed = blank || closes;
+        last_was_meter = meter;
     }
     found
 }
