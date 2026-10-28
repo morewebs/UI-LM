@@ -16,3 +16,5 @@ frame-store/
 
 # Recorded screens for evaluation carry the machine they came from.
 /eval/
+# Hard cases recorded on this machine: kept locally, never published.
+cases/
