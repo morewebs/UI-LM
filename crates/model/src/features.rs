@@ -6,7 +6,7 @@
 //! a table of values taken from the training script.
 
 /// How many features each row has.
-pub const COUNT: usize = 17;
+pub const COUNT: usize = 19;
 
 /// The characters that draw a border.
 const BOX: [char; 8] = ['╭', '┌', '╰', '└', '│', '┃', '─', '━'];
@@ -45,6 +45,19 @@ pub fn of(line: &str, row: usize, rows: usize) -> Vec<f64> {
         f64::from(u32::try_from(leading).unwrap_or(u32::MAX)) / 20.0,
         f64::from(u32::try_from(row).unwrap_or(u32::MAX))
             / f64::from(u32::try_from(rows.max(1)).unwrap_or(1)),
+        // A row that begins with a symbol rather than a letter and one that names a tool
+        // are both how a tool line looks when the glyph itself has been lost to an encoding.
+        flag(
+            stripped
+                .chars()
+                .next()
+                .is_some_and(|character| !character.is_ascii()),
+        ),
+        flag(
+            ["hook", "Edited", "Read", "Ran", "Wrote"]
+                .iter()
+                .any(|word| stripped.contains(word)),
+        ),
         1.0,
     ]
 }

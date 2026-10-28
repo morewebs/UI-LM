@@ -92,6 +92,8 @@ def features(line, row, row_count):
         len(stripped) / 120.0,
         leading / 20.0,
         row / max(row_count, 1),                                 # vertical position
+        has(stripped[:1].isascii() is False),                    # starts with a symbol
+        has(any(word in stripped for word in ("hook", "Edited", "Read", "Ran", "Wrote"))),
         1.0,                                                     # bias
     ]
 
@@ -210,7 +212,7 @@ def main():
 
     model = {
         "kinds": KINDS,
-        "features": 17,
+        "features": 19,
         "weights": weights.tolist(),
         "bias": bias.tolist(),
         "trainedOn": len(pairs),
