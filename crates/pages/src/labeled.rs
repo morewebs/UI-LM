@@ -51,7 +51,7 @@ fn runs(labels: &[String], text: &[String]) -> Vec<(usize, usize, String)> {
             .get(row)
             .map(|line| {
                 let trimmed = line.trim();
-                trimmed.starts_with("└──") || trimmed.starts_with("├──")
+                trimmed.starts_with("└──")
             })
             .unwrap_or(false);
         let starts = opens || named;
@@ -59,7 +59,7 @@ fn runs(labels: &[String], text: &[String]) -> Vec<(usize, usize, String)> {
             Some(last) if last.2 == *label && !blank && !starts && !last_closed => last.1 = row + 1,
             _ => found.push((row, row + 1, label.clone())),
         }
-        last_closed = blank || (closes && !named);
+        last_closed = blank || closes;
     }
     found
 }
