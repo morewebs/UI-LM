@@ -315,3 +315,28 @@ Reverted. Everything green at `c86bbad`.
 **The next attempt must restructure both paths in the same shape** — a shared "read these lines" entry
 that both call, so "split first" is a property of one function rather than a rule each path agrees to
 follow. Doing it to one and then the other is how four attempts have now failed.
+## The container works — and it is one styling fix away from being committable
+
+Both paths were changed at the same point this time, with the same `as_panes` test: reader and label
+path each split **before** segmentation. What that produced, measured:
+
+| check | before | after |
+|---|---|---|
+| target tests (`panes_as_containers`) | 2 ignored, 1 failed | **2 passed, 0 failed** |
+| agent in a split pane | 96.0% | **97.7%** |
+| agent in a single pane | 100% | 100% |
+| evaluation sets | 100% | **100%** |
+| `fields`, TUI | 0 differing | **2 differing** |
+
+**The container itself works**: a split screen declares two panes, every component belongs to exactly
+one, and an agent's meter and tool calls no longer sit in the same list as the shell beside them.
+
+The two that differ are styling, not structure: `spans 35/32` on `wsl-vim` and `wsl-vim-vsplit`. The
+graft copies pane styling by id, and a pane that now holds its own components has ids derived from
+*content* that the two paths can compute slightly differently. Teaching the graft to copy per pane
+group instead of per id is the remaining work — small, and the only thing between this branch and a
+green tree.
+
+Reverted for now, because `fields` is one of the five claims and a branch that breaks it is not
+finished. **The next round starts from this note rather than from a blank page**: the split is proven,
+the tests pass, and only the graft is left.
