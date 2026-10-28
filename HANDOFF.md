@@ -105,8 +105,10 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 
 ## Conventions this project runs on
 
-- **Never commit on a failed gate.** `clippy --workspace --all-targets -D warnings`, `fmt
-  --check`, `test --workspace` — all three, every time.
+- **Never commit on a failed gate, and make the gate animate it.** `scripts/gate.ps1` runs the three
+  checks and refuses to commit unless all pass (`-Commit "message"`). In round 101 a commit went
+  through while clippy and tests were failing because the discipline lived in my attention; it now
+  lives in the script.
 - **Measure every claim; record every disproved hypothesis.** The report names the attempts that
   failed and what they cost, because that is the only reason the next person won't repeat them.
 - **A check that cannot see its material must fail, not pass.** Three separate defects this month
