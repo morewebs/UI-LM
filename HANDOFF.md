@@ -34,6 +34,7 @@ screen decides how it *looks* and how a component is shaped.
 powershell -File scripts/check-all.ps1           # every set, both directions, provenance
 powershell -File scripts/check-fresh.ps1         # record new material and score it blind
 powershell -File scripts/check-interaction.ps1   # typing into the live view reaches the program
+powershell -File scripts/check-race.ps1          # reads during a redraw, and a half-written frame
 cargo test --workspace                           # 221 tests
 ```
 
