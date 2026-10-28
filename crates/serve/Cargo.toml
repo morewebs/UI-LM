@@ -14,6 +14,7 @@ path = "src/main.rs"
 ui-lm-frames = { path = "../frames" }
 ui-lm-pages = { path = "../pages" }
 ui-lm-render = { path = "../render" }
+ui-lm-model = { path = "../model" }
 clap = { version = "4", features = ["derive"] }
 serde_json.workspace = true
 anyhow.workspace = true

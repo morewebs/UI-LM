@@ -53,6 +53,10 @@ struct Cli {
     /// The port to listen on, on this machine only.
     #[arg(long, default_value_t = 8787)]
     port: u16,
+
+    /// Describe screens with a trained model instead of the rule-based reader.
+    #[arg(long, value_name = "FILE")]
+    model: Option<PathBuf>,
 }
 
 fn main() {
@@ -61,6 +65,7 @@ fn main() {
         session: cli.session,
         keys: cli.keys,
         port: cli.port,
+        model: cli.model,
     }) {
         Ok(()) => {}
         Err(error) => {
@@ -124,15 +129,33 @@ pub struct Options {
     pub keys: PathBuf,
     /// The port to listen on, on this machine only.
     pub port: u16,
+    /// A trained model. When given, the pages served are the model's own rather than the
+    /// rule-based reader's.
+    pub model: Option<PathBuf>,
 }
 
 /// Runs the viewer until the process is stopped.
 pub fn run(options: Options) -> Result<()> {
     let state = Arc::new(Mutex::new(Snapshot::default()));
+    // The model is loaded once, at start: a model that failed to load must stop the viewer
+    // rather than quietly serve pages from the rule-based reader as if nothing happened.
+    let model = match &options.model {
+        Some(path) => {
+            let model = ui_lm_model::Model::load(path)?;
+            println!(
+                "describing screens with {} (trained on {} screen(s))",
+                path.display(),
+                model.trained_on
+            );
+            Some(Arc::new(model))
+        }
+        None => None,
+    };
     {
         let session = options.session.clone();
         let state = Arc::clone(&state);
-        std::thread::spawn(move || watch(&session, &state));
+        let model = model.clone();
+        std::thread::spawn(move || watch(&session, &state, model));
     }
 
     let address = SocketAddrV4::new(Ipv4Addr::LOCALHOST, options.port);
@@ -156,11 +179,30 @@ pub fn run(options: Options) -> Result<()> {
     Ok(())
 }
 
+/// The text of a screen, one row per line.
+///
+/// The model reads rows of text, not cells, so the frame is rendered to text first — which
+/// is what a person would see if they copied the screen out of their terminal.
+fn text_of(frame: &ui_lm_frames::Frame) -> String {
+    let grid = ui_lm_frames::decode_grid(&frame.runs, frame.rows, frame.cols);
+    grid.iter()
+        .map(|cells| {
+            cells
+                .iter()
+                .map(|cell| cell.ch)
+                .collect::<String>()
+                .trim_end()
+                .to_owned()
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// Re-reads the session and refreshes the snapshot whenever a frame appears.
-fn watch(session: &Path, state: &Arc<Mutex<Snapshot>>) {
+fn watch(session: &Path, state: &Arc<Mutex<Snapshot>>, model: Option<Arc<ui_lm_model::Model>>) {
     let mut last = usize::MAX;
     loop {
-        if let Some((count, page, html)) = latest(session) {
+        if let Some((count, page, html)) = latest(session, model.as_deref()) {
             if count != last {
                 last = count;
                 let mut snapshot = state.lock().expect("the snapshot lock is never poisoned");
@@ -175,7 +217,7 @@ fn watch(session: &Path, state: &Arc<Mutex<Snapshot>>) {
 }
 
 /// The newest page for a session, its JSON, and its document.
-fn latest(session: &Path) -> Option<(usize, String, String)> {
+fn latest(session: &Path, model: Option<&ui_lm_model::Model>) -> Option<(usize, String, String)> {
     let frames = match ui_lm_frames::read_frames(session) {
         Ok((_, frames)) => frames,
         Err(_) => ui_lm_frames::read_orphaned_frames(session).ok()?,
@@ -187,7 +229,14 @@ fn latest(session: &Path) -> Option<(usize, String, String)> {
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_else(|| "session".to_owned());
-    let page = ui_lm_pages::page_from_frame(frames.last()?, &title);
+    // With a model the page is the model's reading of the screen's text; without one it is
+    // the rule-based reader's. Both go through the same builder, so what is served differs
+    // only in judgement.
+    let frame = frames.last()?;
+    let page = match model {
+        Some(model) => model.page(&text_of(frame), &title),
+        None => ui_lm_pages::page_from_frame(frame, &title),
+    };
     let json = serde_json::to_string(&page).unwrap_or_default();
     let html = ui_lm_render::render_page(&page, &title);
     Some((frames.len(), json, html))

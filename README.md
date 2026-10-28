@@ -69,6 +69,20 @@ Each settled screen becomes one line of `frames.jsonl`: run-length cells with ch
 
 A frame exists only at a **settled** point — 150 ms of quiet. An animating screen produces frames at its pauses, not continuously.
 
+## The model
+
+A trained model turns a screen's text into the page that describes it — blocks, tool calls, meters, reasoning lines, diffs. It is a softmax regression over nineteen features read from the screen itself, trained by `scripts/train_model.py` on recorded screens and run in Rust by `crates/model`.
+
+Measured on batches recorded after training: **94.9%** of the page structure reproduced on the training application's screens against a **44.3%** floor, and **100%** on screens from five unrelated programs against a **77.1%** floor. The floor is a converter that only splits paragraphs.
+
+```bash
+ui-lm-capture page --session sessions/example --model models/page.json   # what the model sees
+ui-lm-capture score --session sessions/example --model models/page.json   # model beside the floor
+ui-lm-serve --session sessions/live --keys keys.txt --model models/page.json   # the live view, drawn from the model
+```
+
+`scripts/retrain.ps1` records, trains and evaluates in one run.
+
 ## See it live, and type back
 
 Two processes: one records, one serves the recording and forwards what you type.

@@ -500,6 +500,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "ui-lm-frames",
+ "ui-lm-model",
  "ui-lm-pages",
  "ui-lm-render",
 ]
