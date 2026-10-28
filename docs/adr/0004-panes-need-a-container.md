@@ -72,3 +72,30 @@ The change touches the page schema, the reader, the label path, both renderers a
 `self-check` will hold every one of them to the same rule. That is a day's work with a failing test
 at each step, not an afternoon's, and doing it fast on a month's evidence of my own error rate would
 be the same mistake this project keeps recording.
+## Second screen: a pane holds a diff, and the page cannot say so
+
+Recorded `vimdiff` on a real file pair — two panes, each showing a diff of the same two files:
+
+```
+  apples 12                     |  apples 14
+  pears 7                       |  pears 9
+  cherries 41                   |  cherries 41
+```
+
+What the page says: **two `Block`s with role `pane`, each 26 lines of text**, model 100% against a
+floor of 66.7%, `fields` 0 differing, round trip 28/28.
+
+So the page knows there are two panes and cannot say that **each pane holds a diff** — the one
+component the catalogue exists for. A diff inside a pane is, to the page, a paragraph.
+
+This is the case the ADR predicted and could not previously show: panes are structure *around*
+content, and today they are structure *instead of* content.
+
+| screen | what the page cannot say |
+|---|---|
+| popup over two panes | the screen is split at all |
+| `vimdiff` | each pane holds a diff |
+
+Two screens, both real, both in `eval/tui`. The design's rule asks for three before new vocabulary;
+this ADR's rule should be the same, so it stays **proposed** and the third screen is the remaining
+requirement — a pane holding a meter, a tool call, or a tab strip.
