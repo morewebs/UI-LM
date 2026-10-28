@@ -110,3 +110,24 @@ fn a_marked_row_is_a_tool_call() {
     let page = page_of(&["  ♦ Explored 1 search"], "ToolCall");
     assert_eq!(kinds(&page), ["ToolCall"]);
 }
+#[test]
+fn a_real_git_diff_is_a_diff_even_when_every_row_is_called_text() {
+    // `git diff` is ten rows, and the first two are `diff --git` and `index`. A model
+    // reading them one at a time calls most of them ordinary text, so the run must be
+    // offered to the reader's own diff check rather than trusted to the label.
+    let page = page_of(
+        &[
+            "diff --git a/inventory.txt b/inventory.txt",
+            "index 4640e9a..c19acd6 100644",
+            "--- a/inventory.txt",
+            "+++ b/inventory.txt",
+            "@@ -1,3 +1,3 @@",
+            "-apples 12",
+            "-pears 7",
+            "+apples 14",
+            "+pears 9",
+        ],
+        "Block",
+    );
+    assert_eq!(kinds(&page), ["Diff"]);
+}
