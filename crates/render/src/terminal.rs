@@ -68,11 +68,9 @@ pub fn render_terminal(page: &Envelope) -> String {
             let first = left.get(row).cloned().unwrap_or_default();
             let _padding = width.saturating_sub(first.chars().count());
             let second = right.get(row).cloned().unwrap_or_default();
-            if second.is_empty() {
-                merged.push(first);
-            } else {
-                merged.push(format!("{first}|{second}"));
-            }
+            // Trailing space is not part of what a row says: a short row padded to the pane
+            // width must come back as the short row it was.
+            merged.push(format!("{first}{second}").trim_end().to_owned());
         }
         return merged.join("\n");
     }

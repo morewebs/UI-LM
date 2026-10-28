@@ -882,25 +882,23 @@ pub(crate) fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>)> {
         }
     }
     let (column, _) = best?;
+    // The left pane keeps its width, padding included. Trimming it is what broke the round
+    // trip on split screens: the content all came back, every row shifted left, and the
+    // measurement fell from 100% to 32.6% — the pane's width is part of what it says.
     let left: Vec<String> = lines
         .iter()
         .map(|line| {
-            line.chars()
-                .take(column)
-                .collect::<String>()
-                .trim_end()
-                .to_owned()
+            let mut pane: String = line.chars().take(column + 1).collect();
+            let width = pane.chars().count();
+            if width < column + 1 {
+                pane.push_str(&" ".repeat(column + 1 - width));
+            }
+            pane
         })
         .collect();
     let right: Vec<String> = lines
         .iter()
-        .map(|line| {
-            line.chars()
-                .skip(column + 1)
-                .collect::<String>()
-                .trim()
-                .to_owned()
-        })
+        .map(|line| line.chars().skip(column + 1).collect::<String>())
         .collect();
     Some((left, right))
 }
