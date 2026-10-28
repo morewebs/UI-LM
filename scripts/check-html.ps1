@@ -60,18 +60,22 @@ foreach ($session in $sessions) {
     # line holding one looks missing — which is what an earlier version of this check reported.
     $document = Visible (Get-Content -LiteralPath $out -Raw -Encoding UTF8)
     foreach ($line in $screen) {
-        $text = $line.Trim()
-        # Very short fragments ("│", "--") are noise; a lost word is not.
-        if ($text.Length -lt 4) { continue }
-        $lines++
-        if (-not $document.Contains($text)) {
-            $missing += ("  " + $session.Name + " -> missing: " + $text.Substring(0, [Math]::Min(60, $text.Length)))
+        # A document is markup, not a line printer: a tool call is three spans (`Read`,
+        # `inventory.csv`, `+2 -2`) and the glyph in front of it is decoration. So the check asks
+        # whether every *word* of every line reached the document, which is the claim that survives
+        # both a fair rendering and a dropped component.
+        foreach ($word in ($line -split '[^\w\.\-/]+')) {
+            if ($word.Length -lt 4) { continue }
+            $lines++
+            if (-not $document.Contains($word)) {
+                $missing += ("  " + $session.Name + " -> missing word: " + $word)
+            }
         }
     }
 }
 
 Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host ("pages checked: {0}, lines checked: {1}" -f $sessions.Count, $lines)
+Write-Host ("pages checked: {0}, words checked: {1}" -f $sessions.Count, $lines)
 if ($missing.Count -gt 0) {
     $missing | Select-Object -First 10 | ForEach-Object { Write-Host $_ }
     Write-Host ("{0} line(s) never reached the document" -f $missing.Count)
