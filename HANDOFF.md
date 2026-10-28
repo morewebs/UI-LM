@@ -38,6 +38,12 @@ powershell -File scripts/check-race.ps1          # reads during a redraw, and a 
 powershell -File scripts/check-live-page.ps1     # the live page moves, a finished one holds still
 powershell -File scripts/check-render-scale.ps1  # exporting a session stays linear per page
 powershell -File scripts/check-release.ps1       # the published download does what the README says
+
+# All seven, in order, about six minutes. The audit is the evidence; nothing below is a claim
+# that has not been through it.
+foreach ($s in "check-all","check-interaction","check-race","check-live-page","check-render-scale","check-release","check-fresh") {
+    powershell -NoProfile -File "scripts/$s.ps1"
+}
 cargo test --workspace                           # 221 tests
 ```
 
