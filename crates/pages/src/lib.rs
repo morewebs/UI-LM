@@ -831,6 +831,14 @@ fn page_from_lines(
     // Narrow on purpose: a drawing with box borders is left alone, because every panel this
     // project already describes carries two such columns and would be torn in half. That is
     // the tree-branch mistake, refused this time before it cost a hundred frames.
+    if std::env::var_os("UI_LM_TRACE").is_some() {
+        eprintln!(
+            "trace: reader {} line(s), {} component(s) before the split branch, divider={}",
+            lines.len(),
+            components.len(),
+            as_panes(&lines).is_some()
+        );
+    }
     if components.len() == 2 {
         if let Some((left, right, column)) = as_panes(&lines) {
             let first_id = block_id(&left);
