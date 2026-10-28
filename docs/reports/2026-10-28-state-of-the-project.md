@@ -28,7 +28,9 @@ the code constructs.
 | pages say honestly whether a component was read or carried | 688 components, 0 contradictions |
 | the model works off its training application | trained on one; **141 frames from 13 other programs, every component** |
 | new screens, recorded after training, read perfectly | five consecutive clean batches |
-| the download works | three-platform release, verified by downloading it and running it |
+| a split screen's panes hold their own components | both paths, read out of the v0.7.0 archive |
+| an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
+| the download works | **v0.7.0**, three platforms, verified by downloading it and running it |
 | the viewer keeps up | typing, redraws, half-written files, cleared screens — each checked |
 | exporting a session is cheap | 4.4 ms and 3.9 KB per page, linear to 1,510 pages, capped by a check |
 
