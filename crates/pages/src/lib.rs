@@ -798,6 +798,49 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
         *root_children = children;
     }
 
+    // A full-screen application that splits its window is one opaque block to everything
+    // above: `vim` with two panes read as a single block of thirty rows — a wall of text
+    // rather than a description of two panes. When the screen is exactly that (one block, no
+    // box borders, a column of `|` or `│` down most of it), it is split into panes instead.
+    //
+    // Narrow on purpose: a drawing with box borders is left alone, because every panel this
+    // project already describes carries two such columns and would be torn in half. That is
+    // the tree-branch mistake, refused this time before it cost a hundred frames.
+    if components.len() == 2 {
+        if let Some((left, right)) = as_panes(&lines) {
+            let first_id = block_id(&left);
+            let second_id = block_id(&right);
+            if first_id != second_id {
+                let pane = |id: String, lines: Vec<String>| Component {
+                    id,
+                    component: "Block".to_owned(),
+                    source: Provenance::Seen,
+                    body: Body::Block {
+                        role: "pane".to_owned(),
+                        rows: [0, u16::try_from(lines.len()).unwrap_or(u16::MAX)],
+                        tabs: Vec::new(),
+                        shortcuts: Vec::new(),
+                        properties: Vec::new(),
+                        spans: vec![Vec::new(); lines.len()],
+                        lines,
+                    },
+                };
+                components = vec![
+                    Component {
+                        id: ROOT_ID.to_owned(),
+                        component: "Column".to_owned(),
+                        source: Provenance::Seen,
+                        body: Body::Column {
+                            children: vec![first_id.clone(), second_id.clone()],
+                        },
+                    },
+                    pane(first_id, left),
+                    pane(second_id, right),
+                ];
+            }
+        }
+    }
+
     Envelope {
         version: ENVELOPE_VERSION.to_owned(),
         create_surface: Surface {
@@ -809,6 +852,58 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
     }
 }
 
+/// Two panes of a split screen, when the screen is one.
+///
+/// A pane boundary is a column of `|` or `│` that most rows share and that is neither the
+/// first nor the last thing on the row. A drawing with box borders is refused outright: the
+/// panels this project already describes are drawn with two such columns, and splitting them
+/// would undo work already measured.
+fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>)> {
+    if lines.len() < 8 {
+        return None;
+    }
+    if lines
+        .iter()
+        .any(|line| line.contains(['╭', '╮', '╰', '╯', '┌', '┐', '└', '┘']))
+    {
+        return None;
+    }
+    let width = lines.iter().map(|line| line.chars().count()).max()?;
+    let mut best: Option<(usize, usize)> = None;
+    for column in 1..width.saturating_sub(1) {
+        let hits = lines
+            .iter()
+            .filter(|line| {
+                line.chars().nth(column) == Some('|') || line.chars().nth(column) == Some('│')
+            })
+            .count();
+        if hits * 10 >= lines.len() * 6 && best.is_none_or(|(_, most)| hits > most) {
+            best = Some((column, hits));
+        }
+    }
+    let (column, _) = best?;
+    let left: Vec<String> = lines
+        .iter()
+        .map(|line| {
+            line.chars()
+                .take(column)
+                .collect::<String>()
+                .trim_end()
+                .to_owned()
+        })
+        .collect();
+    let right: Vec<String> = lines
+        .iter()
+        .map(|line| {
+            line.chars()
+                .skip(column + 1)
+                .collect::<String>()
+                .trim()
+                .to_owned()
+        })
+        .collect();
+    Some((left, right))
+}
 /// The lines of a block read as a diff, or `None` when the block is not one.
 ///
 /// A diff is recognised by carrying **both** a `+` line and a `-` line: those are
