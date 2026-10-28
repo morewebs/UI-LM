@@ -158,7 +158,7 @@ Killed captures are included: their frames are real screens, so leaving them out
 
 **Not proven, and not claimed:**
 
-- **The corpus is one application's screens.** Every number above rests on 270 screens recorded from Grok Build, and the model has never been trained on a corpus gathered from several programs. It reads the others correctly; it was not trained on them.
+- **The training material is one agent's transcripts.** Every number rests on 270 screens of Grok Build, because only agents draw the components this catalogue is for: seven other programs recorded for training produced eleven screens and not one meter, tool call, diff or thought — twenty-six blocks and nothing else. The model reads those programs correctly; there was nothing in them to train on.
 - **The evidence is this machine's.** Every evaluation set was recorded here, mostly chosen by the person building the model. Four clean fresh batches is the strongest claim the project can make, and it is a modest one.
 - **Structure comes from applications that render state.** Agent transcripts and full-screen applications draw diffs, meters, tool calls and panes; compiler output and build logs draw words. On plain text the floor already reproduces the screen exactly, so nothing is measured there and those frames are not counted as evidence.
 - **Provenance is honest but a live view is not continuous.** A frame exists at a settled screen, so a fast-moving program yields fewer moments than it drew.
