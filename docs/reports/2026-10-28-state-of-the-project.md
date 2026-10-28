@@ -97,5 +97,10 @@ text of a row reads `日 本 語` where a person would write `日本語`, and th
 the page is faithful to the screen, not to the string.
 
 That is the honest description of the current state. A consumer that lays out by column puts every
-glyph exactly where it was; a consumer that treats the line as a string shows the gaps. Fixing it needs
-a wide-cell concept the envelope does not have yet, and it is written down rather than wished away.
+glyph exactly where it was; a consumer that treats the line as a string shows the gaps.
+
+**The widths themselves are measured correctly** — a marker placed after two wide glyphs lands at
+column 11, not 9, so the emulator advances two cells per wide character. The page is column-exact; the
+only loss is that the string carries the continuation cells as spaces. Closing that needs a flagged
+continuation cell in the frame format, which is a format change rather than a reader one, and it is
+written down rather than wished away.
