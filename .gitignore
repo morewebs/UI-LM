@@ -13,3 +13,6 @@ frame-store/
 
 # Recorded screens carry the machine they came from, so a corpus is never published.
 /corpus/
+
+# Recorded screens for evaluation carry the machine they came from.
+/eval/
