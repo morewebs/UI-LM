@@ -41,16 +41,24 @@ jobs:
       - name: archive (unix)
         if: runner.os != 'Windows'
         run: |
-          cd target/release
-          tar -czf "$GITHUB_WORKSPACE/ui-lm-${{ runner.os }}-${RUNNER_ARCH}.tar.gz" \
-            ui-lm-capture ui-lm-serve ui-lm-validate
+          # The model travels with the binaries, as on Windows.
+          mkdir -p "ui-lm-${RUNNER_ARCH}/models"
+          cp models/page.json "ui-lm-${RUNNER_ARCH}/models/page.json"
+          cp target/release/ui-lm-capture target/release/ui-lm-serve target/release/ui-lm-validate "ui-lm-${RUNNER_ARCH}/"
+          tar -czf "$GITHUB_WORKSPACE/ui-lm-${{ runner.os }}-${RUNNER_ARCH}.tar.gz" "ui-lm-${RUNNER_ARCH}"
       - name: archive (windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Compress-Archive -Path target/release/ui-lm-capture.exe,
-            target/release/ui-lm-serve.exe,
-            target/release/ui-lm-validate.exe `
+          # The model travels with the binaries. A download without it cannot score a screen or
+          # describe one: `score` and `serve` both want `models/page.json`, and a first-time
+          # user had to find that file in the repository before the model would run at all.
+          New-Item -ItemType Directory -Force -Path "ui-lm-$env:RUNNER_ARCH/models" | Out-Null
+          Copy-Item "models/page.json" "ui-lm-$env:RUNNER_ARCH/models/page.json"
+          Copy-Item "target/release/ui-lm-capture.exe" "ui-lm-$env:RUNNER_ARCH/"
+          Copy-Item "target/release/ui-lm-serve.exe" "ui-lm-$env:RUNNER_ARCH/"
+          Copy-Item "target/release/ui-lm-validate.exe" "ui-lm-$env:RUNNER_ARCH/"
+          Compress-Archive -Path "ui-lm-$env:RUNNER_ARCH" `
             -DestinationPath "ui-lm-Windows-$env:RUNNER_ARCH.zip"
 
       # The same `gh` the repository is administered with, and no third-party action that

@@ -282,8 +282,16 @@ struct Summarize {
     /// Both kinds are accepted because a corpus is usually pointed at from above —
     /// `sessions/` holds `w1/` and `k5/`, and both are wanted — while a single
     /// recording is pointed at directly.
-    #[arg(last = true, required = true, num_args = 1.., value_name = "DIR")]
+    #[arg(last = true, num_args = 0.., value_name = "DIR")]
     sessions: Vec<PathBuf>,
+
+    /// A session or corpus directory, named with the flag every other command uses.
+    ///
+    /// `summarize` took only trailing directories, so a first-time user who had just learned
+    /// `--session` from `score` was told by this one command that the flag did not exist.
+    /// Found by using the released binary as a stranger would.
+    #[arg(long = "session", value_name = "DIR")]
+    named: Vec<PathBuf>,
 }
 
 #[derive(Debug, Args)]
@@ -378,7 +386,13 @@ fn main() -> ExitCode {
 fn run(command: Command) -> Result<ExitCode> {
     match command {
         Command::Record(args) => record(args),
-        Command::Summarize(args) => summarise(&args.sessions),
+        Command::Summarize(args) => {
+            // The flag and the trailing directories are the same request, so they are merged
+            // here rather than making the user learn that one command is different.
+            let mut sessions = args.sessions.clone();
+            sessions.extend(args.named.iter().cloned());
+            summarise(&sessions)
+        }
         Command::Audit(args) => audit(&args.sessions),
         Command::Page(args) => page(&args),
         Command::Compare(args) => compare(&args),
