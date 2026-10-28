@@ -94,10 +94,15 @@ fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
         .enumerate()
         .map(|(row, label)| {
             let line = text.get(row).map(|line| line.trim()).unwrap_or("");
-            // A box is one thing, however the model labelled its edges. A popup drawn by a
-            // multiplexer had its top, sides and contents grouped and then its closing border
-            // split into a block of its own — the panel became two components, and the model
-            // scored 90.5% against a floor of 100%. Rows made of box drawing belong to the box.
+            // A boxed meter is a meter, not decoration: the row opens with `|` and the box rule
+            // below would swallow it. The test is the reader's own parse of a use and a limit, so
+            // this promotes exactly the rows the reader itself calls meters and nothing else.
+            if as_meter(std::slice::from_ref(&line.to_owned())).is_some() {
+                return "Meter".to_owned();
+            } // A box is one thing, however the model labelled its edges. A popup drawn by a
+              // multiplexer had its top, sides and contents grouped and then its closing border
+              // split into a block of its own — the panel became two components, and the model
+              // scored 90.5% against a floor of 100%. Rows made of box drawing belong to the box.
             if line.chars().next().is_some_and(|first| {
                 matches!(
                     first,
@@ -118,6 +123,7 @@ fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
             }) {
                 return "Block".to_owned();
             }
+
             match label.as_str() {
                 // A row can only open a diff if it is drawn as one. `-- (empty)` from a
                 // package listing is not a removal, and calling it one split a two-row
