@@ -811,10 +811,24 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
             let first_id = block_id(&left);
             let second_id = block_id(&right);
             if first_id != second_id {
-                let pane = |id: String, lines: Vec<String>| Component {
+                // Panes carry provenance like every other component. Building them with
+                // `Seen` unconditionally made three identical frames of a split screen claim
+                // they had each been read from the cells — two contradictions in one
+                // session, found by `provenance`, invisible in the score.
+                let first_source = if appeared.insert(first_id.clone()) {
+                    Provenance::Seen
+                } else {
+                    Provenance::Carried
+                };
+                let second_source = if appeared.insert(second_id.clone()) {
+                    Provenance::Seen
+                } else {
+                    Provenance::Carried
+                };
+                let pane = |id: String, lines: Vec<String>, source: Provenance| Component {
                     id,
                     component: "Block".to_owned(),
-                    source: Provenance::Seen,
+                    source,
                     body: Body::Block {
                         role: "pane".to_owned(),
                         rows: [0, u16::try_from(lines.len()).unwrap_or(u16::MAX)],
@@ -834,8 +848,8 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
                             children: vec![first_id.clone(), second_id.clone()],
                         },
                     },
-                    pane(first_id, left),
-                    pane(second_id, right),
+                    pane(first_id, left, first_source),
+                    pane(second_id, right, second_source),
                 ];
             }
         }

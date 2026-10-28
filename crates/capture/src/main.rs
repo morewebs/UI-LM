@@ -101,6 +101,8 @@ enum Command {
     Tui(TuiArgs),
     /// Check the label path against the reader's own answers.
     SelfCheck(SelfCheckArgs),
+    /// Check that pages carry provenance honestly across a sequence.
+    Provenance(ProvenanceArgs),
     /// Score a page built from text alone against the pages the recorder produces.
     Baseline(BaselineArgs),
     /// Write the training pairs a recording holds: the screen's text, and its page.
@@ -115,6 +117,13 @@ enum Command {
     Compare(CompareArgs),
 }
 
+/// Checks that a recorded sequence carries its provenance honestly.
+#[derive(Debug, Args)]
+struct ProvenanceArgs {
+    /// Session directories holding frames.
+    #[arg(long = "session", value_name = "DIR", required = true)]
+    sessions: Vec<PathBuf>,
+}
 /// Feeds the label path the reader's own answers, to find where the two disagree.
 #[derive(Debug, Args)]
 struct SelfCheckArgs {
@@ -373,6 +382,7 @@ fn run(command: Command) -> Result<ExitCode> {
         Command::Score(args) => score(&args),
         Command::Tui(args) => tui(&args),
         Command::SelfCheck(args) => self_check(&args),
+        Command::Provenance(args) => provenance(&args),
         Command::Dataset(args) => dataset(&args),
         Command::Render(args) => render(&args),
     }
@@ -469,6 +479,61 @@ fn tui(args: &TuiArgs) -> Result<ExitCode> {
         "round trip: {same}/{rows} line(s) of content came back ({share:.1}%), {drawn} drawn"
     );
     Ok(ExitCode::SUCCESS)
+}
+fn provenance(args: &ProvenanceArgs) -> Result<ExitCode> {
+    let mut checked = 0usize;
+    let mut carried = 0usize;
+    let mut errors = 0usize;
+    for session in &args.sessions {
+        let loaded = match ui_lm_frames::read_frames(session) {
+            Ok((_, frames)) => frames,
+            Err(_) => ui_lm_frames::read_orphaned_frames(session)?,
+        };
+        let surface = session
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "session".to_owned());
+        // The rule: a component whose text has appeared in an earlier frame is `carried`,
+        // and one whose text has not is `seen`. Anything else is the page claiming it read
+        // something off the screen when it did not, or claiming newness for a repeat.
+        let mut earlier: std::collections::HashSet<String> = Default::default();
+        for page in ui_lm_pages::pages(&loaded, &surface) {
+            for component in &page.create_surface.components {
+                let text = match &component.body {
+                    ui_lm_pages::Body::Column { .. } => continue,
+                    ui_lm_pages::Body::Block { lines, .. } => lines.join("\n"),
+                    ui_lm_pages::Body::Diff { lines, .. } => lines
+                        .iter()
+                        .map(|line| line.text.clone())
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                    ui_lm_pages::Body::ToolCall { calls, .. } => calls
+                        .iter()
+                        .map(|call| call.text.clone())
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                    ui_lm_pages::Body::Thought { text, .. } => text.clone(),
+                    ui_lm_pages::Body::Meter { text, .. } => text.clone(),
+                };
+                checked += 1;
+                let repeated = earlier.contains(&text);
+                let says_carried = component.source == ui_lm_pages::Provenance::Carried;
+                if says_carried {
+                    carried += 1;
+                }
+                if repeated != says_carried {
+                    errors += 1;
+                }
+                earlier.insert(text);
+            }
+        }
+    }
+    println!("provenance: {checked} component(s), {carried} carried, {errors} contradiction(s)");
+    Ok(if errors == 0 {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    })
 }
 fn self_check(args: &SelfCheckArgs) -> Result<ExitCode> {
     let mut total = 0.0f64;
