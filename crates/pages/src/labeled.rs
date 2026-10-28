@@ -114,13 +114,11 @@ fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
                 // A thought is a row the application marks as one: it carries the mark and
                 // says so — `♦ Thought for 0.6s`. Anything else that merely starts with a
                 // non-ASCII glyph is not a thought, and a table whose status column uses
-                // `✓` shattered into seven blocks because each row was called one.
-                "Thought" if !(line.contains("Thought") && line.starts_with('♦')) => {
-                    "Block".to_owned()
-                }
-                "Thought" if line.starts_with(['○', '•', '●', '·', '▪', '◦']) => {
-                    "Block".to_owned()
-                }
+                // A thought is a row the reader itself would call one — the mark and the word
+                // together. Paraphrasing that rule by hand got a table's tick column wrong once
+                // and refused every thought on a titled pane another time; asking the reader
+                // cannot drift from the reader.
+                "Thought" if !is_thought_row(line) => "Block".to_owned(),
                 // A tool call is marked by the mark the application draws for it. A row that
                 // merely begins with a verb is prose: `Read notes.txt first line` is the
                 // user's own message echoed back, and calling it a tool call cut a block in
@@ -142,16 +140,19 @@ fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
 /// These are the same structural checks the reader makes, applied to a label that came from
 /// somewhere else, so a model can be wrong about a row and the page still not claim something
 /// the screen cannot justify.
+/// Whether the reader would call this row a thought.
+fn is_thought_row(line: &str) -> bool {
+    let row = [line.to_owned()];
+    matches!(tool_calls(&row).as_slice(), [only] if only.tool.eq_ignore_ascii_case("thought"))
+}
+
 fn settled(label: &str, lines: &[String]) -> String {
-    let changed = lines
-        .iter()
-        .filter(|line| {
-            let line = line.trim_start();
-            line.starts_with("+ ") || line.starts_with("- ")
-        })
-        .count();
+    // The reader's own diff test, applied to an unstyled run: a diff is a change with both an
+    // addition and a removal. Counting `+` and `-` rows by hand was that rule in different words,
+    // and words drift.
+    let unstyled = vec![Vec::new(); lines.len()];
     match label {
-        "Diff" if changed < 2 => "Block".to_owned(),
+        "Diff" if as_diff(lines, &unstyled).is_none() => "Block".to_owned(),
         other => other.to_owned(),
     }
 }
