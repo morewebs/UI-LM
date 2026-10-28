@@ -119,7 +119,11 @@ impl Model {
 
     /// The page describing `text`, as this model sees it.
     pub fn page(&self, text: &str, surface: &str) -> Envelope {
-        let lines: Vec<String> = text.split('\n').map(str::to_owned).collect();
+        // `.lines()`, not `split('\n')`: the two differ by a trailing empty row when the text ends
+        // with a newline, and one extra row is enough to change which column looks like a divider.
+        // The reader, the labels view and every other caller use `.lines()`, so this path now does
+        // too — it is the difference that made a frame split in one path and not the other.
+        let lines: Vec<String> = text.lines().map(str::to_owned).collect();
         let labels = self.labels(&lines);
         ui_lm_pages::page_from_labels(&lines, &labels, surface)
     }
