@@ -74,3 +74,36 @@ The number is pinned by a test, so a change to the page model that moves it fail
 than drifting quietly. What is still missing is the same list as before for the remaining
 kinds: the per-kind report is now printed, but nothing yet compares a *converter* against
 this floor as a required margin.
+
+## Correction: the number was misleading, not the code
+
+A corpus-wide measurement read **78.5% weighted** while the same converter read **14.3%** on
+the checked-in screen. That looked like a bug in the weighting. It was not: it was the
+average hiding the population.
+
+Measured by splitting the frames:
+
+```
+floor over 26 frame(s): structure 80.8%, weighted 78.5%, text 47.3%
+  of 26 frame(s), 20 held only plain text and 6 carried structure
+  floor on the screens that carry structure: 6.7%
+```
+
+- **20 of 26 screens carried only plain text.** Every one of them is trivial to reproduce,
+  so they scored near 100% and dragged the average up to 78.5%.
+- **The 6 screens that carried structure scored 6.7%** — which is what the formula gives by
+  hand, and what the fixture gives (14.3%).
+
+So the metric was right and the summary was wrong, and the mistake was mine: an average
+over a population nobody looked at. The tool now prints the split, so the number can be read
+for what it is.
+
+## What this also says about the corpus
+
+**Three quarters of the recorded screens are trivial.** A corpus built from settling frames
+mostly captures the quiet moments — a prompt, a line of output, a blank. The screens that
+would teach a model anything are the minority, and they are precisely the ones the
+converter fails on.
+
+That is the more useful finding: the corpus needs *harder* screens, not more of them. More
+sessions of the same shape would only sharpen the average, not the model.

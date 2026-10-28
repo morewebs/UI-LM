@@ -313,6 +313,8 @@ fn baseline(args: &BaselineArgs) -> Result<ExitCode> {
     let mut structure = (0.0f64, 0usize);
     let mut text = (0.0f64, 0usize);
     let mut weighted = (0.0f64, 0usize);
+    let mut structured = (0.0f64, 0usize);
+    let mut plain = 0usize;
     let mut kinds: std::collections::BTreeMap<String, (usize, usize)> = Default::default();
     for session in &args.sessions {
         let path = session.as_path();
@@ -331,6 +333,16 @@ fn baseline(args: &BaselineArgs) -> Result<ExitCode> {
             text.0 += score.text();
             text.1 += 1;
             weighted.0 += score.weighted_structure();
+            // A frame whose page holds only plain text is trivial to reproduce, and a
+            // plain average over frames lets those drown out the screens that carry
+            // structure. They are counted apart, because "78% overall" is meaningless if
+            // most screens were empty.
+            if score.by_kind.iter().any(|kind| kind.kind != "Block") {
+                structured.0 += score.weighted_structure();
+                structured.1 += 1;
+            } else {
+                plain += 1;
+            }
             for kind in &score.by_kind {
                 let entry = kinds.entry(kind.kind.clone()).or_insert((0usize, 0usize));
                 entry.0 += kind.total;
@@ -349,6 +361,18 @@ fn baseline(args: &BaselineArgs) -> Result<ExitCode> {
         weighted.0 / count * 100.0,
         text.0 / count * 100.0
     );
+    let structured_avg = if structured.1 == 0 {
+        0.0
+    } else {
+        structured.0 / structured.1 as f64 * 100.0
+    };
+    println!(
+        "  of {} frame(s), {plain} held only plain text and {} carried structure",
+        structure.1, structured.1
+    );
+    if structured.1 > 0 {
+        println!("  floor on the screens that carry structure: {structured_avg:.1}%");
+    }
     for (kind, (total, matched)) in &kinds {
         println!(
             "  {kind:<10} {matched}/{total} reproduced ({:.0}%)",
