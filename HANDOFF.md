@@ -31,9 +31,10 @@ screen decides how it *looks* and how a component is shaped.
 ## How to verify anything
 
 ```powershell
-powershell -File scripts/check-all.ps1          # everything that currently passes
-powershell -File scripts/check-fresh.ps1        # record new material and score it
-cargo test --workspace                          # 221 tests
+powershell -File scripts/check-all.ps1           # every set, both directions, provenance
+powershell -File scripts/check-fresh.ps1         # record new material and score it blind
+powershell -File scripts/check-interaction.ps1   # typing into the live view reaches the program
+cargo test --workspace                           # 221 tests
 ```
 
 `check-all` fails if any set drops below 100%, if the label path stops rebuilding the reader's
