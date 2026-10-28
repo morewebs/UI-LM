@@ -1,0 +1,88 @@
+# Checks that the live page changes while a program is drawing.
+#
+# This exists because three attempts to answer the question by hand produced one false alarm and
+# one check that silently did not run. It prints what it compared on every run, and it carries
+# its own control: the same comparison against a finished recording must come out *equal*. A
+# check that can only pass is not a check.
+#
+#   powershell -File scripts/check-live-page.ps1
+#
+# Exit code 1 if the live page does not change, if either fetch is empty, or if the control does
+# not behave as a frozen page must.
+
+$ErrorActionPreference = "Continue"
+$repo = Split-Path -Parent $PSScriptRoot
+$capture = Join-Path $repo "target\debug\ui-lm-capture.exe"
+$serve = Join-Path $repo "target\debug\ui-lm-serve.exe"
+if (-not (Test-Path $capture) -or -not (Test-Path $serve)) { throw "build first: cargo build --workspace" }
+
+$port = 8891
+$work = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-livepage-" + [guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Force -Path $work | Out-Null
+$session = Join-Path $work "live"
+$control = Join-Path $work "keys.txt"
+Set-Content -LiteralPath $control -Value "" -Encoding ASCII
+$failures = @()
+
+# A program that keeps drawing for twenty seconds, so the page has every reason to change.
+$recorder = Start-Process -FilePath $capture -PassThru -NoNewWindow -ArgumentList @(
+    "record", "--rows", "20", "--cols", "80", "--out", $session, "--control", $control,
+    "--stop-after", "24000", "--cwd", $work, "--", "powershell", "-NoProfile", "-Command",
+    "1..40 | ForEach-Object { 'tick ' + `$_ ; Start-Sleep -Milliseconds 300 }")
+Start-Sleep -Seconds 6
+$viewer = Start-Process -FilePath $serve -PassThru -NoNewWindow -ArgumentList @(
+    "--session", $session, "--keys", $control, "--port", "$port")
+Start-Sleep -Seconds 2
+
+function Fetch($uri) {
+    try {
+        return [string](Invoke-WebRequest -Uri $uri -UseBasicParsing -TimeoutSec 5).Content
+    } catch {
+        return ""
+    }
+}
+
+$first = Fetch "http://127.0.0.1:$port/"
+Start-Sleep -Seconds 3
+$second = Fetch "http://127.0.0.1:$port/"
+# Printed unconditionally: a check that says nothing did nothing.
+Write-Host ("live page: {0} bytes, then {1} bytes" -f $first.Length, $second.Length)
+
+if (-not $first -or -not $second) {
+    $failures += "a fetch came back empty"
+} elseif ($first -eq $second) {
+    $failures += "the page did not change across three seconds of a drawing program"
+} elseif ($first -notmatch "tick") {
+    $failures += "the page did not contain the program's output"
+} else {
+    Write-Host "the live page changes while the program draws"
+}
+
+if (-not $viewer.HasExited) { $viewer.Kill() }
+
+# The control: the same two fetches against a finished recording must be identical. If they are
+# not, this instrument is measuring something other than "did the page change".
+if (-not $recorder.HasExited) { Start-Sleep -Seconds 12 }
+if (-not $recorder.HasExited) { $recorder.Kill() }
+$controlViewer = Start-Process -FilePath $serve -PassThru -NoNewWindow -ArgumentList @(
+    "--session", $session, "--keys", $control, "--port", "$($port + 1)")
+Start-Sleep -Seconds 3
+$frozenFirst = Fetch "http://127.0.0.1:$($port + 1)/"
+Start-Sleep -Seconds 2
+$frozenSecond = Fetch "http://127.0.0.1:$($port + 1)/"
+Write-Host ("finished recording: {0} bytes, then {1} bytes" -f $frozenFirst.Length, $frozenSecond.Length)
+if (-not $frozenFirst -or -not $frozenSecond) {
+    $failures += "the control fetch came back empty"
+} elseif ($frozenFirst -ne $frozenSecond) {
+    $failures += "a finished recording kept changing, so this check cannot tell the two cases apart"
+} else {
+    Write-Host "a finished recording holds still, as it must"
+}
+if (-not $controlViewer.HasExited) { $controlViewer.Kill() }
+
+Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+if ($failures.Count -gt 0) {
+    $failures | ForEach-Object { Write-Host "  $_" }
+    exit 1
+}
+Write-Host "the live page moves and a finished one does not"
