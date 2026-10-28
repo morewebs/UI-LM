@@ -816,3 +816,27 @@ fn a_recording_becomes_training_pairs() {
         "one pair per line is the whole point"
     );
 }
+#[test]
+fn the_floor_is_the_number_it_was_measured_at() {
+    // A floor nobody pins is a floor that drifts: change the page model and this number
+    // moves, which is worth knowing and should not happen quietly. 40% structure and 100%
+    // text is what a converter that only splits paragraphs recovers from a real screen.
+    let fixture = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../pages/tests/fixtures/session");
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_ui-lm-capture"))
+        .arg("baseline")
+        .arg("--session")
+        .arg(&fixture)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "the measurement failed: {}",
+        output.status
+    );
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        text.contains("structure 40.0%, text 100.0%"),
+        "the floor moved: {text:?}"
+    );
+}
