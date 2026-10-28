@@ -201,10 +201,16 @@ fn text_of(frame: &ui_lm_frames::Frame) -> String {
 /// Re-reads the session and refreshes the snapshot whenever a frame appears.
 fn watch(session: &Path, state: &Arc<Mutex<Snapshot>>, model: Option<Arc<ui_lm_model::Model>>) {
     let mut last = usize::MAX;
+    // What the browser was shown last time. A live view that only ever serves the newest
+    // frame cannot say what changed, so it serves every component as `seen` — true of the
+    // single frame and useless to a viewer. Keeping the previous page's ids makes `carried`
+    // mean what it means in a recorded sequence: this was on screen a moment ago too.
+    let mut previous: std::collections::HashSet<String> = Default::default();
     loop {
-        if let Some((count, page, html)) = latest(session, model.as_deref()) {
+        if let Some((count, page, html, ids)) = latest(session, model.as_deref(), &previous) {
             if count != last {
                 last = count;
+                previous = ids;
                 let mut snapshot = state.lock().expect("the snapshot lock is never poisoned");
                 snapshot.version += 1;
                 snapshot.frames = count;
@@ -217,7 +223,11 @@ fn watch(session: &Path, state: &Arc<Mutex<Snapshot>>, model: Option<Arc<ui_lm_m
 }
 
 /// The newest page for a session, its JSON, and its document.
-fn latest(session: &Path, model: Option<&ui_lm_model::Model>) -> Option<(usize, String, String)> {
+fn latest(
+    session: &Path,
+    model: Option<&ui_lm_model::Model>,
+    previous: &std::collections::HashSet<String>,
+) -> Option<(usize, String, String, std::collections::HashSet<String>)> {
     let frames = match ui_lm_frames::read_frames(session) {
         Ok((_, frames)) => frames,
         Err(_) => ui_lm_frames::read_orphaned_frames(session).ok()?,
@@ -233,7 +243,7 @@ fn latest(session: &Path, model: Option<&ui_lm_model::Model>) -> Option<(usize, 
     // the rule-based reader's. Both go through the same builder, so what is served differs
     // only in judgement.
     let frame = frames.last()?;
-    let page = match model {
+    let mut page = match model {
         Some(model) => {
             // Styling comes from the cells, judgement from the model: without the graft the
             // live view of a model page had no colours at all.
@@ -243,9 +253,19 @@ fn latest(session: &Path, model: Option<&ui_lm_model::Model>) -> Option<(usize, 
         }
         None => ui_lm_pages::page_from_frame(frame, &title),
     };
+    let mut now: std::collections::HashSet<String> = Default::default();
+    for component in &mut page.create_surface.components {
+        let seen_before = previous.contains(&component.id);
+        component.source = if seen_before {
+            ui_lm_pages::Provenance::Carried
+        } else {
+            ui_lm_pages::Provenance::Seen
+        };
+        now.insert(component.id.clone());
+    }
     let json = serde_json::to_string(&page).unwrap_or_default();
     let html = ui_lm_render::render_page(&page, &title);
-    Some((frames.len(), json, html))
+    Some((frames.len(), json, html, now))
 }
 
 /// Answers one request.
