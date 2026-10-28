@@ -38,6 +38,7 @@ powershell -File scripts/check-race.ps1          # reads during a redraw, and a 
 powershell -File scripts/check-live-page.ps1     # the live page moves, a finished one holds still
 powershell -File scripts/check-render-scale.ps1  # exporting a session stays linear per page
 powershell -File scripts/check-release.ps1       # the published download does what the README says
+powershell -File scripts/check-validate.ps1      # the validator agrees on a match, disagrees on a difference
 
 # All seven, in order, about six minutes. The audit is the evidence; nothing below is a claim
 # that has not been through it.
