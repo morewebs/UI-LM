@@ -424,3 +424,30 @@ Reverted. Green: every check passing, both round trips 0 sessions below 100%.
 component count and kinds the ordinary pass produces, printed once. Then the gate is chosen from data
 instead of from a guess — which is exactly how the divider column was solved in round 110, and it
 worked in one round there.
+## The gate, chosen from the table: panes with structure, not panes with size
+
+The measured component counts of every split recording on this machine:
+
+| screen | components in the ordinary pass |
+|---|---|
+| `wsl-vim-vsplit`, `wsl-vim-split`, `wsl-tmux-split` | 2, two `Block`s |
+| `wsl-tmux-panes-popup`, `wsl-tmux-popup` | 3, three `Block`s |
+| agent in a split pane | meter, blocks, thought, tool calls |
+
+The previous attempt gated on count `> 2` and still split the plain screens — because the plain-pane
+branch itself produces three components, so the gate was true for screens it had just handled.
+
+The gate that matches the table is **"does any component have a kind other than `Block`"**:
+
+| check | result |
+|---|---|
+| evaluation sets | 100% |
+| assembly | 100% over 185 frames |
+| provenance | 688 components, 0 contradictions |
+| `fields` | 688 compared, 0 differing |
+| round trip, both paths | 0 sessions below 100% |
+| agent in a split pane | **2 panes declared**; score 96.0% → **94.5%** |
+
+That last row is the honest cost: the page is now *structured correctly* and agrees with the model
+slightly less, because the two paths split the same screen into the same two panes but describe some
+of their content differently. The structure is right and the agreement is not yet.

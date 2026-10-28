@@ -694,7 +694,7 @@ pub fn pages(frames: &[Frame], surface_id: &str) -> Vec<Envelope> {
         .collect()
 }
 
-/// Builds one page, recording which block ids have appeared so far.
+/// Builds the page a frame describes.
 fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) -> Envelope {
     let grid = decode_grid(&frame.runs, frame.rows, frame.cols);
     let lines: Vec<String> = grid
@@ -714,7 +714,22 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
         .zip(&lines)
         .map(|(row, line)| spans_of(row, line.chars().count()))
         .collect();
+    page_from_lines(lines, spans, surface_id, appeared, true)
+}
 
+/// Builds a page from lines and their styling, re-reading a split screen one pane at a time.
+///
+/// The re-read applies only when a pane holds **something structured** — a meter, a tool call, a
+/// reasoning line, a diff. Panes of plain text are already right, and re-reading them moved every
+/// row of four vim and tmux recordings out of place. The condition is chosen from the measured
+/// component counts of every split recording on this machine.
+fn page_from_lines(
+    lines: Vec<String>,
+    spans: Vec<Vec<InlineSpan>>,
+    surface_id: &str,
+    appeared: &mut HashSet<String>,
+    allow_split: bool,
+) -> Envelope {
     let mut components = vec![Component {
         id: ROOT_ID.to_owned(),
         component: "Column".to_owned(),
@@ -876,6 +891,55 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
                     vec![components[1].id.clone()],
                     vec![components[2].id.clone()],
                 ];
+            }
+        }
+    }
+
+    // A split screen whose panes hold something structured is read one pane at a time: reading it
+    // as one flow puts an agent's meter and tool calls in the same list as the shell beside it.
+    // Panes of plain text are already handled above and must not be re-read.
+    let structured = components
+        .iter()
+        .any(|component| component.component != "Column" && component.component != "Block");
+    if allow_split && structured {
+        if let Some((left, right, column)) = as_panes(&lines) {
+            let left_spans: Vec<Vec<InlineSpan>> = spans
+                .iter()
+                .map(|row| pane_spans(row, 0, column + 1))
+                .collect();
+            let right_spans: Vec<Vec<InlineSpan>> = spans
+                .iter()
+                .map(|row| pane_spans(row, column + 1, usize::MAX))
+                .collect();
+            let left_page = page_from_lines(left, left_spans, surface_id, appeared, false);
+            let right_page = page_from_lines(right, right_spans, surface_id, appeared, false);
+            let mut left_parts: Vec<Component> = left_page.create_surface.components;
+            let mut right_parts: Vec<Component> = right_page.create_surface.components;
+            left_parts.remove(0);
+            right_parts.remove(0);
+            if !left_parts.is_empty() && !right_parts.is_empty() {
+                let left_ids: Vec<String> = left_parts.iter().map(|part| part.id.clone()).collect();
+                let right_ids: Vec<String> =
+                    right_parts.iter().map(|part| part.id.clone()).collect();
+                let all: Vec<String> = left_ids.iter().chain(&right_ids).cloned().collect();
+                let mut merged = vec![Component {
+                    id: ROOT_ID.to_owned(),
+                    component: "Column".to_owned(),
+                    source: Provenance::Seen,
+                    body: Body::Column { children: all },
+                }];
+                merged.extend(left_parts);
+                merged.extend(right_parts);
+                return Envelope {
+                    version: ENVELOPE_VERSION.to_owned(),
+                    create_surface: Surface {
+                        surface_id: surface_id.to_owned(),
+                        catalog_id: CATALOGUE_ID.to_owned(),
+                        root: ROOT_ID.to_owned(),
+                        components: merged,
+                        panes: vec![left_ids, right_ids],
+                    },
+                };
             }
         }
     }
