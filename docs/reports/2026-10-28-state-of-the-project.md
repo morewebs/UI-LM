@@ -90,3 +90,12 @@ line**: the two paths were asking different questions before deciding to split. 
 trace printing what each path computed, after five plausible explanations had each been disproved by a
 small test. That ratio — five theories, one trace — is the most useful thing this month taught about how
 the work should be done.
+## One limitation worth stating plainly
+
+A wide character — a CJK glyph, an emoji — fills two terminal cells, and the page records both. So the
+text of a row reads `日 本 語` where a person would write `日本語`, and the **round trip is still exact**:
+the page is faithful to the screen, not to the string.
+
+That is the honest description of the current state. A consumer that lays out by column puts every
+glyph exactly where it was; a consumer that treats the line as a string shows the gaps. Fixing it needs
+a wide-cell concept the envelope does not have yet, and it is written down rather than wished away.
