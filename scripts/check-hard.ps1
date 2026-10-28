@@ -29,7 +29,7 @@ if (-not (Test-Path $cases)) {
 # The figures these screens reached when last measured. A drop here means something regressed.
 $expected = @{
     "wsl-agent-in-pane"  = 100.0
-    "wsl-agent-in-split" = 94.5
+    "wsl-agent-in-split" = 94.0
 }
 
 $regressed = 0

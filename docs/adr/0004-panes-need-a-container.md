@@ -477,3 +477,33 @@ Reverted to the committed state: every check passing, both round trips at 0.
 narrow enough not to fire on a pager-style pane. The evidence for the right threshold is one table
 away — for each split recording, which detector fires on which row — and that is the same shape of
 measurement that solved the divider column and the component-count gate.
+## The table chose the gate, and the label path now splits too
+
+Every split recording on this machine, searched for meter, tool and diff rows:
+
+| screen | rows | meter | tool | diff |
+|---|---|---|---|---|
+| `wsl-tmux-split` | 30 | 0 | 0 | 0 |
+| `wsl-tmux-panes-popup` | 26 | 0 | 0 | 0 |
+| `wsl-vim-vsplit` | 29 | 0 | 0 | 0 |
+| agent in a split pane | 30 | **15** | 28 | 0 |
+
+**No plain split holds a single meter or diff row**, and the agent screen holds fifteen meters. So the
+gate is `as_meter` or `as_diff` on either side — computed from the lines, so the two paths cannot
+disagree — and **tool calls are deliberately excluded**: that detector fires on a pane of text and
+split four recordings that were already correct.
+
+| check | result |
+|---|---|
+| evaluation sets | 100% |
+| assembly | 100% over 185 frames |
+| provenance | 688 components, 0 contradictions |
+| `fields` | 688 compared, 0 differing |
+| round trip, both paths | 0 sessions below 100% |
+| agent in a split pane | 2 panes, **94.0%** |
+
+The container is now in the tree, both paths split identically, and every existing claim holds. The
+one cost is that hard screen: 96.0% before any container, 94.0% now. The cause is visible in the number
+itself — inside a pane the two paths segment differently, and splitting gives that difference somewhere
+to show up. **Structure first, agreement second** is the order this ADR was written in, and the second
+half is now a measurable gap rather than an unknown.

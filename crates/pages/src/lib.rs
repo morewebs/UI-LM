@@ -976,6 +976,26 @@ fn pane_spans(row: &[InlineSpan], from: usize, to: usize) -> Vec<InlineSpan> {
         })
         .collect()
 }
+/// Whether either side of a split screen holds a meter or a diff.
+///
+/// Measured on every split recording here: **no plain vim or tmux split holds a single meter or
+/// diff row**, while the agent-in-a-pane screen holds fifteen meters. Tool calls are deliberately
+/// not part of the test — the detector that finds them also fires on a pane of text, which split
+/// four recordings that were already correct.
+pub(crate) fn panes_hold_structure(lines: &[String]) -> bool {
+    let Some((left, right, _column)) = as_panes(lines) else {
+        return false;
+    };
+    let structured = |pane: &[String]| -> bool {
+        let unstyled = vec![Vec::new(); pane.len()];
+        as_diff(pane, &unstyled).is_some()
+            || pane
+                .iter()
+                .any(|line| as_meter(std::slice::from_ref(line)).is_some())
+    };
+    structured(&left) || structured(&right)
+}
+
 pub(crate) fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>, usize)> {
     if lines.len() < 8 {
         return None;

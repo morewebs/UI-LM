@@ -159,6 +159,50 @@ fn settled(label: &str, lines: &[String]) -> String {
 
 /// A page built from `labels`, one per row of `text`.
 pub fn page_from_labels(text: &[String], labels: &[String], surface: &str) -> Envelope {
+    labeled_page(text, labels, surface, true)
+}
+
+/// The body of `page_from_labels`, re-reading a split screen one pane at a time when its panes hold
+/// a meter or a diff — the reader's own test on the same lines, so the two paths cannot disagree.
+fn labeled_page(text: &[String], labels: &[String], surface: &str, allow_split: bool) -> Envelope {
+    if allow_split && crate::panes_hold_structure(text) {
+        if let Some((left, right, _column)) = crate::as_panes(text) {
+            let left_page = labeled_page(&left, labels, surface, false);
+            let right_page = labeled_page(&right, labels, surface, false);
+            let mut left_parts: Vec<Component> = left_page.create_surface.components;
+            let mut right_parts: Vec<Component> = right_page.create_surface.components;
+            left_parts.remove(0);
+            right_parts.remove(0);
+            if !left_parts.is_empty() && !right_parts.is_empty() {
+                let left_ids: Vec<String> = left_parts.iter().map(|part| part.id.clone()).collect();
+                let right_ids: Vec<String> =
+                    right_parts.iter().map(|part| part.id.clone()).collect();
+                let all_children: Vec<String> =
+                    left_ids.iter().chain(&right_ids).cloned().collect();
+                let split_root = format!("{surface}-root");
+                let mut merged = vec![Component {
+                    id: split_root.clone(),
+                    component: "Column".to_owned(),
+                    source: Provenance::Seen,
+                    body: Body::Column {
+                        children: all_children,
+                    },
+                }];
+                merged.extend(left_parts);
+                merged.extend(right_parts);
+                return Envelope {
+                    version: ENVELOPE_VERSION.to_owned(),
+                    create_surface: Surface {
+                        surface_id: surface.to_owned(),
+                        catalog_id: CATALOGUE_ID.to_owned(),
+                        root: split_root,
+                        components: merged,
+                        panes: vec![left_ids, right_ids],
+                    },
+                };
+            }
+        }
+    }
     let mut children = Vec::new();
     let mut panes: Vec<Vec<String>> = Vec::new();
     let mut components = Vec::new();
