@@ -49,13 +49,15 @@ ui-lm-capture --help
 
 Three programs come in each archive: `ui-lm-capture` records and describes, `ui-lm-serve`
 serves a live view, and `ui-lm-validate` compares a recording against an application's own
-draw buffer. No Rust toolchain, nothing to install.
+draw buffer. Since 0.3.1 the trained model travels with them, in `models/page.json`, so a
+download can score and describe a screen without the repository. No Rust toolchain, nothing to
+install.
 
 ## Quickstart
 
 ```bash
 cargo build --workspace
-cargo test --workspace        # 174 tests
+cargo test --workspace        # 221 tests
 ```
 
 Record a session of any terminal application:
@@ -71,17 +73,17 @@ A frame exists only at a **settled** point — 150 ms of quiet. An animating scr
 
 ## The model
 
-A trained model turns a screen's text into the page that describes it — blocks, tool calls, meters, reasoning lines, diffs. It is a softmax regression over nineteen features read from the screen itself, trained by `scripts/train_model.py` on recorded screens and run in Rust by `crates/model`.
+A trained model turns a screen's text into the page that describes it — blocks, tool calls, meters, reasoning lines, diffs, and the panes of a full-screen application. It is a softmax regression over nineteen features read from the screen itself, trained by `scripts/train_model.py` on recorded screens and run in Rust by `crates/model`.
 
-Measured on batches recorded after training: **94.9%** of the page structure reproduced on the training application's screens against a **44.3%** floor, and **100%** on screens from five unrelated programs against a **77.1%** floor. The floor is a converter that only splits paragraphs.
+**Trained on 270 screens of one application, it reproduces every component of 141 frames from software it was never trained on** — `gh`, `git`, `npm`, `pip`, `cargo`, vim, tmux, nano, and screens where the application is failing — against floors between a quarter and seven eighths. Four batches recorded after training have all come back at 100%. The floor is a converter that only splits paragraphs, so a screen it already reproduces exactly proves nothing; `scripts/check-all.ps1` reports which sets can still fail.
 
 ```bash
 ui-lm-capture page --session sessions/example --model models/page.json   # what the model sees
 ui-lm-capture score --session sessions/example --model models/page.json   # model beside the floor
 ui-lm-serve --session sessions/live --keys keys.txt --model models/page.json   # the live view, drawn from the model
+powershell -File scripts/check-fresh.ps1   # record new material and score it blind
+powershell -File scripts/check-all.ps1     # every set, both directions, provenance
 ```
-
-`scripts/retrain.ps1` records, trains and evaluates in one run.
 
 ## See it live, and type back
 
@@ -152,25 +154,25 @@ Killed captures are included: their frames are real screens, so leaving them out
 
 **Proven.** The rig's VT100 emulator reproduces the application's own draw buffer exactly: 8000/8000 cells, styles included, on every like-for-like pair measured across three scenarios, one containing a styled full-width glyph. See [the K5 measurement](docs/reports/2026-10-27-k5-measurement.md). A real capture of 35 sessions / 526 frames / 436 distinct screens against Grok Build is described in [the W1 capture report](docs/reports/2026-10-27-w1-capture.md).
 
+**Proven since.** A screen's text is described as a page — blocks, tool calls, meters, reasoning lines, diffs and panes — and the page is drawn back: HTML for a browser, and terminal text that returns **every line of content** on every recording measured, split screens included. A page carries the styling the recorder read (6,303 spans across the training batch) and says honestly whether each component was read from the screen or carried from an earlier one (`ui-lm-capture provenance`: 967 components, 0 contradictions). The model fills that page, and `ui-lm-capture self-check` separates what it *judged* from what the code *built*, so a wrong page can be attributed rather than guessed at.
+
 **Not proven, and not claimed:**
 
+- **The corpus is one application's screens.** Every number above rests on 270 screens recorded from Grok Build, and the model has never been trained on a corpus gathered from several programs. It reads the others correctly; it was not trained on them.
+- **The evidence is this machine's.** Every evaluation set was recorded here, mostly chosen by the person building the model. Four clean fresh batches is the strongest claim the project can make, and it is a modest one.
+- **Structure comes from applications that render state.** Agent transcripts and full-screen applications draw diffs, meters, tool calls and panes; compiler output and build logs draw words. On plain text the floor already reproduces the screen exactly, so nothing is measured there and those frames are not counted as evidence.
+- **Provenance is honest but a live view is not continuous.** A frame exists at a settled screen, so a fast-moving program yields fewer moments than it drew.
 - **Volatile-span masking needs the program's event stream.** The classifier is
-  implemented and tested, and the recorder now follows the application's own ACP
-  event stream (`--events`, default `~/.grok/sessions`) so it can tell a spinner
-  tick from a reported change. On a real recording the mask named exactly the
-  status-line cells whose spinner and clock moved while the event stream did not
-  grow. Where no event stream can be found the mask stays empty on purpose: an
-  unknown event is never assumed absent. See [the event tap
-  note](docs/reports/2026-10-27-event-tap.md). Frames recorded before that work
-  carry `volatile: []` and should be re-captured before anything is trained on
-  them.
+  implemented and tested, and the recorder follows the application's own ACP event stream
+  (`--events`, default `~/.grok/sessions`). Frames recorded before that work carry
+  `volatile: []` and should be re-captured before anything is trained on them.
 - **Alt-screen frames depend on the pty host, not the emulator.** Whether a child's
-  `ESC[?1049h` reaches the rig is decided by the host: one Windows conhost consumed
-  the switch and re-rendered a delta, while a GitHub `windows-latest` runner
-  forwarded it. Unix ptys hand the bytes over unchanged. `portable-pty` 0.9 knows
-  the flag that would make this deterministic (`PSEUDOCONSOLE_PASSTHROUGH_MODE`) and
-  does not use it.
-- **No IR, no model, no runtime.** The page representation, the GUI renderer and the model are later components.
+  `ESC[?1049h` reaches the rig is decided by the host: one Windows conhost consumed the
+  switch and re-rendered a delta, while a GitHub `windows-latest` runner forwarded it. Unix
+  ptys hand the bytes over unchanged.
+- **An unnumbered tab strip is still plain text.** An editor that numbers its tabs is read as
+  tabs; one that does not is read as a line of words, because two bare file names are not
+  distinguishable from two words.
 - **Cost is not recorded.** The TUI stream carries no usage events, so `SessionRecord.cost` is `null`.
 
 ## Design
