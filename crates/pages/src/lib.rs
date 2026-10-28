@@ -1048,6 +1048,38 @@ pub(crate) fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>, us
 /// colour. This function is in the page crate because every path that judges a page needs it:
 /// the CLI, the HTML renderer and the live viewer.
 pub fn graft_spans(page: &mut Envelope, reader: &Envelope) {
+    // Styling is copied by **text** first, because text is the one thing the two pages agree on:
+    // they are built from the same screen and, where they agree at all, they agree on the words.
+    // Copies keyed by row or by id failed inside panes — rows count from a pane's top, and a pane
+    // that holds components gets ids from content the two paths can derive differently — and the
+    // cost was a handful of spans on the wrong component.
+    let mut matched: std::collections::HashSet<String> = Default::default();
+    for component in &mut page.create_surface.components {
+        let text = component_text(&component.body);
+        if text.is_empty() {
+            continue;
+        }
+        let Some(theirs) = reader
+            .create_surface
+            .components
+            .iter()
+            .find(|candidate| component_text(&candidate.body) == text)
+        else {
+            continue;
+        };
+        match (&theirs.body, &mut component.body) {
+            (Body::Block { spans: from, .. }, Body::Block { spans: to, .. }) => {
+                *to = from.clone();
+            }
+            (Body::Diff { lines: from, .. }, Body::Diff { lines: to, .. }) => {
+                for (mine, their) in to.iter_mut().zip(from) {
+                    mine.spans = their.spans.clone();
+                }
+            }
+            _ => continue,
+        }
+        matched.insert(component.id.clone());
+    }
     let mut by_row: std::collections::HashMap<usize, Vec<InlineSpan>> = Default::default();
     for component in &reader.create_surface.components {
         let (rows, spans) = match &component.body {
@@ -1102,7 +1134,13 @@ pub fn graft_spans(page: &mut Envelope, reader: &Envelope) {
             ..
         } = &mut component.body
         {
-            if role == "pane" {
+            // Text matching above already styled whatever both pages describe the same way. The row
+            // map is keyed by the screen's rows, which inside a pane count from that pane's top, so
+            // it can only put styling where it does not belong.
+            if role == "pane"
+                || !page.create_surface.panes.is_empty()
+                || matched.contains(&component.id)
+            {
                 continue;
             }
             let first = rows[0] as usize;
