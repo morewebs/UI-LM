@@ -27,10 +27,12 @@ the code constructs.
 | the page carries the screen's colour | 6,303 spans on the corpus; reaches HTML, terminal and the live view |
 | pages say honestly whether a component was read or carried | 688 components, 0 contradictions |
 | the model works off its training application | trained on one; **141 frames from 13 other programs, every component** |
-| new screens, recorded after training, read perfectly | five consecutive clean batches |
-| a split screen's panes hold their own components | both paths, read out of the v0.7.0 archive |
+| new screens, recorded after training, read perfectly | **12 of 12 recordings** in the batch that closed the last gap; earlier batches, five clean |
+| a split screen's panes hold their own components | both paths ask the same question before splitting; read out of the v0.8.0 archive |
 | an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
-| the download works | **v0.7.0**, three platforms, verified by downloading it and running it |
+| every word the page holds reaches the browser document | 58 recordings, 1,524 words, checked |
+| every recording on this machine can be read at all | 58 sessions, 288 pages, no error |
+| the download works | **v0.8.0**, three platforms, verified by downloading it and running it |
 | the viewer keeps up | typing, redraws, half-written files, cleared screens — each checked |
 | exporting a session is cheap | 4.4 ms and 3.9 KB per page, linear to 1,510 pages, capped by a check |
 
@@ -68,3 +70,13 @@ picks this up next.
 3. **Stop calling it a model success and start calling it a reader success.** The honest description
    of what works is that a small classifier plus a careful reader beats a big model alone, and the
    reader is where the remaining value is.
+
+## What the last week added, in one paragraph
+
+The pane container — a split screen read one pane at a time, on both the reader and the model path —
+is implemented and shipped. It took twelve rounds of attempts, seven reverted, before landing in five
+consecutive green steps. The last defect it produced took six more rounds to find and was **one line**:
+the two paths were asking different questions before deciding to split. What found it was a trace
+printing what each path computed, after five plausible explanations had each been disproved by a small
+test. That ratio — five theories, one trace — is the most useful thing this month taught about how the
+work should be done.
