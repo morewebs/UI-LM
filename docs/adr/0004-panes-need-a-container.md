@@ -507,3 +507,23 @@ one cost is that hard screen: 96.0% before any container, 94.0% now. The cause i
 itself — inside a pane the two paths segment differently, and splitting gives that difference somewhere
 to show up. **Structure first, agreement second** is the order this ADR was written in, and the second
 half is now a measurable gap rather than an unknown.
+## Why the container costs two points: it raised the resolution and the model did not
+
+Per-frame comparison of the agent-in-a-split screen, both paths:
+
+| frames | reader | model | note |
+|---|---|---|---|
+| 0–18 | 1 … 10 components | same | kinds and line counts identical |
+| 19–38 | **9** | **11** | the model splits a 7-line block into 1 + 5 + 1, the reader keeps it whole |
+
+**The two paths agree everywhere except where the model invents a boundary.** Before the container,
+that screen was described as two coarse pane blocks, and a one-row disagreement had almost nowhere to
+show; now each pane is segmented properly and the same disagreement costs 2 points.
+
+So 94.0% is not a regression caused by the container — it is the same model error as always, measured
+at a resolution that can now see it. The pre-container 96.0% was partly coarseness.
+
+**What that means for the next step:** the remaining gap is a label-boundary error, not a pane problem.
+It belongs with the other assembly questions — a row the model calls a new block that the reader calls
+part of the one above it — and the guard for it must be derived, as ever, from a table of the rows
+where the two disagree rather than from a rule about what "looks like" a boundary.
