@@ -49,3 +49,28 @@ blocks rather than understanding a screen.
 
 None of that is done. Until it is, no claim about a converter beating the floor should be
 taken seriously — including one this rig might make.
+
+## The metric was fixed, and the floor fell with it
+
+The score now tallies every reference component **by kind** and weights each kind by how
+rare it is, so a missed `Meter` cannot be averaged away by a sea of ordinary blocks.
+
+Re-measured on the same checked-in screen:
+
+```
+floor over 1 frame(s): structure 40.0%, weighted 14.3%, text 100.0%
+  Block      2/2 reproduced (100%)
+  Diff       0/1 reproduced (0%)
+  Meter      0/1 reproduced (0%)
+  ToolCall   0/1 reproduced (0%)
+```
+
+The aggregate used to read **40%** and now reads **14.3%**, and the reason is visible in the
+lines beneath it: the do-nothing converter reproduces every block and none of the components
+that carry meaning. That is what a floor is supposed to look like — a number a real
+converter should beat by a distance, not one it can stumble past by emitting paragraphs.
+
+The number is pinned by a test, so a change to the page model that moves it fails CI rather
+than drifting quietly. What is still missing is the same list as before for the remaining
+kinds: the per-kind report is now printed, but nothing yet compares a *converter* against
+this floor as a required margin.

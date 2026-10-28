@@ -312,6 +312,8 @@ fn run(command: Command) -> Result<ExitCode> {
 fn baseline(args: &BaselineArgs) -> Result<ExitCode> {
     let mut structure = (0.0f64, 0usize);
     let mut text = (0.0f64, 0usize);
+    let mut weighted = (0.0f64, 0usize);
+    let mut kinds: std::collections::BTreeMap<String, (usize, usize)> = Default::default();
     for session in &args.sessions {
         let path = session.as_path();
         let frames = match ui_lm_frames::read_frames(path) {
@@ -328,6 +330,12 @@ fn baseline(args: &BaselineArgs) -> Result<ExitCode> {
             structure.1 += 1;
             text.0 += score.text();
             text.1 += 1;
+            weighted.0 += score.weighted_structure();
+            for kind in &score.by_kind {
+                let entry = kinds.entry(kind.kind.clone()).or_insert((0usize, 0usize));
+                entry.0 += kind.total;
+                entry.1 += kind.matched;
+            }
         }
     }
     if structure.1 == 0 {
@@ -335,11 +343,20 @@ fn baseline(args: &BaselineArgs) -> Result<ExitCode> {
     }
     let count = structure.1 as f64;
     println!(
-        "floor over {} frame(s): structure {:.1}%, text {:.1}%",
+        "floor over {} frame(s): structure {:.1}%, weighted {:.1}%, text {:.1}%",
         structure.1,
         structure.0 / count * 100.0,
+        weighted.0 / count * 100.0,
         text.0 / count * 100.0
     );
+    for (kind, (total, matched)) in &kinds {
+        println!(
+            "  {kind:<10} {matched}/{total} reproduced ({:.0}%)",
+            f64::from(u32::try_from(*matched).unwrap_or(0))
+                / f64::from(u32::try_from(*total).unwrap_or(1))
+                * 100.0
+        );
+    }
     Ok(ExitCode::SUCCESS)
 }
 

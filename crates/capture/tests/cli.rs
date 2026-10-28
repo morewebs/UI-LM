@@ -819,8 +819,9 @@ fn a_recording_becomes_training_pairs() {
 #[test]
 fn the_floor_is_the_number_it_was_measured_at() {
     // A floor nobody pins is a floor that drifts: change the page model and this number
-    // moves, which is worth knowing and should not happen quietly. 40% structure and 100%
-    // text is what a converter that only splits paragraphs recovers from a real screen.
+    // moves, which is worth knowing and should not happen quietly. A converter that only
+    // splits paragraphs recovers every block, no structured component at all, and every row
+    // of text — a plain structure score of 40% that is really 14% once rare kinds count.
     let fixture = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../pages/tests/fixtures/session");
     let output = std::process::Command::new(env!("CARGO_BIN_EXE_ui-lm-capture"))
@@ -836,7 +837,7 @@ fn the_floor_is_the_number_it_was_measured_at() {
     );
     let text = String::from_utf8_lossy(&output.stdout);
     assert!(
-        text.contains("structure 40.0%, text 100.0%"),
+        text.contains("structure 40.0%, weighted 14.3%, text 100.0%"),
         "the floor moved: {text:?}"
     );
 }

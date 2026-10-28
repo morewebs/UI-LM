@@ -238,7 +238,7 @@ pub fn render_text(page: &Envelope) -> Vec<String> {
 /// character but puts it in the wrong component is a different failure from one that
 /// gets the structure and loses a glyph, and a single number would hide which one
 /// happened.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Score {
     /// Components in the reference, excluding the root container.
     pub components: usize,
@@ -248,6 +248,26 @@ pub struct Score {
     pub rows: usize,
     /// Rows whose text is identical in both pages.
     pub rows_matched: usize,
+    /// The tally for each component kind, so a rare kind cannot hide in an average.
+    pub by_kind: Vec<KindScore>,
+}
+
+/// How one component kind was scored.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KindScore {
+    /// The catalogue component, as the reference spells it.
+    pub kind: String,
+    /// How many the reference holds.
+    pub total: usize,
+    /// How many the other page reproduced.
+    pub matched: usize,
+}
+
+impl KindScore {
+    /// The share of this kind the other page reproduced.
+    pub fn share(&self) -> f64 {
+        ratio(self.matched, self.total)
+    }
 }
 
 impl Score {
@@ -259,6 +279,32 @@ impl Score {
     /// The share of rows whose text is identical.
     pub fn text(&self) -> f64 {
         ratio(self.rows_matched, self.rows)
+    }
+
+    /// The share of reference components reproduced, weighting rare kinds above common
+    /// ones.
+    ///
+    /// The plain structure score is dominated by whichever kind is most numerous — in a
+    /// real page that is `Block`, and a converter that makes everything a block scores
+    /// highly while understanding nothing. Here each kind's share is weighted by how rare
+    /// it is in the reference, so missing the only `Meter` costs more than missing one of
+    /// thirty blocks. With a single kind present the weights are all equal and this equals
+    /// [`structure`](Self::structure).
+    pub fn weighted_structure(&self) -> f64 {
+        if self.by_kind.is_empty() {
+            return ratio(self.matched, self.components);
+        }
+        let mut weighted = 0.0;
+        let mut weights = 0.0;
+        for kind in &self.by_kind {
+            let weight = 1.0 / f64::from(u32::try_from(kind.total).unwrap_or(u32::MAX));
+            weighted += weight * kind.share();
+            weights += weight;
+        }
+        if weights == 0.0 {
+            return 0.0;
+        }
+        weighted / weights
     }
 
     /// A page that reproduced everything.
@@ -305,6 +351,27 @@ pub fn compare(reference: &Envelope, page: &Envelope) -> Score {
         if wanted.component == "Column" {
             continue;
         }
+        // Every reference component is counted by kind, so a page can be judged on the
+        // components that are hard to get right rather than only in aggregate — where a
+        // sea of paragraphs hides a missed meter.
+        if !score
+            .by_kind
+            .iter()
+            .any(|kind| kind.kind == wanted.component)
+        {
+            score.by_kind.push(KindScore {
+                kind: wanted.component.clone(),
+                total: 0,
+                matched: 0,
+            });
+        }
+        let slot = score
+            .by_kind
+            .iter_mut()
+            .find(|kind| kind.kind == wanted.component)
+            .expect("the kind was just ensured");
+        slot.total += 1;
+
         let wanted_text = component_text(&wanted.body);
         for (index, candidate) in page.create_surface.components.iter().enumerate() {
             if used[index] || candidate.component != wanted.component {
@@ -313,6 +380,7 @@ pub fn compare(reference: &Envelope, page: &Envelope) -> Score {
             if component_text(&candidate.body) == wanted_text {
                 used[index] = true;
                 score.matched += 1;
+                slot.matched += 1;
                 break;
             }
         }
