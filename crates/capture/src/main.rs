@@ -1264,7 +1264,16 @@ fn page(args: &PageArgs) -> Result<ExitCode> {
     let envelope = match &args.model {
         Some(path) => {
             let model = ui_lm_model::Model::load(path)?;
-            model.page(&ui_lm_capture::summary::frame_text(frame), &surface)
+            let text = ui_lm_capture::summary::frame_text(frame);
+            if std::env::var_os("UI_LM_TRACE").is_some() {
+                let lines: Vec<String> = text.lines().map(str::to_owned).collect();
+                eprintln!(
+                    "trace: {} line(s), gate={}",
+                    lines.len(),
+                    ui_lm_pages::panes_hold_structure(&lines)
+                );
+            }
+            model.page(&text, &surface)
         }
         None => ui_lm_pages::page_from_frame(frame, &surface),
     };
