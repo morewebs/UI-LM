@@ -41,6 +41,9 @@ $scenarios = @(
     @{ name = "grok-session";     keys = @("6000 \r", "4000 /session-info\r", "15000 \r", "2500 /exit\r"); stop = 29000; grok = $true }
     @{ name = "grok-usage";       keys = @("6000 \r", "4000 /usage\r", "9000 \r", "2500 /exit\r");       stop = 24000; grok = $true }
     @{ name = "grok-context";     keys = @("6000 \r", "4000 /context\r", "9000 \r", "2500 /exit\r");      stop = 24000; grok = $true }
+    @{ name = "grok-memory";      keys = @("6000 \r", "4000 /memory\r", "9000 \r", "2500 /exit\r");       stop = 24000; grok = $true }
+    @{ name = "grok-plan";        keys = @("6000 \r", "4000 /view-plan\r", "9000 \r", "2500 /exit\r");    stop = 24000; grok = $true }
+    @{ name = "grok-dashboard";   keys = @("6000 \r", "4000 /dashboard\r", "9000 \r", "2500 /exit\r");    stop = 24000; grok = $true }
 )
 
 $recorded = @()
@@ -65,6 +68,12 @@ foreach ($scenario in $scenarios) {
 
 # Programs that are not the application under study, so the corpus is not one program's
 # idea of what a screen looks like.
+# A program drawn to exercise the page model rather than to be realistic: a bordered panel,
+# a meter, a tool line and a right-aligned shortcut list, then it waits so the screen settles.
+$shapeOut = Join-Path $sessions "shape-app"
+& $capture record --rows 20 --cols 80 --out $shapeOut --stop-after 5000 -- python (Join-Path $repo "scripts/shapes.py") | Out-Null
+if (Test-Path (Join-Path $shapeOut "session.json")) { $recorded += $shapeOut }
+
 Write-Host "recording an ordinary command..."
 $dirOut = Join-Path $sessions "cmd-dir"
 & $capture record --rows 24 --cols 80 --out $dirOut --stop-after 3000 -- cmd /c "dir /b /s" | Out-Null

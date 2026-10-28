@@ -128,3 +128,23 @@ Recording settles often, so a session can hold the same quiet screen more than o
 **Measured on the corpus: zero.** Seventeen pairs were written and no `repeated screen(s)` line was printed — the screens in a real recording differ in something, even when they look the same. So the guard costs nothing and fixes nothing yet; it is pinned by a test that names one recording twice and expects one pair, and it will matter when a corpus is large enough for a screen to recur.
 
 **What it does not catch, and should:** a near-repeat — two screens differing only in a clock, a duration or a spinner — is not an exact duplicate and survives. Those are the repeats a real recording actually produces. Removing them needs a similarity measure, not a hash, and that is not written.
+
+## A wider corpus, measured
+
+Seven Grok screens and one program drawn for the purpose took the corpus from 6 sessions and 17 pairs to **10 sessions and 41 pairs**, with 14 tool calls and 19 meters rather than 6 of each.
+
+| | before | after |
+|---|---|---|
+| sessions | 6 | 10 |
+| pairs | 17 | 41 |
+| structured pairs (`--structured`) | 6 | **20** |
+| floor on structured screens | 6.7% | **14.5%** |
+| blocks reproduced by the do-nothing converter | 84% | 95% |
+| meters / tool calls reproduced | 0% / 0% | **0% / 0%** |
+
+Two things worth keeping:
+
+- **Structured yield more than tripled** (6 to 20) by widening the scenarios rather than repeating them. Repeats of the same four commands would have produced near-identical screens; new commands produced new ones.
+- **The floor on structured screens rose from 6.7% to 14.5%** as more blocks joined the reference pages, while meters and tool calls stayed at **zero**. The do-nothing converter is getting a larger share of an easier reference, not better at the hard part.
+
+The `shape-app` session held no pair: the program it recorded draws a panel, a meter and a tool line, but by the time it settled the screen the export keeps was judged to hold nothing — worth investigating, and not yet explained.
