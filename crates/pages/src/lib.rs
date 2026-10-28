@@ -982,7 +982,7 @@ fn pane_spans(row: &[InlineSpan], from: usize, to: usize) -> Vec<InlineSpan> {
 /// diff row**, while the agent-in-a-pane screen holds fifteen meters. Tool calls are deliberately
 /// not part of the test — the detector that finds them also fires on a pane of text, which split
 /// four recordings that were already correct.
-pub(crate) fn panes_hold_structure(lines: &[String]) -> bool {
+pub fn panes_hold_structure(lines: &[String]) -> bool {
     let Some((left, right, _column)) = as_panes(lines) else {
         return false;
     };
