@@ -290,3 +290,28 @@ motivated it.
 
 The container branch itself (read each side separately) is still to be applied on top of this; the
 `as_panes` blocker in front of it is now removed with a measurement.
+## The second attempt at the branch, and the asymmetry it exposed
+
+With the corner rule gone, the per-side read was applied again — the reader refactored to lines and
+spans, a recursive read per pane behind `allow_split`. It fired: the agent-in-a-split screen went from
+**0 to 2 declared panes**, and the score moved 96.0% → 90.8%.
+
+Then the eval sets, which is why they exist:
+
+| screen | before | after |
+|---|---|---|
+| `wsl-vim-vsplit` | 100% | **61.1%** |
+| `wsl-vim-split` | 100% | 70.0% |
+| `wsl-tmux-split` | 100% | 47.9% |
+| `wsl-tmux-panes-popup` | 100% | 45.8% |
+
+**The reader now splits screens the label path does not.** The label path only splits when it built
+more than one component, and a vim pane of plain text builds one — so the two paths diverge on exactly
+the screens that used to be perfect. That is the same asymmetry as rounds 85–90, one layer up: this
+time it is not styling or ids, it is *where* the split happens in the pipeline.
+
+Reverted. Everything green at `c86bbad`.
+
+**The next attempt must restructure both paths in the same shape** — a shared "read these lines" entry
+that both call, so "split first" is a property of one function rather than a rule each path agrees to
+follow. Doing it to one and then the other is how four attempts have now failed.
