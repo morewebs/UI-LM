@@ -99,6 +99,18 @@ fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
             // this promotes exactly the rows the reader itself calls meters and nothing else.
             if as_meter(std::slice::from_ref(&line.to_owned())).is_some() {
                 return "Meter".to_owned();
+            }
+            // The mark the application draws for a tool call, which the reader already trusts when
+            // it demotes a row that lacks it. Five dialog items on one Grok screen carried the mark
+            // and the model called none of them a tool call; the guard could only remove labels, so
+            // they stayed plain blocks. A thought carries the same mark and says so, and is checked
+            // first — exactly the order the reader uses.
+            if line.starts_with('♦') {
+                return if is_thought_row(line) {
+                    "Thought".to_owned()
+                } else {
+                    "ToolCall".to_owned()
+                };
             } // A box is one thing, however the model labelled its edges. A popup drawn by a
               // multiplexer had its top, sides and contents grouped and then its closing border
               // split into a block of its own — the panel became two components, and the model
