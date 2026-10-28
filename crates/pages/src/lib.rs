@@ -188,7 +188,76 @@ fn check_rows(problems: &mut Vec<String>, id: &str, rows: &[u16; 2]) {
 ///
 /// Blank rows carry an empty string. A row inside a component's span that component
 /// does not name stays empty, which is what a blank row is.
+/// The rows one component occupies, as `(row, text)` pairs.
+fn place<'a>(component: &'a Component, placed: &mut Vec<(u16, &'a str)>) {
+    match &component.body {
+        Body::Block {
+            rows: span, lines, ..
+        } => {
+            for (offset, line) in lines.iter().enumerate() {
+                let row = span[0].saturating_add(u16::try_from(offset).unwrap_or(u16::MAX));
+                placed.push((row, line.as_str()));
+            }
+        }
+        Body::Diff { rows: span, lines } => {
+            for (offset, line) in lines.iter().enumerate() {
+                let row = span[0].saturating_add(u16::try_from(offset).unwrap_or(u16::MAX));
+                placed.push((row, line.text.as_str()));
+            }
+        }
+        Body::ToolCall {
+            rows: span, calls, ..
+        } => {
+            for (offset, call) in calls.iter().enumerate() {
+                let row = span[0].saturating_add(u16::try_from(offset).unwrap_or(u16::MAX));
+                placed.push((row, call.text.as_str()));
+            }
+        }
+        Body::Meter {
+            rows: span, text, ..
+        }
+        | Body::Thought {
+            rows: span, text, ..
+        } => placed.push((span[0], text.as_str())),
+        Body::Column { .. } => {}
+    }
+}
+
 pub fn render_text(page: &Envelope) -> Vec<String> {
+    // A page of panes is drawn side by side. Placing every component by its row alone cannot do
+    // that — two panes claim the same rows, so the second silently overwrites the first, and the
+    // audit read that as a page that had lost a pane. It had: the renderer did.
+    if page.create_surface.panes.len() == 2 {
+        let side = |ids: &[String]| -> Vec<String> {
+            let mut placed: Vec<(u16, &str)> = Vec::new();
+            for id in ids {
+                if let Some(component) = page
+                    .create_surface
+                    .components
+                    .iter()
+                    .find(|component| component.id == *id)
+                {
+                    place(component, &mut placed);
+                }
+            }
+            placed.sort_by_key(|(row, _)| *row);
+            let height = placed.last().map_or(0, |(row, _)| usize::from(*row) + 1);
+            let mut lines = vec![String::new(); height];
+            for (row, text) in placed {
+                lines[usize::from(row)] = text.to_owned();
+            }
+            lines
+        };
+        let left = side(&page.create_surface.panes[0]);
+        let right = side(&page.create_surface.panes[1]);
+        return (0..left.len().max(right.len()))
+            .map(|row| {
+                let first = left.get(row).cloned().unwrap_or_default();
+                let second = right.get(row).cloned().unwrap_or_default();
+                format!("{first}{second}").trim_end().to_owned()
+            })
+            .collect();
+    }
     let mut placed: Vec<(u16, &str)> = Vec::new();
     for component in &page.create_surface.components {
         match &component.body {
