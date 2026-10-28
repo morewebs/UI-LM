@@ -95,6 +95,8 @@ enum Command {
     Audit(Summarize),
     /// Print the page a recorded frame describes, as an A2UI message.
     Page(PageArgs),
+    /// Score the learned model against the pages the recorder produces.
+    Score(ScoreArgs),
     /// Score a page built from text alone against the pages the recorder produces.
     Baseline(BaselineArgs),
     /// Write the training pairs a recording holds: the screen's text, and its page.
@@ -107,6 +109,18 @@ enum Command {
     /// whether the pages agree. A dataset whose structure changes between identical
     /// captures cannot support a claim about a model.
     Compare(CompareArgs),
+}
+
+/// What to score, and which model to score with.
+#[derive(Debug, Args)]
+struct ScoreArgs {
+    /// Session directories holding frames.
+    #[arg(long = "session", value_name = "DIR", required = true)]
+    sessions: Vec<PathBuf>,
+
+    /// The model to score, as written by `scripts/train_model.py`.
+    #[arg(long, value_name = "FILE", default_value = "models/page.json")]
+    model: PathBuf,
 }
 
 /// Which recording to measure the floor on.
@@ -307,9 +321,65 @@ fn run(command: Command) -> Result<ExitCode> {
         Command::Page(args) => page(&args),
         Command::Compare(args) => compare(&args),
         Command::Baseline(args) => baseline(&args),
+        Command::Score(args) => score(&args),
         Command::Dataset(args) => dataset(&args),
         Command::Render(args) => render(&args),
     }
+}
+
+/// Scores the learned model beside the do-nothing converter, on the same screens.
+///
+/// Two numbers side by side, because one alone says nothing: a model is only worth having
+/// if it beats doing nothing, and the margin is the whole claim.
+fn score(args: &ScoreArgs) -> Result<ExitCode> {
+    let model = ui_lm_model::Model::load(&args.model)?;
+    let mut ours = (0.0f64, 0usize);
+    let mut floor = (0.0f64, 0usize);
+    let mut kinds: std::collections::BTreeMap<String, (usize, usize)> = Default::default();
+    let mut frames = 0usize;
+
+    for session in &args.sessions {
+        let path = session.as_path();
+        let loaded = match ui_lm_frames::read_frames(path) {
+            Ok((_, frames)) => frames,
+            Err(_) => ui_lm_frames::read_orphaned_frames(path)?,
+        };
+        for frame in &loaded {
+            let surface = format!("frame-{}", frame.seq);
+            let text = ui_lm_capture::summary::frame_text(frame);
+            if text.trim().is_empty() {
+                continue;
+            }
+            let real = ui_lm_pages::page_from_frame(frame, &surface);
+            let predicted = model.page(&text, &surface);
+            let naive = ui_lm_pages::page_from_text(&text, &surface);
+            ours.0 += ui_lm_pages::compare(&real, &predicted).weighted_structure();
+            ours.1 += 1;
+            floor.0 += ui_lm_pages::compare(&real, &naive).weighted_structure();
+            floor.1 += 1;
+            for kind in ui_lm_pages::compare(&real, &predicted).by_kind {
+                let entry = kinds.entry(kind.kind).or_insert((0, 0));
+                entry.0 += kind.total;
+                entry.1 += kind.matched;
+            }
+            frames += 1;
+        }
+    }
+    if frames == 0 {
+        bail!("no frames to score");
+    }
+    let count = frames as f64;
+    println!(
+        "model {:.1}%  floor {:.1}%  over {} frame(s), trained on {} screen(s)",
+        ours.0 / count * 100.0,
+        floor.0 / count * 100.0,
+        frames,
+        model.trained_on
+    );
+    for (kind, (total, matched)) in &kinds {
+        println!("  {kind:<10} {matched}/{total} reproduced");
+    }
+    Ok(ExitCode::SUCCESS)
 }
 
 /// Scores the do-nothing converter: text in, paragraphs out.

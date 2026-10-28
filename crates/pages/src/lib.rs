@@ -45,6 +45,9 @@
 use std::collections::HashSet;
 
 use serde::Serialize;
+
+pub mod labeled;
+pub use labeled::page_from_labels;
 use ui_lm_frames::{decode_grid, Color, Frame, Style, StyledCell};
 
 /// The envelope version this crate writes.

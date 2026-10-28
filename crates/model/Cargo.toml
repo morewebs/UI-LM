@@ -1,0 +1,12 @@
+[package]
+name = "ui-lm-model"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Turns a screen's text into the page that describes it"
+
+[dependencies]
+ui-lm-pages = { path = "../pages" }
+serde_json.workspace = true
+anyhow.workspace = true
