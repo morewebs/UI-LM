@@ -30,20 +30,23 @@ fn runs(labels: &[String], text: &[String]) -> Vec<(usize, usize, String)> {
             .get(row)
             .map(|line| line.trim().is_empty())
             .unwrap_or(false);
-        // A border opens or closes something, so it ends the run beside it.
-        let border = text
+        // Only a border that opens or closes a box ends a run. A vertical bar is the side
+        // of a box, not a boundary between two things: splitting on it turned an eight-row
+        // panel into eight one-row blocks, which is why blocks were the worst component in
+        // the score while everything else was perfect.
+        let opens = text
             .get(row)
-            .map(|line| {
-                let trimmed = line.trim();
-                trimmed.starts_with(['╭', '┌', '╰', '└', '│', '┃'])
-                    || trimmed.ends_with(['╮', '┐', '╯', '┘', '│', '┃'])
-            })
+            .map(|line| line.trim().starts_with(['╭', '┌']))
+            .unwrap_or(false);
+        let closes = text
+            .get(row)
+            .map(|line| line.trim().starts_with(['╰', '└']))
             .unwrap_or(false);
         match found.last_mut() {
-            Some(last) if last.2 == *label && !blank && !border && !last_closed => last.1 = row + 1,
+            Some(last) if last.2 == *label && !blank && !opens && !last_closed => last.1 = row + 1,
             _ => found.push((row, row + 1, label.clone())),
         }
-        last_closed = blank || border;
+        last_closed = blank || closes;
     }
     found
 }
