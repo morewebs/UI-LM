@@ -82,3 +82,34 @@ if ($missing.Count -gt 0) {
     exit 1
 }
 Write-Host "every line the page holds reached the document"
+
+# A screen can contain markup — an error message quoting a tag, a log line with an ampersand — and the
+# document must hold it as text. This records such a screen and requires the payload to arrive escaped,
+# because the alternative is a document that runs whatever the terminal printed.
+$work2 = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-escape-" + [guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Force -Path $work2 | Out-Null
+$payload = "<script>alert(1)</script>`nA & B <tag> C`n"
+$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($payload))
+& wsl.exe -e sh -c "mkdir -p /tmp/ui-lm; echo $encoded | base64 -d > /tmp/ui-lm/escape.txt" 2>&1 | Out-Null
+$session2 = Join-Path $work2 "s"
+& $capture record --rows 12 --cols 70 --out $session2 --stop-after 8000 -- wsl.exe -e sh -c "cat /tmp/ui-lm/escape.txt; sleep 2" *> $null
+$document2 = Join-Path $work2 "p.html"
+& $capture render --session $session2 --seq 0 --out $document2 2>&1 | Out-Null
+
+$failures = @()
+if (Test-Path $document2) {
+    $body = Get-Content -LiteralPath $document2 -Raw -Encoding UTF8
+    if ($body -match "<script>alert") { $failures += "a screen's markup reached the document unescaped" }
+    if ($body -notmatch "&lt;script&gt;") { $failures += "the markup was not shown as text either" }
+    if ($body -notmatch "A &amp; B") { $failures += "an ampersand was not escaped" }
+} else {
+    $failures += "the escape check produced no document"
+}
+Remove-Item -LiteralPath $work2 -Recurse -Force -ErrorAction SilentlyContinue
+
+if ($failures.Count -gt 0) {
+    $failures | ForEach-Object { Write-Host ("  " + $_) }
+    Write-Host "the browser document is not safe against its own material"
+    exit 1
+}
+Write-Host "markup on a screen arrives in the document as text, escaped"
