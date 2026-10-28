@@ -46,7 +46,7 @@ the code constructs.
 - **A perfect page score is partly the assembly's work.** The model's raw labels disagree with the
   reader on 2–12% of rows, and structural guards are what keep pages exact. That's by design, and it
   took a diagnostic to see it.
-- **Some shapes are not representable.** Panes can be text but not yet hold components; a floating
+- **Some shapes are not representable.** A floating
   window with a border is a panel, one without is a line of words; a tab strip only when numbered.
 - **Live is not continuous.** A frame exists when the screen settles, so a fast program yields fewer
   moments than it drew.

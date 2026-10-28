@@ -1,7 +1,7 @@
 # 0004: panes need a container, and now there is evidence
 
 **Date:** 2026-10-28
-**Status:** proposed — not implemented
+**Status:** implemented in v0.7.0
 **Supersedes:** the "approaches 2 now, towards 3 later" decision in
 [the full-screen design](../superpowers/specs/2026-10-28-full-screen-applications-design.md)
 
@@ -552,3 +552,23 @@ Both known-hard recordings now read perfectly, and the scoreboard's expectations
 **The sequence that finally worked, for the record:** container (page level) → renderer → gates chosen
 from tables → label path → segmenter rule. Five rounds, each ending green, each removing one named
 obstacle. Every previous attempt had tried to do several of those at once.
+
+## Closed: the decision is implemented
+
+The container is in the code and in the release. What the page does now:
+
+- a component says `role: "text" | "panel" | "pane"`, and the pane case only survives for a screen
+  that is nothing but two panes of text;
+- a split whose panes hold **a meter or a diff** is read one pane at a time, on both the reader and
+  the label path, and the surface's `panes` says which components share the screen;
+- the terminal renderer draws from that grouping, keeping the old role as a fallback so a page
+  recorded before this change still draws;
+- a meter inside a paragraph is its own segment, which was the last two points.
+
+Verified from the v0.7.0 archive, not only from the tree: **2 pane groups** on the structured split,
+and **100%** on both agent-in-a-pane recordings that motivated this ADR (they were 53.9% and 96.0%
+when it was written).
+
+The cost, for the record: twelve rounds of attempts, seven of them reverted, before the change landed
+in five consecutive green steps — page level, renderer, gates chosen from tables, label path, segmenter
+rule. **Every revert came from changing two things at once.**
