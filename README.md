@@ -186,6 +186,12 @@ The design and the decisions behind it are in the repo:
 - [ADR 0002: A2UI's envelope, our catalogue](docs/adr/0002-a2ui-envelope-custom-catalogue.md)
 - [The catalogue reference](docs/catalogue/moreweb.terminal-v1.md) — every component, what each guarantees, and which have been seen on a recorded screen
 
+## Where it stands
+
+[State of the project](docs/reports/2026-10-28-state-of-the-project.md) is a plain-language account
+of what this does, what is proven, what cannot be, and the three things worth doing next. Read that
+before the rest.
+
 ## Picking this up
 
 [HANDOFF.md](HANDOFF.md) is the short version: where everything lives, how to verify it, what is
