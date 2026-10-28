@@ -42,11 +42,24 @@ fn runs(labels: &[String], text: &[String]) -> Vec<(usize, usize, String)> {
             .get(row)
             .map(|line| line.trim().starts_with(['╰', '└']))
             .unwrap_or(false);
+        // Narrow on purpose: only a tree branch, `└── name`. A wider reading — "a closing
+        // glyph with any text after it" — also caught the application's own box, whose
+        // closing rule carries a label (`╰── Grok 4.7 (low) ─╯`), and took the training
+        // batch from 100% to 90.5%. A rule written for one screen shape must be as narrow as
+        // that shape, or it rewrites the screens that were already right.
+        let named = text
+            .get(row)
+            .map(|line| {
+                let trimmed = line.trim();
+                trimmed.starts_with("└──") || trimmed.starts_with("├──")
+            })
+            .unwrap_or(false);
+        let starts = opens || named;
         match found.last_mut() {
-            Some(last) if last.2 == *label && !blank && !opens && !last_closed => last.1 = row + 1,
+            Some(last) if last.2 == *label && !blank && !starts && !last_closed => last.1 = row + 1,
             _ => found.push((row, row + 1, label.clone())),
         }
-        last_closed = blank || closes;
+        last_closed = blank || (closes && !named);
     }
     found
 }

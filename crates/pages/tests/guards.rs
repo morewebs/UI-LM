@@ -131,3 +131,19 @@ fn a_real_git_diff_is_a_diff_even_when_every_row_is_called_text() {
     );
     assert_eq!(kinds(&page), ["Diff"]);
 }
+#[test]
+fn a_tree_branch_starts_its_own_block() {
+    // `cargo tree` draws a dependency per row, and the reader gives each branch its own
+    // block. A closing glyph that only rules a box (`╰──── Grok ────╯`) still ends the block
+    // above it, which is why the rule is written for the branch shape alone.
+    let page = page_of(
+        &[
+            "│   [dependencies]",
+            "├── ui-lm-model v0.1.0",
+            "├── ui-lm-pages v0.1.0",
+            "└── vt100 v0.15.2",
+        ],
+        "Block",
+    );
+    assert_eq!(kinds(&page).len(), 4, "{:?}", kinds(&page));
+}
