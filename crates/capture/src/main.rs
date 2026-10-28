@@ -432,6 +432,45 @@ fn component_texts(page: &ui_lm_pages::Envelope) -> Vec<(String, String)> {
 ///
 /// Two numbers side by side, because one alone says nothing: a model is only worth having
 /// if it beats doing nothing, and the margin is the whole claim.
+/// Copies the styling the recorder read onto a page the model judged.
+///
+/// The model decides what each row *is*; the cells decide how it *looks*. A page built from
+/// labels alone had no spans at all — measured over the training batch, 6,303 spans from the
+/// reader against 0 from the model — so every page the model described would have rendered in
+/// one colour. Grafting them back keeps the division the project already states: judgement
+/// comes from the model, construction from the code that watched the screen.
+fn graft_spans(page: &mut ui_lm_pages::Envelope, reader: &ui_lm_pages::Envelope) {
+    use ui_lm_pages::Body;
+    let mut by_row: std::collections::HashMap<usize, Vec<ui_lm_pages::InlineSpan>> =
+        Default::default();
+    for component in &reader.create_surface.components {
+        let (rows, spans) = match &component.body {
+            Body::Block { rows, spans, .. } => (*rows, spans.clone()),
+            Body::Diff { rows, lines } => (
+                *rows,
+                lines
+                    .iter()
+                    .map(|line| line.spans.clone())
+                    .collect::<Vec<_>>(),
+            ),
+            _ => continue,
+        };
+        for (offset, line_spans) in spans.into_iter().enumerate() {
+            by_row.insert(rows[0] as usize + offset, line_spans);
+        }
+    }
+    for component in &mut page.create_surface.components {
+        if let Body::Block {
+            rows, spans, lines, ..
+        } = &mut component.body
+        {
+            let first = rows[0] as usize;
+            *spans = (0..lines.len())
+                .map(|offset| by_row.get(&(first + offset)).cloned().unwrap_or_default())
+                .collect();
+        }
+    }
+}
 fn tui(args: &TuiArgs) -> Result<ExitCode> {
     let frames = match ui_lm_frames::read_frames(&args.session) {
         Ok((_, frames)) => frames,
@@ -964,6 +1003,31 @@ fn page(args: &PageArgs) -> Result<ExitCode> {
     // A whole session is printed as JSON lines, one page per frame: it is a stream
     // to be read in order, and indenting every page in a stream only costs bytes.
     if args.all {
+        // `--all` with `--model` used to print the reader's pages and say nothing about it,
+        // which is the worst kind of wrong: identical output to a request that never
+        // mentioned a model. It now describes every frame with the model, and keeps
+        // provenance across them the same way the reader does.
+        if let Some(path) = &args.model {
+            let model = ui_lm_model::Model::load(path)?;
+            let mut appeared: std::collections::HashSet<String> = Default::default();
+            for frame in &frames {
+                let text = ui_lm_capture::summary::frame_text(frame);
+                let mut page = model.page(&text, &surface);
+                graft_spans(&mut page, &ui_lm_pages::page_from_frame(frame, &surface));
+                for component in &mut page.create_surface.components {
+                    let first_time = appeared.insert(component.id.clone());
+                    component.source = if first_time {
+                        ui_lm_pages::Provenance::Seen
+                    } else {
+                        ui_lm_pages::Provenance::Carried
+                    };
+                }
+                let line =
+                    serde_json::to_string(&page).context("failed to serialise a page as JSON")?;
+                println!("{line}");
+            }
+            return Ok(ExitCode::SUCCESS);
+        }
         for envelope in ui_lm_pages::pages(&frames, &surface) {
             let line =
                 serde_json::to_string(&envelope).context("failed to serialise a page as JSON")?;
