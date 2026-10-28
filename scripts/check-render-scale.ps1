@@ -35,7 +35,7 @@ $session = Join-Path $work "s"
 $program = Join-Path $work "draw.ps1"
 Set-Content -LiteralPath $program -Encoding ASCII -Value @(
     "1..$Frames | ForEach-Object {",
-    "    'line ' + `$_",
+    "    Write-Host ('line ' + `$_) -ForegroundColor Green",
     "    Start-Sleep -Milliseconds 350",
     "}"
 )
@@ -45,7 +45,39 @@ Set-Content -LiteralPath $program -Encoding ASCII -Value @(
 $pages = (& $capture page --session $session --all 2>$null | Measure-Object).Count
 if ($pages -lt 20) {
     Write-Host "only $pages page(s) recorded; too few to measure"
-    Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+    # `render --model` has existed since it was added and nothing tested what it produced. It must
+# build a well-formed document that carries the styling, and it must fail loudly when the model
+# is missing rather than quietly drawing the reader's page.
+$model = Join-Path $repo "models\page.json"
+if (Test-Path $model) {
+    $modelOut = Join-Path $work "model.html"
+    & $capture render --session $session --all --model $model --out $modelOut 2>&1 | Out-Null
+    if (-not (Test-Path $modelOut)) {
+        $failures += "render --model produced no file"
+    } else {
+        $modelHtml = Get-Content -LiteralPath $modelOut -Raw
+        $styled = ([regex]::Matches($modelHtml, '<span style=')).Count
+        Write-Host ("render --model: {0:N0} KB, {1} styled span(s)" -f ((Get-Item $modelOut).Length / 1KB), $styled)
+        if (-not ($modelHtml.StartsWith('<!doctype html>') -and $modelHtml.TrimEnd().EndsWith('</html>'))) {
+            $failures += "render --model produced a document that is not well formed"
+        }
+        # The right invariant is not "some styling" — a session may carry none — but that the
+        # model's document carries exactly the styling the reader's does.
+        $readerOut = Join-Path $work "reader.html"
+        & $capture render --session $session --all --out $readerOut 2>&1 | Out-Null
+        $readerStyled = ([regex]::Matches((Get-Content -LiteralPath $readerOut -Raw), "<span style=")).Count
+        Write-Host ("reader render: {0} styled span(s)" -f $readerStyled)
+        if ($readerStyled -eq 0) { $failures += "the recorded session carried no styling, so the model's copy could not be tested" }
+        if ($styled -ne $readerStyled) {
+            $failures += ("render --model carried {0} styled span(s) against the reader's {1}" -f $styled, $readerStyled)
+        }
+    }
+    $bad = & $capture render --session $session --all --model (Join-Path $work "nope.json") --out (Join-Path $work "bad.html") 2>&1
+    if ($LASTEXITCODE -eq 0) { $failures += "render --model quietly succeeded with a missing model" }
+} else {
+    $failures += "models/page.json is missing, so render --model was not exercised"
+}
+Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
     exit 1
 }
 
@@ -86,6 +118,38 @@ if ($perPage -gt $PageLimit) {
     $failures += ("a page cost {0:N1} ms, more than the {1:N1} ms limit: exporting may no longer be linear" -f $perPage, $PageLimit)
 }
 
+# `render --model` has existed since it was added and nothing tested what it produced. It must
+# build a well-formed document that carries the styling, and it must fail loudly when the model
+# is missing rather than quietly drawing the reader's page.
+$model = Join-Path $repo "models\page.json"
+if (Test-Path $model) {
+    $modelOut = Join-Path $work "model.html"
+    & $capture render --session $session --all --model $model --out $modelOut 2>&1 | Out-Null
+    if (-not (Test-Path $modelOut)) {
+        $failures += "render --model produced no file"
+    } else {
+        $modelHtml = Get-Content -LiteralPath $modelOut -Raw
+        $styled = ([regex]::Matches($modelHtml, '<span style=')).Count
+        Write-Host ("render --model: {0:N0} KB, {1} styled span(s)" -f ((Get-Item $modelOut).Length / 1KB), $styled)
+        if (-not ($modelHtml.StartsWith('<!doctype html>') -and $modelHtml.TrimEnd().EndsWith('</html>'))) {
+            $failures += "render --model produced a document that is not well formed"
+        }
+        # The right invariant is not "some styling" — a session may carry none — but that the
+        # model's document carries exactly the styling the reader's does.
+        $readerOut = Join-Path $work "reader.html"
+        & $capture render --session $session --all --out $readerOut 2>&1 | Out-Null
+        $readerStyled = ([regex]::Matches((Get-Content -LiteralPath $readerOut -Raw), "<span style=")).Count
+        Write-Host ("reader render: {0} styled span(s)" -f $readerStyled)
+        if ($readerStyled -eq 0) { $failures += "the recorded session carried no styling, so the model's copy could not be tested" }
+        if ($styled -ne $readerStyled) {
+            $failures += ("render --model carried {0} styled span(s) against the reader's {1}" -f $styled, $readerStyled)
+        }
+    }
+    $bad = & $capture render --session $session --all --model (Join-Path $work "nope.json") --out (Join-Path $work "bad.html") 2>&1
+    if ($LASTEXITCODE -eq 0) { $failures += "render --model quietly succeeded with a missing model" }
+} else {
+    $failures += "models/page.json is missing, so render --model was not exercised"
+}
 Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 if ($failures.Count -gt 0) {
     $failures | ForEach-Object { Write-Host "  $_" }
