@@ -170,3 +170,31 @@ Near-duplicates are also real at this size: one repeated screen was left out of 
 The gate was then tightened to semantic kinds plus shortcut lists and tab strips, excluding named properties — the reader takes any short `Word: value` line as a property, so prose qualified and the gate stopped discriminating. It still admits 30 of 36 for the reason above, which is honest: most Grok screens really do carry a shortcut strip.
 
 The number to grow is the last one, not the first.
+
+## Working screens, not overlays
+
+Overlays are cheap to record and teach little. Three scenarios that make the application *do* something — read a file, edit a file, run a command — changed the corpus more than the four overlay scenarios before them:
+
+| | overlays only | with three work scenarios |
+|---|---|---|
+| pairs | 36 | **90** |
+| deep pairs (meter, tool call, diff, reasoning) | 15 | **60** |
+| tool-call components | 10 | **41** |
+| reasoning components | 0 | **8** |
+| meter components | 15 | **59** |
+
+The floor over 119 frames:
+
+```
+structure 77.3%, weighted 54.7%, text 48.7%
+  of 119 frame(s), 57 held only plain text and 62 carried structure
+  floor on the screens that carry structure: 13.1%
+  Block      320/383 reproduced (84%)
+  Meter      0/60 reproduced (0%)
+  Thought    0/8 reproduced (0%)
+  ToolCall   0/43 reproduced (0%)
+```
+
+**Twenty-two per cent of frames now carry structure** — more than double the earlier share — and the deep-pair count quadrupled. The floor on structured screens stayed around 13%, and meters, tool calls and reasoning lines remain at **zero**, which is the part no amount of recording will change: it is the converter that fails there, not the corpus.
+
+Recording the application *working* is the lever. Aprons of overlays teach a model what a menu looks like; a tool call teaches it what work looks like.

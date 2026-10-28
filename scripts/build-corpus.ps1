@@ -44,6 +44,11 @@ $scenarios = @(
     @{ name = "grok-memory";      keys = @("6000 \r", "4000 /memory\r", "9000 \r", "2500 /exit\r");       stop = 24000; grok = $true }
     @{ name = "grok-plan";        keys = @("6000 \r", "4000 /view-plan\r", "9000 \r", "2500 /exit\r");    stop = 24000; grok = $true }
     @{ name = "grok-dashboard";   keys = @("6000 \r", "4000 /dashboard\r", "9000 \r", "2500 /exit\r");    stop = 24000; grok = $true }
+    # Overlays are cheap to record and teach little: the screens worth having are the ones
+    # where the application is working, because that is when a tool call and a diff appear.
+    @{ name = "grok-read";        keys = @("6000 \r", "4000 read notes.txt and tell me the first line\r", "14000 \r", "2500 /exit\r"); stop = 28000; grok = $true }
+    @{ name = "grok-edit";        keys = @("6000 \r", "4000 change beta to BETA in notes.txt\r", "18000 \r", "2500 /exit\r");        stop = 32000; grok = $true }
+    @{ name = "grok-command";     keys = @("6000 \r", "4000 run git status and tell me what changed\r", "16000 \r", "2500 /exit\r");    stop = 30000; grok = $true }
 )
 
 $recorded = @()
