@@ -37,6 +37,7 @@ powershell -File scripts/check-interaction.ps1   # typing into the live view rea
 powershell -File scripts/check-race.ps1          # reads during a redraw, and a half-written frame
 powershell -File scripts/check-live-page.ps1     # the live page moves, a finished one holds still
 powershell -File scripts/check-render-scale.ps1  # exporting a session stays linear per page
+powershell -File scripts/check-release.ps1       # the published download does what the README says
 cargo test --workspace                           # 221 tests
 ```
 
