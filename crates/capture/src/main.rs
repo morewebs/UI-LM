@@ -1287,6 +1287,14 @@ fn page(args: &PageArgs) -> Result<ExitCode> {
 /// either breaks one.
 fn audit(sessions: &[PathBuf]) -> Result<ExitCode> {
     let context = || format!("failed to read the sessions under {sessions:?}");
+    let (recordings, frames) =
+        ui_lm_capture::summary::audit_counts(sessions).with_context(context)?;
+    println!("audit: {recordings} recording(s), {frames} frame(s) checked");
+    if recordings == 0 {
+        // Nothing inspected is not the same as nothing wrong.
+        println!("audit: no recordings were found, so nothing was checked");
+        return Ok(ExitCode::FAILURE);
+    }
     let mut violations = ui_lm_capture::summary::audit(sessions).with_context(context)?;
     violations.extend(ui_lm_capture::summary::audit_pages(sessions).with_context(context)?);
     if violations.is_empty() {

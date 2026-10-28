@@ -121,6 +121,26 @@ pub fn summarize(roots: &[PathBuf]) -> std::io::Result<Summary> {
 }
 
 /// `root` itself if it looks like a session, else the session directories under it.
+/// How many recordings and frames the audit would look at.
+///
+/// A command that prints "no violations" without saying what it inspected cannot be told apart from
+/// a command that inspected nothing. This exists so the difference is visible, and so a check can
+/// refuse to call an empty audit a pass.
+pub fn audit_counts(roots: &[PathBuf]) -> std::io::Result<(usize, usize)> {
+    let mut recordings = 0usize;
+    let mut frames = 0usize;
+    for root in roots {
+        for dir in session_dirs(root)? {
+            let loaded = match read_frames(&dir) {
+                Ok((_, frames)) => frames,
+                Err(_) => read_orphaned_frames(&dir)?,
+            };
+            recordings += 1;
+            frames += loaded.len();
+        }
+    }
+    Ok((recordings, frames))
+}
 fn session_dirs(root: &Path) -> std::io::Result<Vec<PathBuf>> {
     if root.join("frames.jsonl").is_file() {
         return Ok(vec![root.to_path_buf()]);
