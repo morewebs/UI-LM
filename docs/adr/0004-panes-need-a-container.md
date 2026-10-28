@@ -238,3 +238,27 @@ left: 0, right: 2 — two panes to look through
 
 The next step is therefore exact: apply the split **before** segmentation, per side. The field, the
 ids and the styling all already work.
+## The split happens before segmentation — written, and it never fired
+
+The exact next step from the last section was implemented in one round: the reader refactored to work
+on lines and spans rather than a frame, a recursive per-side read behind an `allow_split` flag, and the
+same split in the label path, both in the same commit.
+
+It built, the gate opened, and **the new branch never ran once**: `panes` stayed empty on the
+agent-in-a-split screen, score unchanged at 96.0%.
+
+The reason is one layer down, and it is now the recorded starting point:
+
+- `as_panes` refused that screen outright, because **any box corner** on it (`╭ ╮ ╰ ╯`) returned
+  `None`. That rule exists so a framed panel is not split at its own right border.
+- Replacing the rule with "the divider must have content beside it" did **not** fix it: the divider
+  search still prefers the column with the most `│` characters, and on that screen the agent's own
+  box border out-scores the real split.
+- Moving the same test into the candidate loop did not fix it either.
+
+Reverted. `clippy`, `fmt` and `tests` green, HEAD unchanged.
+
+**What the round established, and it is worth more than the code:** the blocker is not the container
+design, it is `as_panes` choosing the wrong column on a screen that is both framed and split. The next
+attempt starts there — one function, one screen, and a printed column table — rather than at the page
+level where three rounds have now been spent.
