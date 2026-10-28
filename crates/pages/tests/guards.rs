@@ -150,3 +150,22 @@ fn a_tree_branch_starts_its_own_block() {
     // `cargo tree`: splitting both ways scored 43.8%, splitting only the last scored 100%.
     assert_eq!(kinds(&page).len(), 2, "{:?}", kinds(&page));
 }
+#[test]
+fn a_second_full_screen_application_splits_without_new_code() {
+    // The design deferred a `Frame` component and bet on roles instead, on the strength of
+    // one application. This is the screen that tests the bet: `tmux` draws its own panes and
+    // status bar, and the same rule finds them with no change.
+    let screen = include_str!("fixtures/screens/tmux-two-panes.txt");
+    let text: Vec<String> = screen.lines().map(|line| line.to_owned()).collect();
+    let labels = vec!["Block".to_owned(); text.len()];
+    let page = ui_lm_pages::page_from_labels(&text, &labels, "tmux");
+    let panes: Vec<_> = page
+        .create_surface
+        .components
+        .iter()
+        .filter(|component| {
+            matches!(&component.body, ui_lm_pages::Body::Block { role, .. } if role == "pane")
+        })
+        .collect();
+    assert_eq!(panes.len(), 2, "two panes, found by the same rule as vim");
+}
