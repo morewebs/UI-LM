@@ -372,3 +372,27 @@ Reverted. Green at `0dea6e6`: `fields` 688 with 0 differing, round trip 0 sessio
 panes from the surface's grouping, the role-based test must read the grouping instead, and the
 label path's pane blocks must stop being a special case. That is one change across three files, with
 the page level already proven.
+## One of the three call sites is done: the renderer draws from the grouping
+
+The renderer used to find panes by looking for two blocks with role `pane`. It now reads the page's
+own grouping, keeping the role as a fallback so an older page still draws:
+
+```text
+groups = page.create_surface.panes   (falling back to role "pane")
+left  = rows of every component in groups[0], in order
+right = rows of every component in groups[1], in order
+```
+
+That is green on its own — `fields` 688 with 0 differing, both round trips at 0 sessions below 100%,
+every check passing — because for the pages that exist today the grouping and the role say the same
+thing. **It is the prerequisite that made the container's round trip fail last round**, and it is now
+in place and shipped rather than reverted.
+
+The page-level split was applied again on top, and the remaining gaps are exactly the two predicted:
+
+| check | with the split |
+|---|---|
+| `fields` | 2 differing (pane styling — the graft fix from round 114) |
+| round trip | 4 sessions (tmux/vim splits, both paths) |
+
+Reverted the split, kept the renderer. The list is now **two items**, not three.

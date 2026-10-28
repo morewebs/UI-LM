@@ -51,13 +51,32 @@ pub fn render_terminal(page: &Envelope) -> String {
     // Two panes are drawn side by side, because that is what a split screen is. Drawing them
     // one after another turned a 100% round trip into 32.6%: the content was all there, and
     // every row of it was in the wrong place.
-    let panes: Vec<&Component> = components
-        .iter()
-        .filter(|component| matches!(&component.body, Body::Block { role, .. } if role == "pane"))
-        .collect();
-    if panes.len() == 2 {
-        let left = rows_of(panes[0]);
-        let right = rows_of(panes[1]);
+    //
+    // The page says which components share the screen. The older `pane` role is still accepted so
+    // a page recorded before the grouping existed can still be drawn.
+    let groups: Vec<Vec<String>> = if page.create_surface.panes.is_empty() {
+        components
+            .iter()
+            .filter(
+                |component| matches!(&component.body, Body::Block { role, .. } if role == "pane"),
+            )
+            .map(|component| vec![component.id.clone()])
+            .collect()
+    } else {
+        page.create_surface.panes.clone()
+    };
+    if groups.len() == 2 {
+        let pane_rows = |ids: &[String]| -> Vec<String> {
+            let mut out = Vec::new();
+            for id in ids {
+                if let Some(component) = components.iter().find(|component| component.id == *id) {
+                    out.extend(rows_of(component));
+                }
+            }
+            out
+        };
+        let left = pane_rows(&groups[0]);
+        let right = pane_rows(&groups[1]);
         let width = left
             .iter()
             .map(|line| line.chars().count())
