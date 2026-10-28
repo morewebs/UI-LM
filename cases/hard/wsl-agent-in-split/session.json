@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "started_at": "2026-10-28T19:53:08Z",
+  "ended_at": "2026-10-28T19:54:00Z",
+  "command": "wsl.exe",
+  "args": [
+    "-e",
+    "tmux",
+    "new-session",
+    "-A",
+    "-s",
+    "sp2",
+    "cd /tmp/ui-lm && /mnt/c/Users/moreweb/.grok/bin/grok.exe"
+  ],
+  "rows": 30,
+  "cols": 110,
+  "env": [
+    [
+      "TERM",
+      "xterm-256color"
+    ],
+    [
+      "COLORTERM",
+      "truecolor"
+    ]
+  ],
+  "child_env": [
+    [
+      "NO_COLOR",
+      "1"
+    ],
+    [
+      "TERM",
+      "xterm-256color"
+    ],
+    [
+      "COLORTERM",
+      "truecolor"
+    ]
+  ],
+  "cwd": "C:\\Users\\moreweb\\Documents\\Workspaces\\moreweb\\Projects\\UI-LM",
+  "app_version": null,
+  "cost": null
+}

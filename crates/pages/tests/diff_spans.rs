@@ -47,6 +47,7 @@ fn page_with_diff(spans: Vec<InlineSpan>) -> Envelope {
                     },
                 },
             ],
+            panes: Vec::new(),
         },
     }
 }

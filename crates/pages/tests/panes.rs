@@ -55,6 +55,7 @@ fn page_with_panes(first: Vec<Vec<InlineSpan>>, second: Vec<Vec<InlineSpan>>) ->
                     },
                 },
             ],
+            panes: Vec::new(),
         },
     }
 }
