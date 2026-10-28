@@ -51,6 +51,20 @@ fn runs(labels: &[String], text: &[String]) -> Vec<(usize, usize, String)> {
     found
 }
 
+/// Whether a row is shaped like a meter: a use, a slash, a limit.
+///
+/// A slash alone is not enough. `> /import-memory` holds one and is the application's input
+/// line; labelled a meter it split the pane it sits in from every row below it — twelve
+/// blocks wrong on one screen, the last structural gap the model had. A meter starts with a
+/// number, because a meter is a quantity used against a quantity allowed.
+fn looks_like_meter(line: &str) -> bool {
+    let mut words = line.split_whitespace();
+    let used = words.next().unwrap_or("");
+    let number = used.chars().any(|ch| ch.is_ascii_digit());
+    let slash = line.split_whitespace().any(|word| word == "/");
+    number && slash && !line.contains(';')
+}
+
 /// Labels with the per-row evidence applied, before any grouping.
 ///
 /// This has to run before `runs` rather than after: a label decides where one block ends and
@@ -68,7 +82,12 @@ fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
                 "Thought" if line.starts_with(['○', '•', '●', '·', '▪', '◦']) => {
                     "Block".to_owned()
                 }
-                "Meter" if !line.contains('/') || line.contains(';') => "Block".to_owned(),
+                // A tool call is marked by the mark the application draws for it. A row that
+                // merely begins with a verb is prose: `Read notes.txt first line` is the
+                // user's own message echoed back, and calling it a tool call cut a block in
+                // two on the one screen where it appeared.
+                "ToolCall" if !line.starts_with('♦') => "Block".to_owned(),
+                "Meter" if !looks_like_meter(line) => "Block".to_owned(),
                 other => other.to_owned(),
             }
         })
