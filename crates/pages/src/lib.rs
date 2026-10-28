@@ -858,7 +858,7 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
 /// first nor the last thing on the row. A drawing with box borders is refused outright: the
 /// panels this project already describes are drawn with two such columns, and splitting them
 /// would undo work already measured.
-fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>)> {
+pub(crate) fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>)> {
     if lines.len() < 8 {
         return None;
     }

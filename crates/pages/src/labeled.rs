@@ -173,6 +173,35 @@ pub fn page_from_labels(text: &[String], labels: &[String], surface: &str) -> En
         });
     }
 
+    // A screen the reader splits into panes must split here too. The label path is meant to
+    // reproduce the reader's page given the reader's judgement, so a shape found by the
+    // reader and not by this path is the model losing a component it was never shown — the
+    // measured cost of that gap was a model tying the floor on every split screen.
+    if components.len() == 1 {
+        if let Some((left, right)) = crate::as_panes(text) {
+            let first_id = block_id(&left);
+            let second_id = block_id(&right);
+            if first_id != second_id {
+                let pane = |id: String, lines: Vec<String>| Component {
+                    id,
+                    component: "Block".to_owned(),
+                    source: Provenance::Seen,
+                    body: Body::Block {
+                        role: "pane".to_owned(),
+                        rows: [0, u16::try_from(lines.len()).unwrap_or(u16::MAX)],
+                        tabs: Vec::new(),
+                        shortcuts: Vec::new(),
+                        properties: Vec::new(),
+                        spans: vec![Vec::new(); lines.len()],
+                        lines,
+                    },
+                };
+                children = vec![first_id.clone(), second_id.clone()];
+                components = vec![pane(first_id, left), pane(second_id, right)];
+            }
+        }
+    }
+
     let root = format!("{surface}-root");
     let mut all = vec![Component {
         id: root.clone(),

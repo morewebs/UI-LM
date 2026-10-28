@@ -48,6 +48,35 @@ pub fn render_terminal(page: &Envelope) -> String {
                 .collect()
         });
 
+    // Two panes are drawn side by side, because that is what a split screen is. Drawing them
+    // one after another turned a 100% round trip into 32.6%: the content was all there, and
+    // every row of it was in the wrong place.
+    let panes: Vec<&Component> = components
+        .iter()
+        .filter(|component| matches!(&component.body, Body::Block { role, .. } if role == "pane"))
+        .collect();
+    if panes.len() == 2 {
+        let left = rows_of(panes[0]);
+        let right = rows_of(panes[1]);
+        let width = left
+            .iter()
+            .map(|line| line.chars().count())
+            .max()
+            .unwrap_or(0);
+        let mut merged: Vec<String> = Vec::new();
+        for row in 0..left.len().max(right.len()) {
+            let first = left.get(row).cloned().unwrap_or_default();
+            let _padding = width.saturating_sub(first.chars().count());
+            let second = right.get(row).cloned().unwrap_or_default();
+            if second.is_empty() {
+                merged.push(first);
+            } else {
+                merged.push(format!("{first}|{second}"));
+            }
+        }
+        return merged.join("\n");
+    }
+
     let mut lines: Vec<String> = Vec::new();
     for id in order {
         if let Some(component) = components.iter().find(|component| component.id == id) {
