@@ -808,6 +808,8 @@ fn page_from_lines(
         },
     }];
     let mut children = Vec::new();
+    // Every id on the page must be unique, because a consumer keys by id.
+    let mut taken: std::collections::HashSet<String> = Default::default();
     // Which children share the screen side by side. Filled only when the screen is split, so a
     // consumer never has to infer panes from two components that happen to claim every row.
     let mut panes: Vec<Vec<String>> = Vec::new();
@@ -824,11 +826,16 @@ fn page_from_lines(
                 u16::try_from(segment.first).unwrap_or(u16::MAX),
                 u16::try_from(segment.last).unwrap_or(u16::MAX),
             ];
-            let id = block_id(text);
+            // Provenance is tracked by the *base* id: a suffix exists only because two blocks on the
+            // same page read alike, and whether that happens can change between frames. Tracking the
+            // suffixed id made a block look new whenever the page's shape shifted — three carried
+            // components became contradictions the moment ids were made unique.
+            let base = block_id(text);
+            let id = unique_id(base.clone(), &mut taken);
             children.push(id.clone());
             // `insert` is the whole provenance rule: the first frame to show this
             // content read it from the cells, every later one carried it forward.
-            let source = if appeared.insert(id.clone()) {
+            let source = if appeared.insert(base) {
                 Provenance::Seen
             } else {
                 Provenance::Carried
@@ -1082,6 +1089,24 @@ pub fn panes_hold_structure(lines: &[String]) -> bool {
 pub fn split_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>)> {
     as_panes(lines).map(|(left, right, _column)| (left, right))
 }
+/// An id nothing else on this page has taken.
+///
+/// Ids come from a component's own text, so two blocks that read alike — the same table header
+/// repeated, the same line in two panes — collide, and a consumer keyed by id silently loses one.
+/// The audit found exactly that on one recording: two components sharing `block-ed7f9f15d27bb56a`.
+fn unique_id(base: String, taken: &mut std::collections::HashSet<String>) -> String {
+    if taken.insert(base.clone()) {
+        return base;
+    }
+    for n in 2.. {
+        let candidate = format!("{base}-{n}");
+        if taken.insert(candidate.clone()) {
+            return candidate;
+        }
+    }
+    unreachable!("the loop above returns on the first free suffix")
+}
+
 pub(crate) fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>, usize)> {
     if lines.len() < 8 {
         return None;
