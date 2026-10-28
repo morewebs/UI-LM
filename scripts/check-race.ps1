@@ -87,9 +87,25 @@ if ($lines.Count -lt 2) {
     }
 }
 
+# A program whose last action is to clear the screen: the newest frame is blank, and a viewer
+# that served it would go empty at the moment a person stopped looking.
+$cleared = Join-Path $work "cleared"
+$marker = "CLEARED-MARKER-" + (Get-Random -Maximum 999)
+& $capture record --rows 24 --cols 90 --out $cleared --stop-after 14000 --cwd $work `
+    -- powershell -NoProfile -Command "Write-Output '$marker'; Start-Sleep -Seconds 2; Clear-Host; Start-Sleep -Seconds 3" *> $null
+$blankViewer = Start-Process -FilePath $serve -PassThru -NoNewWindow -ArgumentList @(
+    "--session", $cleared, "--keys", $control, "--port", "$($port + 1)")
+Start-Sleep -Seconds 3
+$served = (Invoke-WebRequest -Uri "http://127.0.0.1:$($port + 1)/state" -UseBasicParsing -TimeoutSec 5).Content
+if (-not $blankViewer.HasExited) { $blankViewer.Kill() }
+if ($served -notmatch $marker) {
+    $failures += "the viewer served the blank screen a program left behind instead of the last one with content"
+} else {
+    Write-Host ("screen cleared at exit: the viewer kept {0}" -f $marker)
+}
 Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 if ($failures.Count -gt 0) {
     $failures | ForEach-Object { Write-Host "  $_" }
     exit 1
 }
-Write-Host "the viewer survives a redraw and a half-written frame"
+Write-Host "the viewer survives a redraw, a half-written frame, and a screen cleared at exit"
