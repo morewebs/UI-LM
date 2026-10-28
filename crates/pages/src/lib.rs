@@ -1328,7 +1328,13 @@ fn segments(lines: &[String], first: usize, last: usize) -> Vec<Segment> {
     }
     let mut found: Vec<Segment> = Vec::new();
     let mut inside_box = false;
+    // A meter is one row and ends there: without this the rows below it join its
+    // stretch, and the page claims seven rows for a meter that fills one — which is
+    // what the audit reported 151 times on one recording.
+    let mut last_was_meter = false;
     for (row, line) in lines.iter().enumerate().take(last).skip(first) {
+        let was_meter = last_was_meter;
+        last_was_meter = false;
         let opens = opens_box(line);
         let closes = closes_box(line);
         let tool = is_tool_line(line);
@@ -1342,6 +1348,7 @@ fn segments(lines: &[String], first: usize, last: usize) -> Vec<Segment> {
                 tool: false,
                 boxed: false,
             });
+            last_was_meter = true;
             continue;
         }
 
@@ -1383,7 +1390,9 @@ fn segments(lines: &[String], first: usize, last: usize) -> Vec<Segment> {
         // Outside any box: extend the last stretch when it is the same kind, else start
         // a new one.
         match found.last_mut() {
-            Some(current) if !current.boxed && current.tool == tool => current.last = row + 1,
+            Some(current) if !current.boxed && current.tool == tool && !was_meter => {
+                current.last = row + 1
+            }
             _ => found.push(Segment {
                 first: row,
                 last: row + 1,
