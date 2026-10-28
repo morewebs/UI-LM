@@ -99,3 +99,20 @@ content, and today they are structure *instead of* content.
 Two screens, both real, both in `eval/tui`. The design's rule asks for three before new vocabulary;
 this ADR's rule should be the same, so it stays **proposed** and the third screen is the remaining
 requirement — a pane holding a meter, a tool call, or a tab strip.
+## What it would cost, counted rather than guessed
+
+Before deciding, the change was priced by counting its touch points:
+
+| | |
+|---|---|
+| files mentioning `Body::Column` | 5 — `pages/lib.rs`, `pages/labeled.rs`, `render/lib.rs`, `render/terminal.rs`, `capture/main.rs` |
+| occurrences | 19 |
+| construction sites that would need a new field | 11 (8 of them in `pages/lib.rs`, several inside tests) |
+
+So it is mechanical work with a wide blast radius: a new field on `Column`, eleven literals, plus
+the reader learning to split before it segments, the renderer learning to draw a pane's children
+side by side, the label path learning the same split, and `self-check` holding all of them to one
+rule.
+
+**Half a day, with a failing test at each step.** That estimate is the honest answer to "why not
+this afternoon", and it belongs in the ADR next to the evidence.
