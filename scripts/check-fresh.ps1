@@ -48,6 +48,23 @@ $share = [double]([regex]::Match($model_line.Line, 'model ([\d.]+)%').Groups[1].
 if ($share -lt 100) {
     Write-Host ""
     Write-Host "fresh material fell short: $share% - this is a defect, not a result"
+    # Say *where*. A bare percentage sends the next person hunting through a batch of recordings
+    # with a command line, which is what happened the last three times this check failed.
+    Write-Host ""
+    Write-Host "sessions below 100%, with what they missed:"
+    foreach ($session in (Get-ChildItem -LiteralPath $sessions -Directory)) {
+        $one = & $capture score --session $session.FullName --model $model --misses 2 2>&1
+        $head = ($one | Select-Object -First 1) -join ""
+        if ($head -match "model 100\.0%") { continue }
+        Write-Host ("  {0}: {1}" -f $session.Name, ($head -replace ".*model ", "model "))
+        $one | Where-Object { "$_" -match "^\s+(Block|Meter|ToolCall|Thought|Diff)\s+\d+/" } |
+            ForEach-Object { Write-Host ("    " + "$_".Trim()) }
+        $one | Where-Object { "$_" -match "^  missed " } |
+            Select-Object -First 2 |
+            ForEach-Object { Write-Host ("    " + "$_".Trim().Substring(0, [Math]::Min(90, "$_".Trim().Length))) }
+    }
+    Write-Host ""
+    Write-Host "the batch is kept at $sessions"
     exit 1
 }
 if (-not $Keep) { Remove-Item -LiteralPath $sessions -Recurse -Force -ErrorAction SilentlyContinue }
