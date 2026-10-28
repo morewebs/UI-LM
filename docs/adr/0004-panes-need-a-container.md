@@ -182,3 +182,33 @@ Reverted. `fields` back to 0 differing, tests green, HEAD unchanged at the field
 mapping that both sides must agree on makes every axis worse until the other side catches up. The
 next attempt does *both* sides in one change — the label path's pane condition is the first edit,
 not the last — or the reader half stays uncommitted until it is.
+## The third screen: an agent running inside one pane of a split
+
+Obtained by running the agent itself in the left pane of a tmux split, through WSL interop — a
+detached-session trick failed twice, but driving the agent in a single pane and splitting with
+`C-b %` worked:
+
+```
+                        │moreweb@HOST:/path$
+  24K / 500K │ [Dashboard] │
+      > y         7:53 PM  │
+      ♦ Thought for 0.4s   │
+```
+
+The left pane holds **a meter, a reasoning line, tool calls and a composer** — everything this
+catalogue exists for — and the page is a flat list of components across both sides:
+
+| measurement | result |
+|---|---|
+| frames with a `ToolCall` | 25 of 38 |
+| frames showing the divider | 36 of 38 |
+| frames declaring panes | **0 of 38** |
+
+**This is the case the ADR was written for, and it is now observed rather than argued.** A split
+screen with structured content in one pane produces a page that cannot say which components belong
+to which side; a consumer drawing it would put the agent's tool calls and the shell's prompt in one
+column.
+
+The three-screen requirement is met: panes without overlays (vim, tmux), panes under an overlay
+(popup), and **panes holding components** (this one). The next step is the change the ADR already
+priced, and the rule learned in rounds 85–90 applies: both sides of the mapping in one commit.
