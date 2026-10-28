@@ -395,6 +395,12 @@ fn baseline(args: &BaselineArgs) -> Result<ExitCode> {
 /// Writes the training pairs a recording holds.
 fn dataset(args: &DatasetArgs) -> Result<ExitCode> {
     let mut pairs = Vec::new();
+    // A screen that has not changed is not a second example. Recording settles often, so a
+    // session can hold the same quiet screen several times; exporting it several times
+    // makes a corpus look bigger and teaches less, because a model would be rewarded for
+    // repeating the commonest screen in it.
+    let mut seen: std::collections::HashSet<String> = Default::default();
+    let mut repeated = 0usize;
     for session in &args.sessions {
         let found = ui_lm_capture::summary::training_pairs(session, args.structured)
             .with_context(|| format!("failed to read the session {}", session.display()))?;
@@ -404,13 +410,22 @@ fn dataset(args: &DatasetArgs) -> Result<ExitCode> {
                 session.display()
             );
         }
-        pairs.extend(found);
+        for (input, target) in found {
+            if seen.insert(input.clone()) {
+                pairs.push((input, target));
+            } else {
+                repeated += 1;
+            }
+        }
     }
     if pairs.is_empty() {
         bail!(
             "none of the {} session(s) holds a screen with anything on it",
             args.sessions.len()
         );
+    }
+    if repeated > 0 {
+        println!("{repeated} repeated screen(s) left out");
     }
 
     if args.scrub {

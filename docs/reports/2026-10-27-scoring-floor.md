@@ -120,3 +120,11 @@ The export can now be asked for screens that carry structure (`dataset --structu
 So **six of seventeen pairs** — 35% — describe something a converter has to recognise. The rest describe prose, which copying already reproduces. `--structured` is pinned by tests: the fixture's screen, which holds a meter and a tool call, survives the filter.
 
 This is the change that makes a corpus worth having: the number that matters is not how many pairs were recorded, but how many of them are hard.
+
+## A screen that has not changed is not a second example
+
+Recording settles often, so a session can hold the same quiet screen more than once. The export now leaves exact repeats out and says how many.
+
+**Measured on the corpus: zero.** Seventeen pairs were written and no `repeated screen(s)` line was printed — the screens in a real recording differ in something, even when they look the same. So the guard costs nothing and fixes nothing yet; it is pinned by a test that names one recording twice and expects one pair, and it will matter when a corpus is large enough for a screen to recur.
+
+**What it does not catch, and should:** a near-repeat — two screens differing only in a clock, a duration or a spinner — is not an exact duplicate and survives. Those are the repeats a real recording actually produces. Removing them needs a similarity measure, not a hash, and that is not written.

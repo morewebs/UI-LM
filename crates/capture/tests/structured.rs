@@ -61,3 +61,28 @@ fn asking_for_structure_still_gives_the_ordinary_export_when_asked_for_it() {
         structured.len()
     );
 }
+#[test]
+fn the_same_screen_twice_is_one_pair() {
+    // Recording settles often, so the same quiet screen appears more than once. Exporting
+    // it twice makes a corpus look bigger and teaches a model to repeat the commonest
+    // screen in it.
+    let out = tempfile::tempdir().unwrap();
+    let path = out.path().join("pairs.jsonl");
+    let status = Command::new(env!("CARGO_BIN_EXE_ui-lm-capture"))
+        .arg("dataset")
+        .arg("--session")
+        .arg(fixture())
+        .arg("--session")
+        .arg(fixture())
+        .arg("--out")
+        .arg(&path)
+        .status()
+        .unwrap();
+    assert!(status.success(), "the export failed: {status}");
+    let body = std::fs::read_to_string(&path).unwrap();
+    let lines: Vec<&str> = body
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+    assert_eq!(lines.len(), 1, "one screen, however many sessions name it");
+}
