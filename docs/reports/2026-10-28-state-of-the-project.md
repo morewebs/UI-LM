@@ -80,3 +80,13 @@ the two paths were asking different questions before deciding to split. What fou
 printing what each path computed, after five plausible explanations had each been disproved by a small
 test. That ratio — five theories, one trace — is the most useful thing this month taught about how the
 work should be done.
+
+## What the last week added, in one paragraph
+
+The pane container — a split screen read one pane at a time, on both the reader and the model path —
+is implemented and shipped in v0.8.0. It took twelve rounds of attempts, seven reverted, before landing
+in five consecutive green steps. The last defect it produced took six more rounds to find and was **one
+line**: the two paths were asking different questions before deciding to split. What found it was a
+trace printing what each path computed, after five plausible explanations had each been disproved by a
+small test. That ratio — five theories, one trace — is the most useful thing this month taught about how
+the work should be done.
