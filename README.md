@@ -186,6 +186,12 @@ The design and the decisions behind it are in the repo:
 - [ADR 0002: A2UI's envelope, our catalogue](docs/adr/0002-a2ui-envelope-custom-catalogue.md)
 - [The catalogue reference](docs/catalogue/moreweb.terminal-v1.md) — every component, what each guarantees, and which have been seen on a recorded screen
 
+## Picking this up
+
+[HANDOFF.md](HANDOFF.md) is the short version: where everything lives, how to verify it, what is
+proven and what is not, the fragile spots and why they are written they way they are, and the
+three things worth doing next.
+
 ## Licence
 
 Apache-2.0. See [LICENSE](LICENSE).
