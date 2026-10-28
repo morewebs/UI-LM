@@ -93,7 +93,7 @@ def features(line, row, row_count):
         leading / 20.0,
         row / max(row_count, 1),                                 # vertical position
         has(stripped[:1].isascii() is False),                    # starts with a symbol
-        has(any(word in stripped for word in ("hook", "Edited", "Read", "Ran", "Wrote"))),
+        has(any(word in stripped for word in ("hook", "Edited", "Read", "Ran", "Wrote", "Explored", "Searched", "Listed"))),
         1.0,                                                     # bias
     ]
 

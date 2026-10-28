@@ -54,9 +54,11 @@ pub fn of(line: &str, row: usize, rows: usize) -> Vec<f64> {
                 .is_some_and(|character| !character.is_ascii()),
         ),
         flag(
-            ["hook", "Edited", "Read", "Ran", "Wrote"]
-                .iter()
-                .any(|word| stripped.contains(word)),
+            [
+                "hook", "Edited", "Read", "Ran", "Wrote", "Explored", "Searched", "Listed",
+            ]
+            .iter()
+            .any(|word| stripped.contains(word)),
         ),
         1.0,
     ]
