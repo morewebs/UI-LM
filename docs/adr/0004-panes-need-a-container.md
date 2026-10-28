@@ -340,3 +340,35 @@ green tree.
 Reverted for now, because `fields` is one of the five claims and a branch that breaks it is not
 finished. **The next round starts from this note rather than from a blank page**: the split is proven,
 the tests pass, and only the graft is left.
+## The seventh attempt: the container works, and three other layers still expect a block called `pane`
+
+Done properly this time — both paths split at the same point, and the graft copies styling **pane by
+pane, component by component inside each pane**, plus a fix so the row-keyed pass stops overwriting
+pane rows. Results before the sweep:
+
+| check | before | after |
+|---|---|---|
+| target tests, un-ignored | 2 failed | **3 passed** |
+| `fields`, TUI | 0 differing | **0 differing** (132 compared, up from 119) |
+| agent in a split pane | 96.0% | **97.7%** |
+| every evaluation set | 100% | 100% |
+
+Then the two checks that `fields` and `score` cannot see:
+
+```
+round trip:       6 session(s) below 100%   (wsl-vim, wsl-vim-split, wsl-vim-vsplit, …)
+round trip/model: 6 session(s) below 100%
+tests: 1 failing
+```
+
+**The container is correct at the page level and wrong everywhere else**, because two more layers key
+on the old shape: the terminal renderer draws panes by looking for blocks with role `pane`, and a unit
+test asserts the same role. A pane that holds components no longer has that role, so nothing draws it
+side by side any more.
+
+Reverted. Green at `0dea6e6`: `fields` 688 with 0 differing, round trip 0 sessions below 100%, gate open.
+
+**The remaining work is now a list rather than a mystery**, and it is short: the renderer must draw
+panes from the surface's grouping, the role-based test must read the grouping instead, and the
+label path's pane blocks must stop being a special case. That is one change across three files, with
+the page level already proven.
