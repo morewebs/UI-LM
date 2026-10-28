@@ -79,6 +79,13 @@ fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
         .map(|(row, label)| {
             let line = text.get(row).map(|line| line.trim()).unwrap_or("");
             match label.as_str() {
+                // A thought is a row the application marks as one: it carries the mark and
+                // says so — `♦ Thought for 0.6s`. Anything else that merely starts with a
+                // non-ASCII glyph is not a thought, and a table whose status column uses
+                // `✓` shattered into seven blocks because each row was called one.
+                "Thought" if !(line.contains("Thought") && line.starts_with('♦')) => {
+                    "Block".to_owned()
+                }
                 "Thought" if line.starts_with(['○', '•', '●', '·', '▪', '◦']) => {
                     "Block".to_owned()
                 }
