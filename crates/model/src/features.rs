@@ -55,7 +55,7 @@ pub fn of(line: &str, row: usize, rows: usize) -> Vec<f64> {
         ),
         flag(
             [
-                "hook", "Edited", "Read", "Ran", "Wrote", "Explored", "Searched", "Listed",
+                "hook", "Edited", "Read", "Ran", "Wrote", "Explored", "Search", "Listed",
             ]
             .iter()
             .any(|word| stripped.contains(word)),
