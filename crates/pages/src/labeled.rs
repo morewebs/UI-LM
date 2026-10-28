@@ -275,6 +275,7 @@ pub fn page_from_labels(text: &[String], labels: &[String], surface: &str) -> En
             catalog_id: CATALOGUE_ID.to_owned(),
             root,
             components: all,
+            panes: Vec::new(),
         },
     }
 }

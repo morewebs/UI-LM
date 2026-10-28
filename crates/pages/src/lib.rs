@@ -450,6 +450,13 @@ pub struct Surface {
     pub root: String,
     /// Every component, as an adjacency list reachable from `root`.
     pub components: Vec<Component>,
+    /// Groups of component ids that share the screen side by side.
+    ///
+    /// A split application draws two panes at once, and a flat list cannot say which
+    /// components belong together. Each inner list is one pane, in screen order. Empty
+    /// until the reader learns to split before it segments (ADR 0004).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub panes: Vec<Vec<String>>,
 }
 
 /// One component in the `moreweb.terminal/v1` catalogue.
@@ -873,6 +880,7 @@ fn page_with(frame: &Frame, surface_id: &str, appeared: &mut HashSet<String>) ->
             catalog_id: CATALOGUE_ID.to_owned(),
             root: ROOT_ID.to_owned(),
             components,
+            panes: Vec::new(),
         },
     }
 }
@@ -1791,6 +1799,7 @@ pub fn page_from_text(text: &str, surface: &str) -> Envelope {
             catalog_id: CATALOGUE_ID.to_owned(),
             root,
             components: all,
+            panes: Vec::new(),
         },
     }
 }
@@ -2175,6 +2184,7 @@ mod tests {
                         children: vec!["ghost".to_owned()],
                     },
                 }],
+                panes: Vec::new(),
             },
         };
         let problems = audit(&page);
@@ -2224,6 +2234,7 @@ mod tests {
                         },
                     },
                 ],
+                panes: Vec::new(),
             },
         };
         let problems = audit(&page);
