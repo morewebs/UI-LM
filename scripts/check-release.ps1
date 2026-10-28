@@ -22,7 +22,22 @@ $work = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-release-" + [guid]::
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 $failures = @()
 
-& gh release download $Tag --pattern "ui-lm-Windows-X64.zip" --dir $work --repo morewebs/UI-LM 2>&1 | Out-Null
+# `latest` is not a tag: `gh release download` wants the release's own name. Resolving it also
+# makes the check say which release it actually tested, which matters when the answer is "no
+# archive".
+$resolved = if ($Tag -eq "latest") {
+    (& gh release view --repo morewebs/UI-LM --json tagName --jq ".tagName" 2>&1 | Select-Object -First 1) -join ""
+} else {
+    $Tag
+}
+$resolved = $resolved.Trim()
+if (-not $resolved -or $resolved -match "no releases") {
+    Write-Host "no published release to check"
+    Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+    exit 1
+}
+Write-Host "checking release: $resolved"
+& gh release download $resolved --pattern "ui-lm-Windows-X64.zip" --dir $work --repo morewebs/UI-LM 2>&1 | Out-Null
 $zip = Get-ChildItem -LiteralPath $work -Filter "*.zip" | Select-Object -First 1
 if (-not $zip) {
     Write-Host "the release had no Windows archive"
