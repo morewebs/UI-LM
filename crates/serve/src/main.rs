@@ -242,7 +242,21 @@ fn latest(
     // With a model the page is the model's reading of the screen's text; without one it is
     // the rule-based reader's. Both go through the same builder, so what is served differs
     // only in judgement.
-    let frame = frames.last()?;
+    // The last frame is not always the screen worth showing: when a program exits, the pty's
+    // final state is often blank, and a viewer that served it would go empty at exactly the
+    // moment a person stopped looking. The newest frame that carries a component wins; if
+    // every frame is blank, the last one is served, because that is the truth.
+    let frame = frames
+        .iter()
+        .rev()
+        .find(|frame| {
+            !ui_lm_pages::page_from_frame(frame, &title)
+                .create_surface
+                .components
+                .iter()
+                .all(|component| component.component == "Column")
+        })
+        .or_else(|| frames.last())?;
     let mut page = match model {
         Some(model) => {
             // Styling comes from the cells, judgement from the model: without the graft the
