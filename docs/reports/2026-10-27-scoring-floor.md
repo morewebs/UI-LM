@@ -147,4 +147,8 @@ Two things worth keeping:
 - **Structured yield more than tripled** (6 to 20) by widening the scenarios rather than repeating them. Repeats of the same four commands would have produced near-identical screens; new commands produced new ones.
 - **The floor on structured screens rose from 6.7% to 14.5%** as more blocks joined the reference pages, while meters and tool calls stayed at **zero**. The do-nothing converter is getting a larger share of an easier reference, not better at the hard part.
 
-The `shape-app` session held no pair: the program it recorded draws a panel, a meter and a tool line, but by the time it settled the screen the export keeps was judged to hold nothing — worth investigating, and not yet explained.
+The `shape-app` session held no pair, and that turned out to be a defect rather than a bad drawing. The program does draw, and the reader does read it: as one block with role `panel` carrying two shortcuts. Because the whole bordered box arrives as a single `Block`, a test that only counted component kinds saw plain text, and the export discarded the screen. The structured filter was throwing away panels, which are among the few screens worth having.
+
+The filter now counts a block as structure when it carries a role other than `text`, a tab strip, a shortcut list or a named property. Re-tested against the drawing: **1 pair written** where before there were none.
+
+**The deeper gap is not fixed.** A meter and a tool line drawn inside a panel are still invisible to the page model, because they are lines of text inside it rather than components, so a model trained on these pairs would never learn to recognise them there. Splitting the interior of a box into its own components is the change that would fix it, and it is not written.

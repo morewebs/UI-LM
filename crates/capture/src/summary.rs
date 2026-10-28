@@ -351,11 +351,35 @@ pub fn training_pairs(dir: &Path, structured_only: bool) -> std::io::Result<Vec<
 }
 
 /// Whether a page holds a component beyond a container or a run of text.
+///
+/// A block counts as structure when it carries something a converter has to *recognise*: a
+/// role it did not get from being prose (a panel, an input box), a tab strip, a shortcut
+/// list, or a named property. This matters because of how the reader sees a bordered box —
+/// the whole box arrives as one `Block`, so a panel holding a meter and a tool line looks
+/// like plain text to a test that only counts component kinds, and the export threw such a
+/// screen away. Measured on a purpose-built drawing: the corpus dropped the one screen that
+/// carried a panel with a shortcut list in it.
 pub fn has_structure(page: &ui_lm_pages::Envelope) -> bool {
-    page.create_surface
-        .components
-        .iter()
-        .any(|component| component.component != "Column" && component.component != "Block")
+    page.create_surface.components.iter().any(|component| {
+        if component.component != "Column" && component.component != "Block" {
+            return true;
+        }
+        match &component.body {
+            ui_lm_pages::Body::Block {
+                role,
+                tabs,
+                shortcuts,
+                properties,
+                ..
+            } => {
+                *role != "text"
+                    || !tabs.is_empty()
+                    || !shortcuts.is_empty()
+                    || !properties.is_empty()
+            }
+            _ => false,
+        }
+    })
 }
 
 #[cfg(test)]
