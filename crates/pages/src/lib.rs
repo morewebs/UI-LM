@@ -398,7 +398,7 @@ pub fn compare(reference: &Envelope, page: &Envelope) -> Score {
 }
 
 /// The text a component carries, whatever kind it is.
-fn component_text(body: &Body) -> Vec<String> {
+pub fn component_text(body: &Body) -> Vec<String> {
     match body {
         Body::Column { .. } => Vec::new(),
         Body::Block { lines, .. } => lines.clone(),
@@ -943,6 +943,13 @@ pub fn graft_spans(page: &mut Envelope, reader: &Envelope) {
         }
     }
     for component in &mut page.create_surface.components {
+        if let Body::Diff { rows, lines, .. } = &mut component.body {
+            let first = rows[0] as usize;
+            for (offset, line) in lines.iter_mut().enumerate() {
+                line.spans = by_row.get(&(first + offset)).cloned().unwrap_or_default();
+            }
+            continue;
+        }
         if let Body::Block {
             rows, spans, lines, ..
         } = &mut component.body

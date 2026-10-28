@@ -101,6 +101,8 @@ enum Command {
     Tui(TuiArgs),
     /// Check the label path against the reader's own answers.
     SelfCheck(SelfCheckArgs),
+    /// Compare the parts of a page that compare does not look at.
+    Fields(FieldsArgs),
     /// Check that pages carry provenance honestly across a sequence.
     Provenance(ProvenanceArgs),
     /// Score a page built from text alone against the pages the recorder produces.
@@ -123,6 +125,17 @@ struct ProvenanceArgs {
     /// Session directories holding frames.
     #[arg(long = "session", value_name = "DIR", required = true)]
     sessions: Vec<PathBuf>,
+}
+/// Compares the parts of a page that `compare` does not look at.
+#[derive(Debug, Args)]
+struct FieldsArgs {
+    /// Session directories holding frames.
+    #[arg(long = "session", value_name = "DIR", required = true)]
+    sessions: Vec<PathBuf>,
+
+    /// The model to judge with.
+    #[arg(long, value_name = "FILE", default_value = "models/page.json")]
+    model: PathBuf,
 }
 /// Feeds the label path the reader's own answers, to find where the two disagree.
 #[derive(Debug, Args)]
@@ -400,6 +413,7 @@ fn run(command: Command) -> Result<ExitCode> {
         Command::Score(args) => score(&args),
         Command::Tui(args) => tui(&args),
         Command::SelfCheck(args) => self_check(&args),
+        Command::Fields(args) => fields(&args),
         Command::Provenance(args) => provenance(&args),
         Command::Dataset(args) => dataset(&args),
         Command::Render(args) => render(&args),
@@ -552,6 +566,103 @@ fn provenance(args: &ProvenanceArgs) -> Result<ExitCode> {
     } else {
         ExitCode::FAILURE
     })
+}
+/// What a page says beyond kind and text: role, tabs, shortcuts, properties, spans.
+///
+/// `compare` matches components by kind and text, so a page can score 100% while dropping the
+/// tab strip, the shortcut list, the named properties and every span of styling. Those are what a
+/// runtime draws differently from prose, so they get their own comparison rather than riding
+/// along untested under a perfect score.
+fn fields(args: &FieldsArgs) -> Result<ExitCode> {
+    let model = ui_lm_model::Model::load(&args.model)?;
+    let mut checked = 0usize;
+    let mut differences = 0usize;
+    let mut examples: Vec<String> = Vec::new();
+    for session in &args.sessions {
+        let loaded = match ui_lm_frames::read_frames(session) {
+            Ok((_, frames)) => frames,
+            Err(_) => ui_lm_frames::read_orphaned_frames(session)?,
+        };
+        for frame in &loaded {
+            let surface = format!("frame-{}", frame.seq);
+            let text = ui_lm_capture::summary::frame_text(frame);
+            if text.trim().is_empty() {
+                continue;
+            }
+            let real = ui_lm_pages::page_from_frame(frame, &surface);
+            let mut predicted = model.page(&text, &surface);
+            ui_lm_pages::graft_spans(
+                &mut predicted,
+                &ui_lm_pages::page_from_frame(frame, &surface),
+            );
+            for component in real
+                .create_surface
+                .components
+                .iter()
+                .filter(|component| component.component != "Column")
+            {
+                let Some(other) = predicted
+                    .create_surface
+                    .components
+                    .iter()
+                    .find(|candidate| {
+                        ui_lm_pages::component_text(&candidate.body)
+                            == ui_lm_pages::component_text(&component.body)
+                    })
+                else {
+                    continue;
+                };
+                checked += 1;
+                let (role_a, tabs_a, short_a, props_a, spans_a) = shape_of(component);
+                let (role_b, tabs_b, short_b, props_b, spans_b) = shape_of(other);
+                if (role_a.clone(), tabs_a, short_a, props_a, spans_a)
+                    != (role_b.clone(), tabs_b, short_b, props_b, spans_b)
+                {
+                    differences += 1;
+                    if examples.len() < 3 {
+                        examples.push(format!(
+                            "{} role {role_a:?}/{role_b:?} tabs {tabs_a}/{tabs_b} shortcuts {short_a}/{short_b} properties {props_a}/{props_b} spans {spans_a}/{spans_b}",
+                            component.component
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    println!("fields: {checked} component(s) compared, {differences} differing");
+    for example in &examples {
+        println!("  {example}");
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+/// The parts of a component that kind and text do not carry.
+fn shape_of(component: &ui_lm_pages::Component) -> (String, usize, usize, usize, usize) {
+    use ui_lm_pages::Body;
+    match &component.body {
+        Body::Block {
+            role,
+            tabs,
+            shortcuts,
+            properties,
+            spans,
+            ..
+        } => (
+            role.clone(),
+            tabs.len(),
+            shortcuts.len(),
+            properties.len(),
+            spans.iter().filter(|line| !line.is_empty()).count(),
+        ),
+        Body::Diff { lines, .. } => (
+            "diff".to_owned(),
+            0,
+            0,
+            0,
+            lines.iter().filter(|line| !line.spans.is_empty()).count(),
+        ),
+        other => (format!("{other:?}").chars().take(12).collect(), 0, 0, 0, 0),
+    }
 }
 fn self_check(args: &SelfCheckArgs) -> Result<ExitCode> {
     let mut total = 0.0f64;
