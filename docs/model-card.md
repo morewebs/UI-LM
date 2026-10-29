@@ -94,7 +94,7 @@ catch it:
 | a **divider** | a column of bars **not matched** by a bar on the same rows | a centred `whiptail` dialog, whose border looked like a divider | the `tmux-two-panes` and `grok-help-frame6` fixtures, plus `whiptail-menu` |
 | `Meter` | a count against a drawn limit; a percentage is not one | `top`'s `%Cpu(s)` header | the `second machine` job forbids `Meter` on a monitor |
 | a **listing** | one `Block`, never a meter, thought or tool call | a directory listing, on any machine | the same job forbids all four on a listing |
-| `Diff` | **any** addition beside **any** removal | `- buy milk` / `+ buy eggs`, which is not a patch | a test that *pins the cost* rather than forbidding it: 34 of 61 corpus diffs carry no header, so narrowing was reverted |
+| `Diff` | **any** addition beside **any** removal | `- buy milk` / `+ buy eggs`, which is not a patch | a test that *pins the cost* rather than forbidding it: 34 of 61 corpus diffs carry no `@@` hunk header (24 carry no header at all), so narrowing was reverted |
 | `Table` | does not exist | column alignment matched 28 of 81 recordings, all survey sheets | ADR 0007, rejected on measurement |
 
 **Five boundaries guard against widening; one pins an accepted cost.** The difference matters: forbidding is right
