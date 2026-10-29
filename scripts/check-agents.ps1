@@ -32,18 +32,19 @@ $failures = @()
 $frames = 0
 $kinds = @{}
 foreach ($session in $sessions) {
-    $line = (& $capture score --session $session.FullName --model $model 2>&1 | Select-Object -First 1) -join ""
-    if ($line -notmatch "model 100\.0%") { $failures += ("{0}: {1}" -f $session.Name, $line.Trim()) }
+    $strong = (& $capture score --session $session.FullName --model $model 2>&1 | Select-Object -First 1) -join ""
+    if ($strong -notmatch "model 100\.0%") { $failures += ("{0}: {1}" -f $session.Name, $strong.Trim()) }
     $trip = (& $capture tui --session $session.FullName --all --model $model 2>&1 | Select-Object -Last 1) -join ""
     if ($trip -notmatch "\(100\.0%\)") { $failures += ("{0} draws back weakly: {1}" -f $session.Name, $trip.Trim()) }
     $audit = (& $capture audit --model $model -- $session.FullName 2>&1 | Select-Object -Last 1) -join ""
     if ($audit -notmatch "no violations") { $failures += ("{0} contradicts its own screen: {1}" -f $session.Name, $audit.Trim()) }
-    foreach ($raw in (& $capture page --session $session.FullName --all --model $model 2>$null)) {
-        $page = $raw | ConvertFrom-Json -ErrorAction SilentlyContinue
-        if (-not $page) { continue }
-        foreach ($component in $page.createSurface.components) { $kinds[$component.component] = 1 + $kinds[$component.component] }
+    # `score` already walks every page once and prints a line per kind, so counting kinds costs nothing
+    # more. A second pass over the same frames was a quarter of this check's running time.
+    $scoreLines = @(& $capture score --session $session.FullName --model $model 2>&1)
+    $frames += @($scoreLines | Where-Object { $_ -match "over (\d+) frame" } | ForEach-Object { [int]($_.ToString() -replace '.*over (\d+) frame.*', '$1') } | Measure-Object -Sum).Sum
+    foreach ($line in $scoreLines) {
+        if ("$line" -match "^\s+(\w+)\s+(\d+)/(\d+) reproduced") { $kinds[$Matches[1]] = [int]$kinds[$Matches[1]] + [int]$Matches[3] }
     }
-    $frames += @(& $capture page --session $session.FullName --all 2>$null).Count
 }
 
 Write-Host ("  {0} recording(s), {1} frame(s): {2}" -f $sessions.Count, $frames, (($kinds.GetEnumerator() | Sort-Object Key | ForEach-Object { $_.Key + "=" + $_.Value }) -join ", "))
