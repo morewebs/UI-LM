@@ -80,6 +80,11 @@ A trained model turns a screen's text into the page that describes it — blocks
 ```bash
 ui-lm-capture page --session sessions/example --model models/page.json   # what the model sees
 ui-lm-capture score --session sessions/example --model models/page.json   # model beside the floor
+ui-lm-capture audit -- sessions/                                          # pages that contradict their screens
+ui-lm-capture audit --model models/page.json -- sessions/                 # the same, for the model's pages
+ui-lm-capture fields --left a --right b                                   # the parts `compare` does not look at
+ui-lm-capture disagree --session sessions/example --model models/page.json # rows the model labels differently
+ui-lm-capture baseline --session sessions/example                         # text-only reading, as a floor
 ui-lm-serve --session sessions/live --keys keys.txt --model models/page.json   # the live view, drawn from the model
 powershell -File scripts/check-fresh.ps1   # record new material and score it blind
 powershell -File scripts/check-all.ps1     # every set, both directions, provenance
