@@ -24,12 +24,29 @@ $base = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("one`ntwo`nthre
 $changed = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("one`nTWO`nthree`nfour`n"))
 & wsl.exe -e sh -c "mkdir -p /tmp/ui-lm/gdiff && cd /tmp/ui-lm/gdiff && git init -q . 2>/dev/null; echo $base | base64 -d > f.txt; git add f.txt; git -c user.email=a@b -c user.name=a commit -qm base 2>/dev/null; echo $changed | base64 -d > f.txt" 2>&1 | Out-Null
 
+# The agent is asked to run `git diff` and mostly does. Once in a while it answers from context without
+# running anything — which is not a defect in this project, but it does leave the check measuring nothing.
+# So the scenario is attempted up to three times, and a run with no diff is retried rather than believed.
+$attempts = 3
 $keys = Join-Path $work "k.keys"
 Set-Content -LiteralPath $keys -Value @('8000 y\r', '6000 \r', '8000 run git diff and show me the output\r', '25000 \r') -Encoding ASCII
 $session = Join-Path $work "s"
-& $capture record --rows 30 --cols 110 --out $session --stop-after 50000 --script $keys -- wsl.exe -e tmux new-session -A -s gdiffcheck "cd /tmp/ui-lm/gdiff && /mnt/c/Users/moreweb/.grok/bin/grok.exe" *> $null
-& wsl.exe -e sh -c 'tmux kill-server 2>/dev/null; true' 2>&1 | Out-Null
-
+# Up to three attempts: a run that produces no diff measured nothing, and is retried rather than believed.
+$session = Join-Path $work "s"
+$diffs = 0
+$attempt = 0
+while ($attempt -lt $attempts -and $diffs -lt 1) {
+    $attempt++
+    if (Test-Path $session) { Remove-Item -LiteralPath $session -Recurse -Force }
+    & $capture record --rows 30 --cols 110 --out $session --stop-after 50000 --script $keys -- wsl.exe -e tmux new-session -A -s gdiffcheck "cd /tmp/ui-lm/gdiff && /mnt/c/Users/moreweb/.grok/bin/grok.exe" *> $null
+    & wsl.exe -e sh -c 'tmux kill-server 2>/dev/null; true' 2>&1 | Out-Null
+    if (-not (Test-Path (Join-Path $session "session.json"))) { continue }
+    foreach ($line in (& $capture page --session $session --all 2>$null)) {
+        if ("$line" -match '"component":"Diff"') { $diffs++ }
+    }
+    if ($diffs -lt 1) { Write-Host ("  attempt {0}: the agent did not show a diff, retrying" -f $attempt) }
+}
+if ($attempt -gt 1) { Write-Host ("  a diff appeared on attempt {0}" -f $attempt) }
 $failures = @()
 if (-not (Test-Path (Join-Path $session "session.json"))) {
     Write-Host "the recording failed, so nothing was measured"
