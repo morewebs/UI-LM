@@ -53,3 +53,25 @@ if ($gone.Count -gt 0) {
     exit 1
 }
 Write-Host "every script the documents name exists"
+
+# The handoff lists the CLI in one line. It was missing two commands until a reader checked by hand, so the
+# line is checked here: every subcommand the binary has must appear in it.
+$handoff = Join-Path $repo "HANDOFF.md"
+if (Test-Path $handoff) {
+    $text = Get-Content -LiteralPath $handoff -Raw -Encoding UTF8
+    $line = $null
+    foreach ($candidate in ($text -split "`n")) {
+        if ($candidate -match '`record .+`') { $line = $candidate; break }
+    }
+    if ($null -eq $line) {
+        Write-Host "the handoff no longer lists the commands, so nothing was compared"
+        exit 1
+    }
+    $omitted = @($commands | Where-Object { $line -notmatch ('\b' + [regex]::Escape($_) + '\b') })
+    if ($omitted.Count -gt 0) {
+        $omitted | ForEach-Object { Write-Host ("  the handoff's command line omits: " + $_) }
+        Write-Host "the handoff does not list every command"
+        exit 1
+    }
+    Write-Host "the handoff lists every command"
+}
