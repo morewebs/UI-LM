@@ -151,3 +151,20 @@ if ($spelled.Count -gt 0) {
     exit 1
 }
 Write-Host "every count in the front pages is written as digits"
+
+# The hard recordings are evidence, so their number is counted too.
+$hard = @(Get-ChildItem -LiteralPath (Join-Path $repo "cases\hard") -Directory -ErrorAction SilentlyContinue).Count
+$corpusPage2 = Join-Path $repo "docs\reports\2026-10-28-state-of-the-project.md"
+if ((Test-Path $corpusPage2) -and $hard -gt 0) {
+    $text2 = Get-Content -LiteralPath $corpusPage2 -Raw -Encoding UTF8
+    $bad2 = @()
+    foreach ($found in [regex]::Matches($text2, '(\d+)\s+hard recording')) {
+        if ([int]$found.Groups[1].Value -ne $hard) { $bad2 += ("the page says {0} hard recordings, there are {1}" -f $found.Groups[1].Value, $hard) }
+    }
+    if ($bad2.Count -gt 0) {
+        $bad2 | ForEach-Object { Write-Host ("  " + $_) }
+        Write-Host "a document counts the hard recordings wrongly"
+        exit 1
+    }
+    Write-Host ("  the hard recordings on disk: {0}" -f $hard)
+}
