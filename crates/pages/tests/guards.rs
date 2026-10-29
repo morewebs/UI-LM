@@ -348,3 +348,22 @@ fn a_heading_drawn_inside_a_panel_belongs_to_the_panel() {
         "a panel is one block"
     );
 }
+
+#[test]
+fn a_heavy_ruled_box_is_a_frame() {
+    // ADR 0006. Written after the round-49 measurement disagreed with the round-48 claim: this decides which
+    // of the two was wrong, and it decides it without a recording.
+    let rows: Vec<&str> = vec![
+        "~                          ╔Confirm═════════════════╗",
+        "~                          ║                        ║",
+        "~                          ║  Floating dialog       ║",
+        "~                          ╚════════════════════════╝",
+    ];
+    let page = page_of(&rows, "Block");
+    let kinds = kinds(&page);
+    assert!(
+        kinds.contains(&"Frame".to_owned()),
+        "a heavy-ruled box must be a Frame, not a block: {:?}",
+        kinds
+    );
+}

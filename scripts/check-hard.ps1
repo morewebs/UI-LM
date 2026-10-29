@@ -45,6 +45,13 @@ $expected = @{
 # because the model copies the reader and both were wrong the same way. Fragmentation is invisible to a
 # score, so the shape of the page is checked directly — a frame that suddenly holds twice the components
 # it used to has been cut up, and somebody has to say why.
+# Kinds a case must actually produce. A ceiling counts components; it cannot say what they are, and the
+# floating window proved it: three blocks would satisfy the popup's ceiling of 3 while the `Frame` the case
+# exists for had silently gone missing. Step 5 of `docs/adding-a-component.md`: a new kind is proven by
+# breaking it and watching a named check fail.
+$required = @{
+    "vim-floating-popup" = @("Frame")
+}
 $ceiling = @{
     "wsl-agent-in-pane"        = 11
 # Raised by one in round 43, with the reason: the scrollbar fix (round 33) lets a panel close when its
@@ -73,11 +80,21 @@ foreach ($case in (Get-ChildItem -LiteralPath $cases -Directory)) {
     if ($trip -match "\(([\d.]+)%\)") { $tripped = [double]$Matches[1] }
     # The busiest frame, against the recorded ceiling.
     $busiest = 0
+    $kinds = @{}
     foreach ($raw in (& $capture page --session $case.FullName --all 2>$null)) {
         $page = $raw | ConvertFrom-Json -ErrorAction SilentlyContinue
         if (-not $page) { continue }
         $count = @($page.createSurface.components | Where-Object { $_.component -ne "Column" }).Count
         if ($count -gt $busiest) { $busiest = $count }
+        foreach ($component in $page.createSurface.components) { $kinds[$component.component] = $true }
+    }
+    if ($required.ContainsKey($case.Name)) {
+        foreach ($kind in $required[$case.Name]) {
+            if (-not $kinds.ContainsKey($kind)) {
+                Write-Host ("  {0,-22} no {1} component, and this case exists for it" -f $case.Name, $kind)
+                $regressed++
+            }
+        }
     }
     if ($ceiling.ContainsKey($case.Name) -and $busiest -gt $ceiling[$case.Name]) {
         Write-Host ("  {0,-22} busiest frame holds {1} components, the ceiling is {2}" -f $case.Name, $busiest, $ceiling[$case.Name])
