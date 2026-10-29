@@ -110,10 +110,17 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 
 1. **A third full-screen application with a floating window or a dialog.** vim and tmux both put
    panes in a plain rectangle; the design's trigger for a `Frame` component has not fired yet.
-2. **A `Meter` from something that is not an agent CLI.** Agents print a budget (`25K / 500K`) because a
+2. **A recording should say how its program ended.** Round 76 spent a round concluding that a pager "draws
+   nothing here" when `less` had exited with status 1 because its input file was missing — the evidence was in
+   the terminal and nowhere in the record. Add `exit: Option<i32>` to `SessionRecord`, thread it through
+   `SessionWriter::finish`, and pass it at the recorder's call site; **four construction sites** build a record
+   (recorder, one test in `crates/frames`, one in `crates/validate`) and two attempts have failed by missing
+   two of them or by moving the wait block with line arithmetic. Do it with a compiler in the loop, not by
+   index.
+3. **A `Meter` from something that is not an agent CLI.** Agents print a budget (`25K / 500K`) because a
    budget is what they manage; file copies and monitors print percentages, and `as_meter` will not invent a
    limit from one. A build tool with a step count, or a watcher with a quota, is what this needs.
-3. **Interaction.** Nothing here tests a screen mid-redraw or a keystroke arriving during a
+4. **Interaction.** Nothing here tests a screen mid-redraw or a keystroke arriving during a
    redraw; `serve` forwards input but no test asserts what happens when it does.
 
 ## What was the second item, and is now done
