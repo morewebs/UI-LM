@@ -109,10 +109,11 @@ written down rather than wished away.
 Three batches recorded after the model was trained, 200 frames, 1,155 components, **nothing missed**:
 Block, Meter, Thought and ToolCall all perfect.
 
-**`Diff` is not among them, and cannot be.** The agent reports an edit as a tool line — `♦ Edit
-edit.txt +1/-1` — with counts rather than diff lines, so no screen it draws contains a two-sided diff.
-That kind is exercised by the curated `git diff` recordings and by nothing else.
+**`Diff` was missing until it was asked for.** The agent reports an *edit* as a tool line with
+counts — `♦ Edit edit.txt +1/-1` — but asking it to run `git diff` makes the output block hold a real
+two-sided diff, and the reader finds it: `Diff 1/1` on a recording made after training. So all five
+kinds are perfect on new material.
 
-So the claim is precise: *four of the five kinds are perfect on new material from the training
-application; the fifth has curated coverage only.* Every row of that sentence has a number behind it,
+The claim is now: *all five kinds are perfect on new material from the training application* — with the
+one caveat that a diff only appears when the application is asked to show one. Every row of that sentence has a number behind it,
 and the sentence is narrower than the one it replaces.
