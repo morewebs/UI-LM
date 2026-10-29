@@ -262,3 +262,20 @@ fn a_real_popup_over_panes_keeps_its_overlay() {
         .count();
     assert_eq!(panels, 1, "the overlay is a panel: {:?}", kinds(&page));
 }
+
+#[test]
+fn word_art_is_not_a_thought() {
+    // Freebuff draws its name in full blocks over five rows. The model, which has not seen a full block
+    // in its training screens, called that run reasoning. A run with no letter or digit in it cannot be
+    // a thought, whatever a model says: it is a picture.
+    let page = page_of(
+        &[
+            "███████████",
+            "███▀▀▀▀▀▀▀▀",
+            "███ █████  ██████",
+            "███ ███▀▀",
+        ],
+        "Thought",
+    );
+    assert_eq!(kinds(&page), vec!["Block".to_owned()]);
+}
