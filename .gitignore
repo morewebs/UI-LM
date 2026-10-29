@@ -10,6 +10,7 @@ frame-store/
 # captured bytes rather than against frames the model built itself. The exception is
 # named exactly rather than by directory, so it cannot grow into a corpus by accident.
 !crates/pages/tests/fixtures/session/frames.jsonl
+!crates/pages/tests/fixtures/every-kind/frames.jsonl
 
 # Recorded screens carry the machine they came from, so a corpus is never published.
 /corpus/
