@@ -1441,8 +1441,11 @@ fn opens_box(line: &str) -> bool {
 }
 
 /// Whether a line closes a bordered box.
-fn closes_box(line: &str) -> bool {
-    line.trim_start().starts_with(['╰', '└'])
+pub(crate) fn closes_box(line: &str) -> bool {
+    let trimmed = line.trim_start();
+    // A tree branch starts the same way and closes nothing: cargo tree's `└── vt100 v0.15.2` split a
+    // screen into one block per branch. A border ends in a corner and carries no name.
+    trimmed.ends_with(['╯', '┘'])
 }
 
 /// Whether a tool word names reasoning rather than an action.

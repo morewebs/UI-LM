@@ -132,10 +132,11 @@ fn a_real_git_diff_is_a_diff_even_when_every_row_is_called_text() {
     assert_eq!(kinds(&page), ["Diff"]);
 }
 #[test]
-fn a_tree_branch_starts_its_own_block() {
-    // `cargo tree` draws a dependency per row, and the reader gives each branch its own
-    // block. A closing glyph that only rules a box (`╰──── Grok ────╯`) still ends the block
-    // above it, which is why the rule is written for the branch shape alone.
+fn a_tree_branch_joins_the_listing_it_belongs_to() {
+    // Decided in round 26: `cargo tree` is one listing, not one component per dependency. Both paths
+    // used to split at every `└──`, which turned a tree screen into seventeen blocks; the model copied
+    // the reader, so both agreed and both were wrong. This test pinned the old behaviour and had to be
+    // changed on purpose — which is what a pin is for.
     let page = page_of(
         &[
             "│   [dependencies]",
@@ -145,10 +146,11 @@ fn a_tree_branch_starts_its_own_block() {
         ],
         "Block",
     );
-    // The branch rows that continue a group (`├──`) belong to it; only the last one
-    // (`└──`) starts a block of its own — which is what the reader does, measured on
-    // `cargo tree`: splitting both ways scored 43.8%, splitting only the last scored 100%.
-    assert_eq!(kinds(&page).len(), 2, "{:?}", kinds(&page));
+    assert_eq!(
+        kinds(&page),
+        vec!["Block".to_owned()],
+        "one listing, one block"
+    );
 }
 #[test]
 fn a_second_full_screen_application_splits_without_new_code() {

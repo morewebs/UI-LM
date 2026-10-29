@@ -41,21 +41,9 @@ fn runs(labels: &[String], text: &[String]) -> Vec<(usize, usize, String)> {
             .unwrap_or(false);
         let closes = text
             .get(row)
-            .map(|line| line.trim().starts_with(['╰', '└']))
+            .map(|line| crate::closes_box(line))
             .unwrap_or(false);
-        // Narrow on purpose: only a tree branch, `└── name`. A wider reading — "a closing
-        // glyph with any text after it" — also caught the application's own box, whose
-        // closing rule carries a label (`╰── Grok 4.7 (low) ─╯`), and took the training
-        // batch from 100% to 90.5%. A rule written for one screen shape must be as narrow as
-        // that shape, or it rewrites the screens that were already right.
-        let named = text
-            .get(row)
-            .map(|line| {
-                let trimmed = line.trim();
-                trimmed.starts_with("└── ")
-            })
-            .unwrap_or(false);
-        let starts = opens || named;
+        let starts = opens;
         // A row that is a use-and-limit is its own run, exactly as the reader cuts it: the two paths
         // must group a screen the same way, and the reader learned this rule a fortnight before
         // this path did — which cost four fresh recordings their perfect score.
