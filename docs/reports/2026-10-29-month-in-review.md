@@ -22,7 +22,7 @@ description of the screen, and anything that can read the page can rebuild the s
 | releases | **v0.1.0 → v0.12.1**, three platforms each, every one verified by downloading it |
 | checks | 17 scripts, one table, **every check shown failing at least once** |
 | fuzz properties | 4 — reader, renderers, model, raw bytes |
-| fresh material | **389 frames, six batches, not one component missed** |
+| fresh material | **476 frames, seven batches, not one component missed** |
 | hardest recording | two agents in two panes: **describes 100%, draws back 100%** |
 
 ## The five defects worth remembering
