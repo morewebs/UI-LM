@@ -75,6 +75,12 @@ And the disagreements are not spread evenly — they have one shape, measured by
 - **`Meter` has one observed producer.** Agents print a budget — use against a limit — because that is what
   they manage. Progress bars, monitors and file copies print percentages and counts instead, and `as_meter`
   refuses to invent a limit from a percentage. The kind is real; the applications that draw it are few.
+- **A budget glued into one token is *declined*, and the cost is measured.** `0/5 hours remaining`, drawn inside the
+  second agent's quota panel, is not read as a meter. Accepting it was measured on
+  `eval/freebuff/quota-panel` (round 130): the round trip fell from **86/86 to 67/86** because a meter's extent is
+  decided by the row that starts it and the reader has no rule that ends one inside a box — it swallowed the panel's
+  remaining rows and its closing border. **Nineteen lines for one meter.** The rule stays narrow, and this is now a
+  number rather than a preference.
 
 ## What it can do that it was not trained for
 

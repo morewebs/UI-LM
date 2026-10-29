@@ -168,5 +168,5 @@ refused was refused by counting something.
 
 1. **A `Table`, by semantics rather than alignment** — a column whose values share a type across rows, with
    `df`, `top` and `cargo tree` as the positives and Freebuff's survey rows as the counterweight.
-2. **A meter inside a panel** — the rule is written; what blocks it is that a panel owns its rows, and splitting
-   one out costs the whole panel's round trip (measured: 320 lines).
+2. **A meter inside a panel** — measured and **declined**: accepting a glued budget costs nineteen lines of round trip on the one recording
+   that holds it, so the panel keeps its rows.
