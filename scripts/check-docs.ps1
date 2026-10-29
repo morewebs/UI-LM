@@ -341,4 +341,27 @@ if ((Test-Path $weights) -and (Test-Path $cardPath)) {
     Write-Host ("the card's training count matches the weights: {0} screens" -f $trained)
 }
 
+# The model card states the shape of the weights: how many features, and how many parameters. Both are computed
+# from the file, so a trainer that adds a feature and leaves the card describing the previous shape fails here.
+# This is the pair that drifts silently: no score changes when the card is wrong about the model it is scoring.
+if ((Test-Path $weights) -and (Test-Path $cardPath)) {
+    $model = Get-Content -LiteralPath $weights -Raw | ConvertFrom-Json
+    $featureCount = @($model.weights).Count
+    $kindCount = @($model.kinds).Count
+    $parameterCount = $featureCount * $kindCount + $kindCount
+    $shapeText = Get-Content -LiteralPath $cardPath -Raw -Encoding UTF8
+    $claimedFeatures = if ($shapeText -match '\| features \| (\d+)') { [int]$Matches[1] } else { -1 }
+    $claimedParameters = if ($shapeText -match '\| parameters \| (\d+)') { [int]$Matches[1] } else { -1 }
+    if ($claimedFeatures -lt 0 -or $claimedParameters -lt 0) {
+        Write-Host "the model card no longer states the shape of the weights"
+        exit 1
+    }
+    if ($claimedFeatures -ne $featureCount -or $claimedParameters -ne $parameterCount) {
+        Write-Host ("  the card says {0} features and {1} parameters; the weights are {2} x {3} + {3} = {4}" -f $claimedFeatures, $claimedParameters, $featureCount, $kindCount, $parameterCount)
+        Write-Host "the model card describes a different model from the one in the repository"
+        exit 1
+    }
+    Write-Host ("the card's model shape matches the weights: {0} features, {1} parameters" -f $featureCount, $parameterCount)
+}
+
 Write-Host "every front page opens with a sentence"
