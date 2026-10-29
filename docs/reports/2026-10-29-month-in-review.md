@@ -24,7 +24,7 @@ description of the screen, and anything that can read the page can rebuild the s
 | fuzz properties | 4 — reader, renderers, model, raw bytes |
 | model card | `docs/model-card.md` — weights, features, training data, and four things it cannot do |
 | fresh material | **ten batches, not one component missed** — counted per batch in the report |
-| hardest recordings | **5**, from an agent in a pane to two text buffers: all 100% on score and both round trips |
+| hardest recordings | **13**, from an agent in a pane to two agents on one screen: all at 100% on score, round trip and shape |
 
 ## The five defects worth remembering
 
@@ -83,23 +83,41 @@ that ships.
 
 | | |
 |---|---|
-| releases | **19**, v0.1.0 through v0.14.0, three platforms each, every one verified by downloading it |
-| commits | 385 |
+| releases | **24**, v0.1.0 through v0.19.0, three platforms each, every one verified by downloading it |
+| commits | 494 |
 | checks | **19 scripts** and 4 fuzz properties, each with the failure that proved it in `docs/checks.md` |
 | hard recordings | **13** shapes, twelve at 100% on score and both round trips |
 | fresh material | **10 batches**, every one perfect, every one recorded after training |
-| the final audit | `every check passed in 472.9s` |
-| unproven | **one claim**: that the vocabulary generalises beyond the application it was built for |
+| the final audit | `every check passed in 699.3s` |
+| unproven | **two kinds**: `Table` (rejected with numbers) and a meter inside a panel |
+
+## What the second agent changed
+
+The one claim this project could not test for itself — *does the vocabulary generalise past the application it
+was built for?* — was tested. Freebuff, an npm TUI, was recorded **eleven times, 591 frames**, across reading,
+writing, diffing (including a staged **rename**), searching, a full fix cycle, two refusals, a repository it had
+never seen, and a session cut short by a quota:
+
+```
+Block 4652/4652 · ToolCall 158/158 · Thought 385/385 · Diff 54/54, all reproduced
+```
+
+The model was trained on Grok alone. And it changed four rules, every one of them narrow:
+
+- a **bullet** marks a tool row (`•` beside `♦`), but only when the next word is capitalised;
+- a **reasoning heading ends after its word** — `• Thinking about the problem` is a sentence, not reasoning;
+- a **border ends in a corner after decoration is stripped**, because a scrolling panel draws its own furniture
+  in the last column;
+- a **tree is one listing**, not one block per branch, on both paths and in one commit.
 
 ## What I would do next, in order
 
-1. **Get a second agent's transcripts.** Every claim in the model card rests on one application. The
-   procedure for testing another one is in `2026-10-28-state-of-the-project.md` and takes minutes; it is
-   the only thing standing between this project and a general claim.
-2. **Record the divider glyph, not just its column.** The one limitation with a measured cost: a pane row
-   that holds only a divider loses its structure while keeping its text (76% of rows on a two-full-pane
-   screen before the renderer fix).
-3. **Add a layout check for the renderers.** `check-html` compares words and pane structure; it cannot
-   tell whether a page's *arrangement* matches the screen's.
-4. **Keep distrusting the suite.** Every defect this month was in something nobody had pointed at
-   material it could not handle. The next one is most likely in a check that has only seen easy input.
+1. **A `Table`, by semantics rather than alignment.** ADR 0007 records the rejection and the acceptance cases;
+   the route is a column whose values share a type across rows, with `df`, `top` and `cargo tree` as the
+   positives and Freebuff's survey rows as the counterweight.
+2. **A meter inside a panel.** The rule is written and measured; what blocks it is that a panel owns its rows,
+   and splitting one out costs the whole panel's round trip.
+3. **Add a layout check for the renderers.** `check-html` compares words and pane structure; it cannot tell
+   whether a page's *arrangement* matches the screen's.
+4. **Keep distrusting the suite.** Every defect this month was in something nobody had pointed at material it
+   could not handle. The next one is most likely in a check that has only seen easy input.
