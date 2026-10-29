@@ -32,20 +32,46 @@ pub fn render_pages(pages: &[Envelope], title: &str) -> String {
             body,
             "<section class=\"page\" data-frame=\"{index}\">\n<header>frame {index}</header>\n"
         );
-        for component in &page.create_surface.components {
-            render_component(&mut body, component);
-        }
+        body_of(page, &mut body);
         body.push_str("</section>\n");
     }
     document(&body, title)
 }
 
+/// The body of a page, with panes drawn side by side.
+///
+/// The terminal renderer has drawn a split screen in two columns since the container landed; this one
+/// still put the agent's meter above the shell's prompt, in one column, because nothing had ever shown
+/// it a paned page. `check-html` compared words and passed — words reach the document either way.
+fn body_of(page: &Envelope, out: &mut String) {
+    let panes = &page.create_surface.panes;
+    if panes.len() != 2 {
+        for component in &page.create_surface.components {
+            render_component(out, component);
+        }
+        return;
+    }
+    out.push_str("<div class=\"panes\">");
+    for group in panes {
+        out.push_str("<div class=\"pane\">");
+        for id in group {
+            if let Some(component) = page
+                .create_surface
+                .components
+                .iter()
+                .find(|component| component.id == *id)
+            {
+                render_component(out, component);
+            }
+        }
+        out.push_str("</div>");
+    }
+    out.push_str("</div>");
+}
 /// Renders one page into its own document.
 pub fn render_page(page: &Envelope, title: &str) -> String {
     let mut body = String::new();
-    for component in &page.create_surface.components {
-        render_component(&mut body, component);
-    }
+    body_of(page, &mut body);
     document(&body, title)
 }
 
@@ -73,7 +99,9 @@ section.page > header {{ color: #6f6f76; font-size: 11px; letter-spacing: .08em;
 .composer {{ border-color: #4a4a55; }}
 .panel > .tag, .composer > .tag {{ color: #6f6f76; font-size: 10px; letter-spacing: .1em;
         text-transform: uppercase; display: block; margin-bottom: 4px; }}
-.tool {{ display: flex; gap: 8px; align-items: baseline; margin: 4px 0; }}
+.panes {{ display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }}
+      .pane {{ min-width: 0; }}
+      .tool {{ display: flex; gap: 8px; align-items: baseline; margin: 4px 0; }}
 .tool .name {{ color: #8ab4f8; }}
 .tool .target {{ color: #d6d6d7; }}
 .tool .counts {{ color: #6f6f76; }}
