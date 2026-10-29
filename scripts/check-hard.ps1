@@ -36,6 +36,13 @@ $expected = @{
     "vim-floating-popup" = 100.0
     "whiptail-dialog" = 100.0
     "every-kind-one-screen" = 100.0
+    # The orchestration shapes, promoted from `eval/apps` in round 100: one agent beside a shell, an agent
+    # working in a pane, two agents on one screen, and a divider that moves mid-session. They were recorded
+    # once; a hard case is what stops them being lost.
+    "agent-beside-shell" = 100.0
+    "pane-conversation" = 100.0
+    "two-agents-one-screen" = 100.0
+    "pane-resize" = 100.0
     # Fixed: an advertisement panel whose border ends `╯  █` stopped being a panel once the scrollbar
     # column was not stripped, so the reader swallowed the rest of the screen into one block. Measured at
     # 99.7% before the fix and 100% after it; that is the number a regression would have to fall below.
@@ -57,6 +64,8 @@ $required = @{
     "vim-floating-popup"     = @("Frame")
     "whiptail-dialog"        = @("Frame")
     "every-kind-one-screen"  = @("Block", "ToolCall", "Diff", "Meter")
+    "pane-conversation"      = @("Block", "Meter", "ToolCall")
+    "two-agents-one-screen"  = @("Block", "Meter", "ToolCall")
     "freebuff-refusal"       = @("Thought")
     "wsl-agent-in-pane"      = @("Meter", "ToolCall")
     "wsl-agent-in-split"     = @("Meter", "Thought", "ToolCall")
@@ -80,6 +89,10 @@ $ceiling = @{
     # heavy-rule predicate correctly does not claim it.
     "whiptail-dialog"          = 1
     "every-kind-one-screen"    = 4
+    "agent-beside-shell"       = 2
+    "pane-conversation"        = 9
+    "two-agents-one-screen"    = 15
+    "pane-resize"              = 2
 }
 $regressed = 0
 foreach ($case in (Get-ChildItem -LiteralPath $cases -Directory)) {
