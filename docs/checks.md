@@ -19,6 +19,7 @@ because their first proof had been remembered rather than recorded.
 | `check-sizes` | the smallest and largest screens round trip | demanding more lines than exist printed "only 30 line(s) of content, so nothing was really drawn" |
 | `check-scrub` | a shared pair keeps its catalogue | removing the protection printed "the catalogue's name was scrubbed away" |
 | `check-hard` (kinds) | a case that exists for a kind must produce it | blinding the `Frame` predicate printed "no Frame component, and this case exists for it" |
+| `check-agents` (kinds) | the set produces Thought, ToolCall and Diff | blinding `is_thought_word` printed "no Thought component anywhere in the set, and the set exists for it"; blinding `as_diff` printed the same for Diff |
 | `check-agents` | the second Agent CLI reads perfectly, untrained — and its material holds structure | with the recordings moved away: "no second-agent recordings on this machine, so nothing was exercised"; with a prose-only recording swapped in: "every component was one kind (Block), so the set tests nothing"; with a lowered ceiling: "busiest frame holds 10 components, the ceiling is 3" |
 | `check-corrupt` | damaged recordings are skipped, not fatal | rewording the skip message printed "nothing said the frame was skipped" |
 | `check-readme` | the README describes every command the binary has | replacing a command's name in the README printed "the README never mentions: disagree" |

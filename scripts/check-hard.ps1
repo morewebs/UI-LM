@@ -50,7 +50,13 @@ $expected = @{
 # exists for had silently gone missing. Step 5 of `docs/adding-a-component.md`: a new kind is proven by
 # breaking it and watching a named check fail.
 $required = @{
-    "vim-floating-popup" = @("Frame")
+    # Each entry is a kind the case exists for. Breaking the predicate that produces it must fail this check,
+    # and `docs/checks.md` records the message each break produced.
+    "vim-floating-popup"     = @("Frame")
+    "freebuff-refusal"       = @("Thought")
+    "wsl-agent-in-pane"      = @("Meter", "ToolCall")
+    "wsl-agent-in-split"     = @("Meter", "Thought", "ToolCall")
+    "wsl-two-agents-in-split" = @("Meter", "Thought", "ToolCall")
 }
 $ceiling = @{
     "wsl-agent-in-pane"        = 11

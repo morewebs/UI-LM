@@ -90,6 +90,13 @@ Write-Host ("  {0:N0}% of frames hold more than one component, across {1} kind(s
 if ($share -lt 50) {
     $failures += ("only {0:N0}% of frames hold structure, so a perfect score here proves nothing" -f $share)
 }
+# The kinds this material exists to exercise. A set that quietly stopped producing one would still score 100%
+# — the model copies the reader — so each is named, and breaking its predicate must fail this check.
+foreach ($kind in @("Thought", "ToolCall", "Diff")) {
+    if (-not $kinds.ContainsKey($kind)) {
+        $failures += ("no {0} component anywhere in the set, and the set exists for it" -f $kind)
+    }
+}
 if ($distinct -lt 2) {
     $failures += ("every component was one kind (" + (@($kinds.Keys) -join ", ") + "), so the set tests nothing")
 }
