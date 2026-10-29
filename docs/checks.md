@@ -21,7 +21,7 @@ that would be reconstructed from memory; each is being re-proven with its output
 | `check-scrub` | a shared pair keeps its catalogue | removing the protection printed "the catalogue's name was scrubbed away" |
 | `check-corrupt` | damaged recordings are skipped, not fatal | rewording the skip message printed "nothing said the frame was skipped" |
 | `check-race` (proven, message not kept) | the viewer survives redraws and half-written files | a truncated append made the viewer draw a torn frame |
-| `check-interaction` (proven, message not kept) | typing reaches the program | suppressing a write did not change what the check exercises — the typed marker still came back — so nothing was proven either way |
+| `check-interaction` | typing reaches the program | neutralising **both** key writers printed "interaction failed: the typed text never appeared on screen" |
 | `check-live-page` | the live page moves, a finished one does not | a constant document printed "the page did not change across three seconds of a drawing program" |
 | `check-render-scale` | exporting stays linear | a 50 ms delay per page printed "a page cost 53.1 ms, more than the 11.0 ms limit" |
 | `check-fresh` | new material matches the model | an older model scored below the floor on the same batch |
