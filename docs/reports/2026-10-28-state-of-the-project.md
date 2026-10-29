@@ -33,8 +33,8 @@ the code constructs.
 | a floating window is named | **`Frame`**, added in round 48 from a vim popup: the first kind added since the vocabulary settled, and the first that needed a boundary before it needed a predicate |
 | the hard recordings hold their shapes | **9 hard recordings**, eight at 100% on score and both round trips: an agent in a pane, an agent beside a shell, two agents, and two text buffers |
 | an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
-| every word the page holds reaches the browser document | 87 recordings **on both paths**, checked; markup arrives escaped |
-| every recording on this machine reads on either builder | **87 recordings, 2028 pages**, reader and model, no error |
+| every word the page holds reaches the browser document | 88 recordings **on both paths**, checked; markup arrives escaped |
+| every recording on this machine reads on either builder | **88 recordings, 2038 pages**, reader and model, no error |
 | every page a builder makes is consistent with its screen |  frames audited on **each** path, no violations |
 | the download works | **v0.19.0**, three platforms, verified by downloading it and running it |
 | the checks can fail | **19 scripts and 4 fuzz properties, each shown failing with the output kept** (`docs/checks.md`); three refuse to pass on empty material and one has a clock |
