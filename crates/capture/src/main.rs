@@ -1163,6 +1163,28 @@ fn render(args: &RenderArgs) -> Result<ExitCode> {
                 .with_context(|| format!("the session has no frame {seq}"))?,
             None => pages.len() - 1,
         };
+        // Say which frames are paned. A pane layout is drawn only for a page whose surface holds two panes, and
+        // that is a property of the frame, not the session — so a person who rendered frame 0 of a split screen and
+        // found one column had nothing to tell them the split was three frames later. It cost three attempts in
+        // round 133 to find a frame with one.
+        let paned: Vec<usize> = pages
+            .iter()
+            .enumerate()
+            .filter(|(_, page)| page.create_surface.panes.len() >= 2)
+            .map(|(index, _)| index)
+            .collect();
+        if paned.is_empty() {
+            println!("this session holds no frame with two panes, so every frame draws one column");
+        } else if !paned.contains(&index) {
+            println!(
+                "frame {index} holds no split, so it draws one column; frames with two panes: {}",
+                paned
+                    .iter()
+                    .map(usize::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+        }
         ui_lm_render::render_page(&pages[index], &title)
     };
     std::fs::write(&args.out, &html)
