@@ -35,6 +35,7 @@ $expected = @{
     "wsl-blank-in-split" = 100.0
     "vim-floating-popup" = 100.0
     "whiptail-dialog" = 100.0
+    "whiptail-menu" = 100.0
     "every-kind-one-screen" = 100.0
     # The orchestration shapes, promoted from `eval/apps` in round 100: one agent beside a shell, an agent
     # working in a pane, two agents on one screen, and a divider that moves mid-session. They were recorded
