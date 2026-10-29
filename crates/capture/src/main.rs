@@ -884,6 +884,13 @@ fn score(args: &ScoreArgs) -> Result<ExitCode> {
         frames,
         model.trained_on
     );
+    // A set the floor already reproduces exactly cannot tell the model from a converter that splits
+    // paragraphs, so a perfect score on it proves nothing. Say so where the score is read, rather than
+    // leaving the trap to be discovered again — five of the eight non-Grok recordings are in this state.
+    let floor_share = floor.0 / count * 100.0;
+    if floor_share >= 99.95 {
+        println!("  the floor reproduces this set exactly, so a perfect score here proves nothing");
+    }
     for (kind, (total, matched)) in &kinds {
         println!("  {kind:<10} {matched}/{total} reproduced");
     }
