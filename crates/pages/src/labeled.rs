@@ -178,7 +178,7 @@ fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
 /// Whether the reader would call this row a thought.
 fn is_thought_row(line: &str) -> bool {
     let row = [line.to_owned()];
-    matches!(tool_calls(&row).as_slice(), [only] if only.tool.eq_ignore_ascii_case("thought") || only.tool.eq_ignore_ascii_case("thinking"))
+    matches!(tool_calls(&row).as_slice(), [only] if crate::is_thought_word(&only.tool))
 }
 
 fn settled(label: &str, lines: &[String]) -> String {

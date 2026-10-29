@@ -849,7 +849,7 @@ fn page_from_lines(
                 // A collapsed reasoning line is the catalogue's `Thought`, not a tool
                 // call: the application says `♦ Thought for 3.0s` and nothing else.
                 match calls.as_slice() {
-                    [only] if only.tool.eq_ignore_ascii_case("thought") => (
+                    [only] if is_thought_word(&only.tool) => (
                         "Thought".to_owned(),
                         Body::Thought {
                             rows,
@@ -1445,6 +1445,14 @@ fn closes_box(line: &str) -> bool {
     line.trim_start().starts_with(['╰', '└'])
 }
 
+/// Whether a tool word names reasoning rather than an action.
+///
+/// Grok writes `♦ Thought for 3.0s`; Freebuff writes `• Thinking`. Both are the catalogue's `Thought`,
+/// and the reader and the label path must agree about that — they did not, and three Freebuff
+/// recordings produced no thought at all while the label path recognised them.
+pub(crate) fn is_thought_word(tool: &str) -> bool {
+    tool.eq_ignore_ascii_case("thought") || tool.eq_ignore_ascii_case("thinking")
+}
 /// Whether a line is a tool line.
 fn is_tool_line(line: &str) -> bool {
     tool_marker(line).is_some()
