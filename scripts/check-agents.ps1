@@ -48,6 +48,28 @@ foreach ($session in $sessions) {
 }
 
 Write-Host ("  {0} recording(s), {1} frame(s): {2}" -f $sessions.Count, $frames, (($kinds.GetEnumerator() | Sort-Object Key | ForEach-Object { $_.Key + "=" + $_.Value }) -join ", "))
+
+# A perfect score on one-block screens proves nothing — the same trap `score` warns about when a floor is
+# 100%. This set is the project's richest source of structure (8.89 components a frame when written), and
+# a recording that quietly became a page of prose would still score 100% and still pass. So the material
+# itself is checked: most frames must hold more than one component, and more than one kind must appear.
+$structuredFrames = 0
+foreach ($session in $sessions) {
+    foreach ($raw in (& $capture page --session $session.FullName --all 2>$null)) {
+        $page = $raw | ConvertFrom-Json -ErrorAction SilentlyContinue
+        if (-not $page) { continue }
+        if (@($page.createSurface.components | Where-Object { $_.component -ne "Column" }).Count -gt 1) { $structuredFrames++ }
+    }
+}
+$share = if ($frames -gt 0) { 100.0 * $structuredFrames / $frames } else { 0 }
+$distinct = @($kinds.Keys | Where-Object { $_ -ne "Column" }).Count
+Write-Host ("  {0:N0}% of frames hold more than one component, across {1} kind(s)" -f $share, $distinct)
+if ($share -lt 50) {
+    $failures += ("only {0:N0}% of frames hold structure, so a perfect score here proves nothing" -f $share)
+}
+if ($distinct -lt 2) {
+    $failures += ("every component was one kind (" + (@($kinds.Keys) -join ", ") + "), so the set tests nothing")
+}
 if ($failures.Count -gt 0) {
     $failures | ForEach-Object { Write-Host ("  " + $_) }
     Write-Host "the second agent does not read perfectly"
