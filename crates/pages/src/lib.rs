@@ -1442,10 +1442,25 @@ fn opens_box(line: &str) -> bool {
 
 /// Whether a line closes a bordered box.
 pub(crate) fn closes_box(line: &str) -> bool {
-    let trimmed = line.trim_start();
-    // A tree branch starts the same way and closes nothing: cargo tree's `└── vt100 v0.15.2` split a
-    // screen into one block per branch. A border ends in a corner and carries no name.
-    trimmed.ends_with(['╯', '┘'])
+    let trimmed = undecorated(line).trim_start();
+    // A tree branch starts the same way and closes nothing, so a border must also end in a corner —
+    // after the scrollbar column is stripped, or a panel that ends `╯  █` stops being a panel.
+    trimmed.starts_with(['╰', '└']) && trimmed.ends_with(['╯', '┘'])
+}
+
+/// The line without the block glyphs a terminal draws in its last column.
+///
+/// A border arrives as `╰────╯  █` and a heading as `• Thinking … ▄`. Decoration is not speech: both rules
+/// strip it before deciding. The first version of the border rule forgot, and an advertisement panel with a
+/// scrollbar stopped being a panel — the reader swallowed the rest of the screen into one block.
+pub(crate) fn undecorated(line: &str) -> &str {
+    line.trim_end_matches(|glyph: char| {
+        glyph.is_whitespace()
+            || matches!(
+                glyph,
+                '▄' | '█' | '▀' | '░' | '▒' | '▓' | '│' | '┃' | '▏' | '▕'
+            )
+    })
 }
 
 /// Whether a tool word names reasoning rather than an action.

@@ -33,11 +33,10 @@ $expected = @{
     "wsl-two-agents-in-split" = 100.0
     "wsl-vim-in-split" = 100.0
     "wsl-blank-in-split" = 100.0
-    # The first Freebuff screen the model and the reader disagree about: on six frames the model calls
-    # the row `• Thinking … █` a Thought and the reader folds it into the block above. The model looks
-    # right and the reader does not, so this is a defect with a baseline rather than a case to celebrate.
-    # When it is fixed the number rises, and this table says how far it had to come.
-    "freebuff-refusal" = 99.7
+    # Fixed: an advertisement panel whose border ends `╯  █` stopped being a panel once the scrollbar
+    # column was not stripped, so the reader swallowed the rest of the screen into one block. Measured at
+    # 99.7% before the fix and 100% after it; that is the number a regression would have to fall below.
+    "freebuff-refusal" = 100.0
 }
 
 # How many components the busiest frame of each recording holds, measured after the tree decision of
