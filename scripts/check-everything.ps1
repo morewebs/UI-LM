@@ -39,7 +39,8 @@ $all = @(
     @{ name = "interaction"; script = "check-interaction.ps1"; slow = $true },
     @{ name = "live-page";   script = "check-live-page.ps1"; slow = $true },
     @{ name = "render-scale"; script = "check-render-scale.ps1"; slow = $true },
-    @{ name = "fresh";       script = "check-fresh.ps1"; slow = $true }
+@{ name = "fresh";       script = "check-fresh.ps1"; slow = $true },
+    @{ name = "diff-fresh";  script = "check-diff-fresh.ps1"; slow = $true }
 )
 
 $selected = if ($Quick) { $all | Where-Object { -not $_.slow } } else { $all }
