@@ -46,7 +46,7 @@ while ($attempt -lt $attempts -and $diffs -lt 1) {
     }
     if ($diffs -lt 1) { Write-Host ("  attempt {0}: the agent did not show a diff, retrying" -f $attempt) }
 }
-if ($attempt -gt 1) { Write-Host ("  a diff appeared on attempt {0}" -f $attempt) }
+if ($diffs -ge 1 -and $attempt -gt 1) { Write-Host ("  a diff appeared on attempt {0}" -f $attempt) }
 $failures = @()
 if (-not (Test-Path (Join-Path $session "session.json"))) {
     Write-Host "the recording failed, so nothing was measured"
@@ -72,6 +72,13 @@ if ($score -notmatch "Diff\s+(\d+)/(\d+) reproduced" -or $Matches[1] -ne $Matche
 Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 if ($failures.Count -gt 0) {
     $failures | ForEach-Object { Write-Host ("  " + $_) }
+    # "the agent showed no diff" and "the reader got the diff wrong" are different failures, and reporting the
+    # first as the second is how a flaky agent looks like a broken reader. Round 90 found the full suite red for
+    # this reason while the same check passed on its own a minute later.
+    if ($failures.Count -eq 1 -and $failures[0] -match "no diff appeared") {
+        Write-Host "the agent showed no diff in three attempts, so nothing was measured"
+        exit 1
+    }
     Write-Host "a fresh diff was not read exactly"
     exit 1
 }
