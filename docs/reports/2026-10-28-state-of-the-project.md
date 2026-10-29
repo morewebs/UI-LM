@@ -27,7 +27,7 @@ the code constructs.
 | the page carries the screen's colour | 6,303 spans on the corpus; reaches HTML, terminal and the live view |
 | pages say honestly whether a component was read or carried | 688 components, 0 contradictions |
 | the model works off its training application | trained on one; **141 frames from 13 other programs, every component** |
-| new screens, recorded after training, read perfectly | **273 frames, all five component kinds, nothing missed** |
+| new screens, recorded after training, read perfectly | **307 frames across five batches**; every kind held, nothing missed |
 | a split screen's panes hold their own components | both paths ask the same question before splitting; audited on model pages too |
 | an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
 | every word the page holds reaches the browser document | 58 recordings **on both paths**, 3,048 words, checked; markup arrives escaped |
