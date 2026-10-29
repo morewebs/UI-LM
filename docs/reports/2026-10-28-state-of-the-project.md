@@ -158,3 +158,36 @@ have been caught lying at least once.
 4. **Distrust the suite a little more.** Twenty-one properties are proven; the ones that failed were
    always the ones nobody had pointed at material they could not handle. The next defect is most likely
    in a check that has only ever been given easy input.
+
+## If you have material from another application
+
+The one claim this project cannot test is that its vocabulary generalises beyond the application it was
+trained on. If you have transcripts from another agent — or any program that draws *state* — here is the
+whole procedure, and it takes minutes rather than rounds:
+
+```
+# 1. record it, or point at sessions you already have
+ui-lm-capture record --rows 50 --cols 160 --out sessions/other -- <the program>
+
+# 2. does the page describe its own screen, and do both builders agree?
+ui-lm-capture audit -- sessions/other
+ui-lm-capture audit --model models/page.json -- sessions/other
+ui-lm-capture score --session sessions/other --model models/page.json
+ui-lm-capture tui --session sessions/other --all --model models/page.json
+```
+
+Read the output in this order:
+
+- **`score` prints a floor beside the model's figure.** A floor near 100% means the screen held almost no
+  structure, so a perfect score proves nothing; a low floor and a high score is the result that matters.
+- **`audit` must report no violations** on both paths. A violation means the page names a row the screen
+  does not have — a description no renderer could draw.
+- **`tui --all` must be 100.0%.** Below that, the page has lost content or put it in the wrong place.
+
+Then add the recordings under `eval/` and run `scripts/check-all.ps1`: the new set joins the table, and
+`check-docs` will keep the counts honest from then on.
+
+What to look for in the score: which **kinds** appear. A program that shows panels, tabs, tool calls and
+meters tests the vocabulary as it stands. A program with a shape the catalogue does not have — a calendar,
+a chart, a form — is the interesting case, because it is where the vocabulary's limits become visible
+rather than theoretical.
