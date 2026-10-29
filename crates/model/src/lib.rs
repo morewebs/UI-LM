@@ -35,6 +35,12 @@ pub struct Model {
     bias: Vec<f64>,
     /// How many screens it was trained on, for reporting.
     pub trained_on: usize,
+    /// A short digest of the weights, stamped onto every page this model assembles.
+    ///
+    /// A page built by the reader and a page built by this model were indistinguishable in the record, and rounds
+    /// 109–112 compared them repeatedly without being able to say which was which. The digest answers that the way
+    /// the build stamp answers it for a binary: the artefact says what produced it.
+    digest: String,
 }
 
 impl Model {
@@ -86,12 +92,25 @@ impl Model {
             ));
         }
         let trained_on = usize::try_from(json["trainedOn"].as_u64().unwrap_or(0)).unwrap_or(0);
+        // The same FNV-1a the build stamp uses, over every weight as written: no dependency, and a change of one
+        // weight in the fifth decimal changes the digest.
+        let mut hash: u64 = 0xcbf2_9ce4_8422_2325_u64;
+        for byte in text.bytes() {
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+        }
         Ok(Self {
             kinds,
             weights,
             bias,
             trained_on,
+            digest: format!("{hash:016x}"),
         })
+    }
+
+    /// The digest stamped onto every page this model assembles.
+    pub fn digest(&self) -> &str {
+        &self.digest
     }
 
     /// What each row of `lines` is, as a kind name.
@@ -125,7 +144,35 @@ impl Model {
         // divider, and that is exactly what made a frame split in the reader and not here.
         let lines: Vec<String> = text.split('\n').map(str::to_owned).collect();
         let labels = self.labels(&lines);
-        ui_lm_pages::page_from_labels(&lines, &labels, surface)
+        let mut page = ui_lm_pages::page_from_labels(&lines, &labels, surface);
+        page.create_surface.model = Some(self.digest.clone());
+        page
+    }
+}
+
+#[cfg(test)]
+mod stamp_tests {
+    use super::Model;
+    use std::path::PathBuf;
+
+    #[test]
+    fn a_page_from_the_model_says_which_model_built_it() {
+        // Rounds 109-112 compared pages from the reader and pages from the label path repeatedly, and the two were
+        // indistinguishable in the record. The digest is the answer, so it gets a test: present on a model page,
+        // equal to the model's own, and absent from a page the reader built.
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../models/page.json");
+        let model = Model::load(&path).expect("the model loads");
+        let page = model.page("alpha\nbeta\n", "test");
+        assert_eq!(
+            page.create_surface.model.as_deref(),
+            Some(model.digest()),
+            "the page names the model that built it"
+        );
+        let reader = ui_lm_pages::page_from_text("alpha\nbeta\n", "test");
+        assert_eq!(
+            reader.create_surface.model, None,
+            "a reader page names no model, because no model built it"
+        );
     }
 }
 
