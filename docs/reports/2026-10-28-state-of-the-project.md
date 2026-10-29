@@ -34,7 +34,7 @@ the code constructs.
 | every recording on this machine reads on either builder | 58 recordings, **576 pages**, reader and model, no error |
 | every page a builder makes is consistent with its screen | 288 frames audited on **each** path, no violations |
 | the download works | **v0.13.0**, three platforms, verified by downloading it and running it |
-| the checks can fail | **16 scripts and 4 fuzz properties, each shown failing with the output kept** (`docs/checks.md`); three refuse to pass on empty material |
+| the checks can fail | **17 scripts and 4 fuzz properties, each shown failing with the output kept** (`docs/checks.md`); three refuse to pass on empty material and one has a clock |
 | the viewer keeps up | typing, redraws, half-written files, cleared screens — each checked |
 | exporting a session is cheap | 4.4 ms and 3.9 KB per page, linear to 1,510 pages, capped by a check |
 
@@ -128,7 +128,7 @@ One command answers "is this tree sound", and takes about eight minutes:
 powershell -File scripts/check-everything.ps1
 ```
 
-It runs sixteen checks and prints one table. With `-Quick` it skips the five that record new material
+It runs nineteen checks and prints one table. With `-Quick` it skips the five that record new material
 and answers in under a minute — that is the loop for working; the full run is the loop for shipping.
 With `-Tag v0.11.1` it also downloads that release and proves the archive does what this document says.
 
@@ -153,6 +153,6 @@ have been caught lying at least once.
    structure. It still cannot tell whether a page's *arrangement* matches the screen's.
 3. **Wide-character strings.** The page is column-exact and the string is padded; a flagged continuation
    cell in the frame format would close the gap between the two.
-4. **Distrust the suite a little more.** Seventeen properties are proven; the ones that failed were
+4. **Distrust the suite a little more.** Twenty-one properties are proven; the ones that failed were
    always the ones nobody had pointed at material they could not handle. The next defect is most likely
    in a check that has only ever been given easy input.

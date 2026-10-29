@@ -3,8 +3,8 @@
 A check that has never failed is a check of unknown strength. This is the ledger: every script in
 `scripts/`, what it protects, and the failure that was produced to prove it can fail.
 
-**Every row quotes a message the check actually printed when it was broken on purpose.** Sixteen scripts
-and four properties were each made to fail, and the output kept — five of them re-proven in the last week
+**Every row quotes a message the check actually printed when it was broken on purpose.** Seventeen
+scripts and four properties were each made to fail, and the output kept — five of them re-proven in the last week
 because their first proof had been remembered rather than recorded.
 
 | check | protects | how it was made to fail |
