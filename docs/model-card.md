@@ -48,6 +48,16 @@ all perfect.
   to the page format, the reader, both renderers and the checks — see `docs/adding-a-component.md`.
 - **It is at its ceiling on this data.** Measured three ways: 60% more corpus gave +0.1% row accuracy; a
   twentieth feature was worse on every screen family; training on plain screens was three times worse.
+- **It does not generalise on its own — the assembly does.** Measured with `disagree`, which compares the model's
+  row labels with the reader's kinds:
+
+  | application | rows where the model disagrees |
+  |---|---|
+  | Grok (trained) | **2.0%** to **10.3%** |
+  | Freebuff (never trained on) | **17.6%** to **26.3%** |
+
+  The pages are still exact on both — because the guards correct what the model gets wrong, not because the model
+  learned a second application. **What generalises is the assembly, and the vocabulary it asks the reader for.**
 - **Its raw labels disagree with the reader on 2–12% of rows.** Structural guards are what keep pages
   exact; the model is one voice in an assembly, not an oracle.
 - **`Meter` has one observed producer.** Agents print a budget — use against a limit — because that is what
