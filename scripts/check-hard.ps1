@@ -33,6 +33,7 @@ $expected = @{
     "wsl-two-agents-in-split" = 100.0
     "wsl-vim-in-split" = 100.0
     "wsl-blank-in-split" = 100.0
+    "vim-floating-popup" = 100.0
     # Fixed: an advertisement panel whose border ends `╯  █` stopped being a panel once the scrollbar
     # column was not stripped, so the reader swallowed the rest of the screen into one block. Measured at
     # 99.7% before the fix and 100% after it; that is the number a regression would have to fall below.
@@ -55,6 +56,7 @@ $ceiling = @{
     "wsl-two-agents-in-split"  = 20
     "wsl-vim-in-split"         = 2
     "freebuff-refusal"         = 13
+    "vim-floating-popup"       = 1
 }
 $regressed = 0
 foreach ($case in (Get-ChildItem -LiteralPath $cases -Directory)) {
