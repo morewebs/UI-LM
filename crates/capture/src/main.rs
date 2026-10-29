@@ -87,6 +87,8 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Print what this binary was built from, so a measurement can say which one made it.
+    Version,
     /// Run a program on a pty and record its screens as a session.
     Record(Record),
     /// Report what a set of recorded sessions contains.
@@ -423,6 +425,10 @@ fn main() -> ExitCode {
 
 fn run(command: Command) -> Result<ExitCode> {
     match command {
+        Command::Version => {
+            version();
+            Ok(ExitCode::SUCCESS)
+        }
         Command::Record(args) => record(args),
         Command::Summarize(args) => {
             // The flag and the trailing directories are the same request, so they are merged
@@ -1352,6 +1358,19 @@ fn summarise(sessions: &[PathBuf]) -> Result<ExitCode> {
 }
 
 /// Records one session, and reports how it ended.
+/// What this binary was built from: the commit, whether the tree was dirty, and when.
+///
+/// Not decoration. Three measurements in one week were taken from a binary that did not carry the change being
+/// measured, and each looked like a finding; the cheap answer is to ask the binary.
+fn version() {
+    println!(
+        "ui-lm-capture {}  commit {}  tree {}",
+        env!("CARGO_PKG_VERSION"),
+        option_env!("UI_LM_BUILD_COMMIT").unwrap_or("unknown"),
+        option_env!("UI_LM_BUILD_TREE").unwrap_or("unknown"),
+    );
+}
+
 fn record(args: Record) -> Result<ExitCode> {
     let started = std::time::Instant::now();
     if args.rows == 0 || args.cols == 0 {
