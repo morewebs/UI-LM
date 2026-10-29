@@ -33,6 +33,11 @@ $expected = @{
     "wsl-two-agents-in-split" = 100.0
     "wsl-vim-in-split" = 100.0
     "wsl-blank-in-split" = 100.0
+    # The first Freebuff screen the model and the reader disagree about: on six frames the model calls
+    # the row `• Thinking … █` a Thought and the reader folds it into the block above. The model looks
+    # right and the reader does not, so this is a defect with a baseline rather than a case to celebrate.
+    # When it is fixed the number rises, and this table says how far it had to come.
+    "freebuff-refusal" = 99.7
 }
 
 # How many components the busiest frame of each recording holds, measured after the tree decision of
@@ -46,6 +51,7 @@ $ceiling = @{
     "wsl-blank-in-split"       = 2
     "wsl-two-agents-in-split"  = 19
     "wsl-vim-in-split"         = 2
+    "freebuff-refusal"         = 13
 }
 $regressed = 0
 foreach ($case in (Get-ChildItem -LiteralPath $cases -Directory)) {
