@@ -26,8 +26,8 @@ the code constructs.
 | a page draws back into a terminal, every line of content | 100% on every recording, split screens included |
 | the page carries the screen's colour | 6,303 spans on the corpus; reaches HTML, terminal and the live view |
 | pages say honestly whether a component was read or carried | 688 components, 0 contradictions |
-| the model works off its training application | trained on one; **558 fresh frames from eight batches, every component** |
-| new screens, recorded after training, read perfectly | **558 frames across eight batches**; every kind held, nothing missed |
+| the model works off its training application | trained on one; **every component of every batch recorded since**, batch by batch in the report |
+| new screens, recorded after training, read perfectly | **every batch since training, every kind it held, nothing missed** — the per-batch numbers are in the report |
 | a split screen's panes hold their own components | both paths ask the same question before splitting; audited on model pages too |
 | an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
 | every word the page holds reaches the browser document | 60 recordings **on both paths**, checked; markup arrives escaped |
@@ -110,7 +110,7 @@ continuation cell in the frame format, which is a format change rather than a re
 written down rather than wished away.
 ## What "100% on fresh material" does and does not mean
 
-Eight batches recorded after the model was trained, 558 frames, **nothing missed**:
+Eight batches recorded after the model was trained, **nothing missed in any of them**:
 Block, Meter, Thought and ToolCall all perfect.
 
 **`Diff` was missing until it was asked for.** The agent reports an *edit* as a tool line with
