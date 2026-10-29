@@ -47,13 +47,19 @@ function Visible([string]$html) {
 
 $lines = 0
 $missing = @()
+$model = Join-Path $repo "models\page.json"
+# Both paths draw into the browser: the reader's pages and the model's. Only the reader's were ever
+# checked, so a model page that reached the document short of a component would have passed silently —
+# the same shape of gap as the diff that only appeared when someone asked for it.
+foreach ($flavour in @("reader", "model")) {
 foreach ($session in $sessions) {
-    $screen = @(& $capture tui --session $session.FullName --seq 0 2>$null)
+    $modelArgs = if ($flavour -eq "model") { @("--model", $model) } else { @() }
+    $screen = @(& $capture @(@("tui", "--session", $session.FullName, "--seq", "0") + $modelArgs) 2>$null)
     if ($screen.Count -eq 0) { continue }
-    $out = Join-Path $work "page.html"
-    & $capture render --session $session.FullName --seq 0 --out $out 2>&1 | Out-Null
+    $out = Join-Path $work ("page-" + $flavour + ".html")
+    & $capture @(@("render", "--session", $session.FullName, "--seq", "0", "--out", $out) + $modelArgs) 2>&1 | Out-Null
     if (-not (Test-Path $out)) {
-        $missing += ("  " + $session.Name + " -> no document was written")
+        $missing += ("  " + $session.Name + " (" + $flavour + ") -> no document was written")
         continue
     }
     # The document is UTF-8. Read as the console default, a box character arrives mangled and every
@@ -68,14 +74,15 @@ foreach ($session in $sessions) {
             if ($word.Length -lt 4) { continue }
             $lines++
             if (-not $document.Contains($word)) {
-                $missing += ("  " + $session.Name + " -> missing word: " + $word)
+                $missing += ("  " + $session.Name + " (" + $flavour + ") -> missing word: " + $word)
             }
         }
     }
 }
+}
 
 Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host ("pages checked: {0}, words checked: {1}" -f $sessions.Count, $lines)
+Write-Host ("recordings checked: {0} on both paths, words checked: {1}" -f $sessions.Count, $lines)
 if ($missing.Count -gt 0) {
     $missing | Select-Object -First 10 | ForEach-Object { Write-Host $_ }
     Write-Host ("{0} line(s) never reached the document" -f $missing.Count)
