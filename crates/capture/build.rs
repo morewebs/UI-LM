@@ -44,6 +44,8 @@ fn main() {
 
     // Rebuild when the sources or the commit change, so the stamp cannot go stale behind an edit or a checkout.
     println!("cargo:rerun-if-changed=../../.git/HEAD");
+    // A commit does not change .git/HEAD ("ref: refs/heads/main" stays put), but it does append to this log.
+    println!("cargo:rerun-if-changed=../../.git/logs/HEAD");
     println!("cargo:rerun-if-changed=src");
     println!("cargo:rerun-if-changed=../pages/src");
     println!("cargo:rerun-if-changed=../render/src");
