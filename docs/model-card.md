@@ -82,6 +82,24 @@ And the disagreements are not spread evenly — they have one shape, measured by
   remaining rows and its closing border. **Nineteen lines for one meter.** The rule stays narrow, and this is now a
   number rather than a preference.
 
+## Every boundary, and what stops it widening silently
+
+Each of these is a place where a rule *could* be widened to catch one more screen, at the cost of reclassifying
+screens already in the corpus. Widening is the change that looks like progress, so each boundary names what would
+catch it:
+
+| boundary | the rule | the counterexample | the guard |
+|---|---|---|---|
+| `Frame` | a **titled box with corners**, not touching the screen's edge | vim's completion popup, which floats without a border | `check-hard` forbids `Frame` on `vim-completion-popup` |
+| a **divider** | a column of bars **not matched** by a bar on the same rows | a centred `whiptail` dialog, whose border looked like a divider | the `tmux-two-panes` and `grok-help-frame6` fixtures, plus `whiptail-menu` |
+| `Meter` | a count against a drawn limit; a percentage is not one | `top`'s `%Cpu(s)` header | the `second machine` job forbids `Meter` on a monitor |
+| a **listing** | one `Block`, never a meter, thought or tool call | a directory listing, on any machine | the same job forbids all four on a listing |
+| `Diff` | **any** addition beside **any** removal | `- buy milk` / `+ buy eggs`, which is not a patch | a test that *pins the cost* rather than forbidding it: 34 of 61 corpus diffs carry no header, so narrowing was reverted |
+| `Table` | does not exist | column alignment matched 28 of 81 recordings, all survey sheets | ADR 0007, rejected on measurement |
+
+**Five boundaries guard against widening; one pins an accepted cost.** The difference matters: forbidding is right
+where the wide rule would be *wrong*, and pinning is right where the wide rule is merely *expensive*.
+
 ## What it can do that it was not trained for
 
 **A second agent CLI, read without ever seeing it.** Freebuff (`freebuff`, an npm package that draws its own
