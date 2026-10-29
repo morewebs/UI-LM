@@ -104,3 +104,15 @@ column 11, not 9, so the emulator advances two cells per wide character. The pag
 only loss is that the string carries the continuation cells as spaces. Closing that needs a flagged
 continuation cell in the frame format, which is a format change rather than a reader one, and it is
 written down rather than wished away.
+## What "100% on fresh material" does and does not mean
+
+Three batches recorded after the model was trained, 200 frames, 1,155 components, **nothing missed**:
+Block, Meter, Thought and ToolCall all perfect.
+
+**`Diff` is not among them, and cannot be.** The agent reports an edit as a tool line — `♦ Edit
+edit.txt +1/-1` — with counts rather than diff lines, so no screen it draws contains a two-sided diff.
+That kind is exercised by the curated `git diff` recordings and by nothing else.
+
+So the claim is precise: *four of the five kinds are perfect on new material from the training
+application; the fifth has curated coverage only.* Every row of that sentence has a number behind it,
+and the sentence is narrower than the one it replaces.
