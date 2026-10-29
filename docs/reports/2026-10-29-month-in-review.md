@@ -1,7 +1,8 @@
 # The month in review
 
-**UI-LM, 2026-10-27 to 2026-10-29.** 19 releases, 356 commits, 18 checks and four fuzz
-properties. This page is the short version; the long version is `2026-10-28-model.md`, and the current
+properties. This page is the short version; the long version is `2026-10-28-model.md`, the
+state of the product is `2026-10-28-state-of-the-project.md`, and the model itself is described
+in `docs/model-card.md`.
 state of the product is `2026-10-28-state-of-the-project.md`.
 
 ## What it is
