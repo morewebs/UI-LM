@@ -46,6 +46,7 @@ function Visible([string]$html) {
 }
 
 $lines = 0
+$panes = 0
 $missing = @()
 $model = Join-Path $repo "models\page.json"
 # Both paths draw into the browser: the reader's pages and the model's. Only the reader's were ever
@@ -64,7 +65,20 @@ foreach ($session in $sessions) {
     }
     # The document is UTF-8. Read as the console default, a box character arrives mangled and every
     # line holding one looks missing — which is what an earlier version of this check reported.
-    $document = Visible (Get-Content -LiteralPath $out -Raw -Encoding UTF8)
+    $raw = Get-Content -LiteralPath $out -Raw -Encoding UTF8
+    $document = Visible $raw
+    # Structure, not just words. A paned page drawn in one column still contains every word, which is
+    # how the browser put an agent's meter above a shell's prompt for weeks without this check noticing.
+    $page = (& $capture @(@("page", "--session", $session.FullName, "--seq", "0") + $modelArgs) 2>$null) -join ""
+    if ($page -match '"panes":\[\[') {
+        $wrappers = ([regex]::Matches($raw, '<div class="pane">')).Count
+        if (-not ($raw -match '<div class="panes">')) {
+            $missing += ("  " + $session.Name + " (" + $flavour + ") -> a paned page was drawn without a pane wrapper")
+        } elseif ($wrappers -lt 2) {
+            $missing += ("  " + $session.Name + " (" + $flavour + ") -> only " + $wrappers + " pane div(s) were drawn")
+        }
+        $panes++
+    }
     foreach ($line in $screen) {
         # A document is markup, not a line printer: a tool call is three spans (`Read`,
         # `inventory.csv`, `+2 -2`) and the glyph in front of it is decoration. So the check asks
@@ -82,7 +96,7 @@ foreach ($session in $sessions) {
 }
 
 Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host ("recordings checked: {0} on both paths, words checked: {1}" -f $sessions.Count, $lines)
+Write-Host ("recordings checked: {0} on both paths, words checked: {1}, paned pages: {2}" -f $sessions.Count, $lines, $panes)
 if ($missing.Count -gt 0) {
     $missing | Select-Object -First 10 | ForEach-Object { Write-Host $_ }
     Write-Host ("{0} line(s) never reached the document" -f $missing.Count)
@@ -120,3 +134,29 @@ if ($failures.Count -gt 0) {
     exit 1
 }
 Write-Host "markup on a screen arrives in the document as text, escaped"
+
+# Frame 0 is rarely paned: a split appears once the application has drawn one. The two hard recordings
+# have panes from frame 19, so a second pass renders one of those frames and requires the document to
+# draw the panes as panes — the assertion above only runs when `page` says the frame is split.
+$panedPages = 0
+New-Item -ItemType Directory -Force -Path $work | Out-Null
+$hard = Join-Path $repo "cases\hard"
+if (Test-Path $hard) {
+    foreach ($session in (Get-ChildItem -LiteralPath $hard -Recurse -Directory | Where-Object { Test-Path (Join-Path $_.FullName "session.json") })) {
+        foreach ($flavour in @("reader", "model")) {
+            $modelArgs = if ($flavour -eq "model") { @("--model", $model) } else { @() }
+            $document2 = Join-Path $work ("paned-" + $flavour + ".html")
+            & $capture @(@("render", "--session", $session.FullName, "--seq", "20", "--out", $document2) + $modelArgs) 2>&1 | Out-Null
+            if (-not (Test-Path $document2)) { continue }
+            $raw2 = Get-Content -LiteralPath $document2 -Raw -Encoding UTF8
+            $panedPages++
+            $divs = ([regex]::Matches($raw2, '<div class="pane">')).Count
+            if (-not ($raw2 -match '<div class="panes">')) {
+                $missing += ("  " + $session.Name + " (" + $flavour + ", frame 20) -> no pane wrapper")
+            } elseif ($divs -lt 2) {
+                $missing += ("  " + $session.Name + " (" + $flavour + ", frame 20) -> " + $divs + " pane div(s)")
+            }
+        }
+    }
+}
+Write-Host ("paned documents checked: {0}" -f $panedPages)
