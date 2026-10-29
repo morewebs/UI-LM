@@ -40,7 +40,7 @@ the code constructs.
 
 ## What is not proven, or cannot be
 
-- **The training material is one agent's transcripts.** Only software that draws *state* produces
+- **The training material is one agent's transcripts.** This machine has no other agent CLI — `claude`, `aider`, `codex`, `gemini`, `ollama` and `opencode` were all looked for, in WSL and on Windows, and none is installed. The claim is untested because the material does not exist here, not because it was not sought. Only software that draws *state* produces
   the components this catalogue describes — seven other programs recorded for training produced
   eleven screens and not one structured component. A second agent's transcripts are the only way to
   test whether these shapes are general, and I don't have any.
