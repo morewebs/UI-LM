@@ -75,7 +75,7 @@ A frame exists only at a **settled** point — 150 ms of quiet. An animating scr
 
 A trained model turns a screen's text into the page that describes it — blocks, tool calls, meters, reasoning lines, diffs, and the panes of a full-screen application. It is a softmax regression over nineteen features read from the screen itself, trained by `scripts/train_model.py` on recorded screens and run in Rust by `crates/model`.
 
-**Trained on 270 screens of one application, it reproduces every component of 141 frames from software it was never trained on** — `gh`, `git`, `npm`, `pip`, `cargo`, vim, tmux, nano, and screens where the application is failing — against floors between a quarter and seven eighths. Four batches recorded after training have all come back at 100%. The floor is a converter that only splits paragraphs, so a screen it already reproduces exactly proves nothing; `scripts/check-all.ps1` reports which sets can still fail.
+**Trained on 434 screens of one application, it reproduces every component of 141 frames from software it was never trained on** — `gh`, `git`, `npm`, `pip`, `cargo`, vim, tmux, nano, and screens where the application is failing — against floors between a quarter and seven eighths. Eight batches recorded after training have all come back at 100%. The floor is a converter that only splits paragraphs, so a screen it already reproduces exactly proves nothing; `scripts/check-all.ps1` reports which sets can still fail.
 
 ```bash
 ui-lm-capture page --session sessions/example --model models/page.json   # what the model sees
@@ -163,7 +163,7 @@ Killed captures are included: their frames are real screens, so leaving them out
 
 **Not proven, and not claimed:**
 
-- **The training material is one agent's transcripts.** Every number rests on 270 screens of Grok Build, because only agents draw the components this catalogue is for: seven other programs recorded for training produced eleven screens and not one meter, tool call, diff or thought — twenty-six blocks and nothing else. The model reads those programs correctly; there was nothing in them to train on.
+- **The training material is one agent's transcripts.** Every number rests on 434 screens of Grok Build, because only agents draw the components this catalogue is for: seven other programs recorded for training produced eleven screens and not one meter, tool call, diff or thought — twenty-six blocks and nothing else. The model reads those programs correctly; there was nothing in them to train on.
 - **The evidence is this machine's.** Every evaluation set was recorded here, mostly chosen by the person building the model. Four clean fresh batches is the strongest claim the project can make, and it is a modest one.
 - **Structure comes from applications that render state.** Agent transcripts and full-screen applications draw diffs, meters, tool calls and panes; compiler output and build logs draw words. On plain text the floor already reproduces the screen exactly, so nothing is measured there and those frames are not counted as evidence.
 - **Provenance is honest but a live view is not continuous.** A frame exists at a settled screen, so a fast-moving program yields fewer moments than it drew.
