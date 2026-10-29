@@ -290,4 +290,34 @@ if ($broken.Count -gt 0) {
     Write-Host "a front page opens with a fragment"
     exit 1
 }
+# The model card's boundary table names a guard for each rule that must not widen. A guard that is deleted from
+# `check-hard` would leave the document claiming protection that no longer exists — and the document is read by
+# whoever widens a rule next. So every case in the forbidden table has to be named in the card.
+$hard = Join-Path $repo "scripts\check-hard.ps1"
+$card = Join-Path $repo "docs\model-card.md"
+if ((Test-Path $hard) -and (Test-Path $card)) {
+    $hardText = Get-Content -LiteralPath $hard -Raw -Encoding UTF8
+    $cardText = Get-Content -LiteralPath $card -Raw -Encoding UTF8
+    $start = $hardText.IndexOf('$forbidden = @{')
+    $guarded = @()
+    if ($start -ge 0) {
+        $end = $hardText.IndexOf("`n}", $start)
+        $block = $hardText.Substring($start, $end - $start)
+        foreach ($found in [regex]::Matches($block, '"(?<name>[a-z0-9-]+)"\s*=')) {
+            $guarded += $found.Groups["name"].Value
+        }
+    }
+    if ($guarded.Count -eq 0) {
+        Write-Host "no forbidden table, so nothing is guarded against a rule widening"
+        exit 1
+    }
+    $unclaimed = @($guarded | Where-Object { -not $cardText.Contains($_) })
+    if ($unclaimed.Count -gt 0) {
+        $unclaimed | ForEach-Object { Write-Host ("  the boundary table does not name the guard on " + $_) }
+        Write-Host "a document claims a guard it does not list"
+        exit 1
+    }
+    Write-Host ("every forbidden guard is named in the boundary table: " + ($guarded -join ", "))
+}
+
 Write-Host "every front page opens with a sentence"
