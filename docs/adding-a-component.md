@@ -11,8 +11,24 @@ matching the catalogue's name, and — if it holds text — a `lines` vector par
 the round trip is measured against the screen and every line has to be placeable.
 
 The variant must be reachable by `component_text` (for the renderers and the browser check) and by
-`audit` (which checks ids, children, and spans against line ends). If `audit` cannot describe the new
-shape, add it there first: the audit is the thing that stops a page no renderer could draw.
+`audit`. If `audit` cannot describe the new shape, add it there first: the audit is the thing that
+stops a page no renderer could draw.
+
+### What the audit will ask of your kind
+
+Four invariants, each proven failable, each with a test or a recorded break behind it:
+
+| invariant | what breaking it looks like |
+|---|---|
+| every id is unique, and every component is reachable from the root | two blocks that read alike collided on one recording |
+| every component names a kind the catalogue defines | a page no renderer of `moreweb.terminal/v1` could draw |
+| a component's spans are parallel to its lines | styling that lands on a row that does not exist |
+| **a component describes every row it claims** | splitting one row out of a panel left it short: *"claims 7 row(s) and describes 1"*, 1433 violations |
+| **one owner per row**, except two components in different panes | two components both claiming row 1, which the surface's `panes` field distinguishes from a split |
+
+The last two were added in rounds 68 and 70, after a week in which three rules cost a *round trip* rather
+than a score. A new kind must satisfy all five or `check-audit` refuses it — which is the cheapest place to
+find out that it does not.
 
 ## 2. The reader produces it
 
@@ -71,7 +87,9 @@ behind it. A new kind without a row in that table is a kind nobody has checked.
 
 ## Has this page been run?
 
-The five commands above were executed in the order given on **2026-10-29** and all five passed. That is
+The five commands above were executed in the order given on **2026-10-29** and all five passed — twice that
+day: once when the page was written, and again after `check-audit` gained the filled-rows and row-ownership
+invariants, because a procedure that names a check has to be re-run when the check changes. That is
 the only kind of evidence a document can offer: not that it is well written, but that following it works.
 
 When you change a check, run them again and change the date. A guide nobody has run is a guess with
