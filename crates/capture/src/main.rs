@@ -886,11 +886,14 @@ fn score(args: &ScoreArgs) -> Result<ExitCode> {
     }
     let count = frames as f64;
     println!(
-        "model {:.1}%  floor {:.1}%  over {} frame(s), trained on {} screen(s)",
+        // The digest is part of the measurement, not decoration: rounds 109-112 compared scores from different
+        // models without the output saying which one produced them, and one comparison was wrong because of it.
+        "model {:.1}%  floor {:.1}%  over {} frame(s), trained on {} screen(s), model {}\n",
         ours.0 / count * 100.0,
         floor.0 / count * 100.0,
         frames,
-        model.trained_on
+        model.trained_on,
+        model.digest()
     );
     // A set the floor already reproduces exactly cannot tell the model from a converter that splits
     // paragraphs, so a perfect score on it proves nothing. Say so where the score is read, rather than
