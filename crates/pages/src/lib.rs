@@ -2124,8 +2124,32 @@ pub fn page_from_text(text: &str, surface: &str) -> Envelope {
 ///
 /// Both paths ask this. Grok writes `♦ Thought for 3.0s`; Freebuff writes `• Thinking` and puts the words
 /// on the rows below, which stay a block of their own because a `Thought` holds one line.
+///
+/// The heading ends after its own word, or names how long it took. A bullet that keeps talking —
+/// `• Thinking about the problem` — is a sentence, and calling it reasoning would invent a component the
+/// screen does not have; the test `a_bullet_that_starts_with_thinking_is_not_reasoning` holds that line.
 pub(crate) fn is_reasoning_heading(lines: &[String]) -> bool {
-    matches!(tool_calls(lines).as_slice(), [only] if is_thought_word(&only.tool))
+    let [only] = lines else {
+        return false;
+    };
+    let Some((_, rest)) = tool_marker(only) else {
+        return false;
+    };
+    let rest = rest.trim();
+    let (word, after) = match rest.split_once(' ') {
+        Some((word, after)) => (word, after.trim()),
+        None => (rest, ""),
+    };
+    // A screen draws a scrollbar in its last column, so the row reads `• Thinking … ▄`. Decoration is
+    // not speech: strip the block glyphs a terminal uses for bars before asking whether anything follows.
+    let spoken = after.trim_end_matches(|glyph: char| {
+        glyph.is_whitespace()
+            || matches!(
+                glyph,
+                '▄' | '█' | '▀' | '░' | '▒' | '▓' | '│' | '┃' | '▏' | '▕'
+            )
+    });
+    is_thought_word(word) && (spoken.is_empty() || spoken.to_lowercase().starts_with("for "))
 }
 
 #[cfg(test)]

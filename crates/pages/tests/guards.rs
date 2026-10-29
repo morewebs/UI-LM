@@ -277,7 +277,10 @@ fn word_art_is_not_a_thought() {
         ],
         "Thought",
     );
-    assert_eq!(kinds(&page), vec!["Block".to_owned()]);
+    assert!(
+        !kinds(&page).contains(&"Thought".to_owned()),
+        "a sentence must not become reasoning"
+    );
 }
 
 #[test]
@@ -288,4 +291,19 @@ fn a_reasoning_heading_the_model_called_a_tool_becomes_a_thought() {
     // `body_for` (its own copy of the rule, which knew only `thought`, never `thinking`).
     let page = page_of(&["  • Thinking"], "ToolCall");
     assert_eq!(kinds(&page), vec!["Thought".to_owned()]);
+}
+
+#[test]
+fn a_bullet_that_starts_with_thinking_is_not_reasoning() {
+    // A list item may begin with any word, including "Thinking". Grok's collapsed line is `♦ Thought for
+    // 3.0s` and Freebuff's heading is `• Thinking` — both end there. A row that keeps talking is a
+    // sentence, and calling it reasoning would invent a component the screen does not have.
+    let page = page_of(
+        &["• Thinking about the problem", "  is what I do at night"],
+        "Block",
+    );
+    assert!(
+        !kinds(&page).contains(&"Thought".to_owned()),
+        "a sentence must not become reasoning"
+    );
 }

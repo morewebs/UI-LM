@@ -376,7 +376,11 @@ fn body_for(label: &str, lines: &[String], rows: [u16; 2]) -> (String, Body) {
     // depended on the model's label.
     if text.len() == 1 {
         let calls = tool_calls(&text);
-        if calls.len() == 1 && crate::is_thought_word(&calls[0].tool) {
+        // The reader's rule again — and this was the fifth copy of it. It asked only whether the tool
+        // word names thinking, so `• Thinking about the problem` became a Thought here while the reader
+        // called it a block. One rule, asked once: `is_reasoning_heading` also requires the row to end
+        // after its word, or to name a duration.
+        if calls.len() == 1 && crate::is_reasoning_heading(&text) {
             return (
                 "Thought".to_owned(),
                 Body::Thought {
