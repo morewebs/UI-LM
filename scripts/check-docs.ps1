@@ -254,8 +254,12 @@ if (Test-Path $reviewPage) {
     $reviewText2 = Get-Content -LiteralPath $reviewPage -Raw -Encoding UTF8
     $tagCount = @(& git -C $repo tag --list "v*" | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' }).Count
     foreach ($found in [regex]::Matches($reviewText2, '(\d+)\s+releases')) {
-        if ([int]$found.Groups[1].Value -ne $tagCount) {
-            Write-Host ("  the review says {0} releases, there are {1}" -f $found.Groups[1].Value, $tagCount)
+        # The same allowance the versions get, for the same reason: a release in progress counts the release it is
+        # about to make, so the review may be **one ahead** of the tags — never behind, because a page that lags
+        # is a page describing the past. Exact equality was the rule until round 106.
+        $said = [int]$found.Groups[1].Value
+        if ($said -lt $tagCount -or $said -gt ($tagCount + 1)) {
+            Write-Host ("  the review says {0} releases, there are {1}" -f $said, $tagCount)
             Write-Host "the review counts the releases wrongly"
             exit 1
         }
