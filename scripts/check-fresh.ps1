@@ -25,7 +25,22 @@ $model = if ([System.IO.Path]::IsPathRooted($Model)) { $Model } else { Join-Path
 # and a check that never sees its own material would report nothing instead of failing.
 $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", (Join-Path $repo "scripts\build-corpus.ps1"), "-OutDir", "corpus/fresh", "-Keep")
 $log = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-fresh-" + [guid]::NewGuid().ToString("N") + ".log")
+# A batch normally takes four minutes. One took fifty-four, because this is the only check that starts
+# a program and waits for it, and a session that never settles looks exactly like a slow one. The
+# recorder bounds each scenario; nothing bounded the batch, so a hang was indistinguishable from
+# progress. Twenty minutes is four times the usual: long enough for a slow machine, short enough to say
+# something is wrong instead of leaving a run sitting there.
+$limit = 1200
+$watch = [System.Diagnostics.Stopwatch]::StartNew()
 & powershell.exe @arguments *> $log
+$watch.Stop()
+$recorded = $watch.Elapsed.TotalSeconds
+if ($recorded -gt $limit) {
+    Write-Host ("recording the batch took {0:N0} s, beyond the {1} s limit" -f $recorded, $limit)
+    Write-Host "a scenario that starts a program can hang, and this check would rather say so than wait"
+    Write-Host ("the log is here: " + $log)
+    exit 1
+}
 
 # The batches are kept in a temporary directory and named in the log; a batch that cannot be
 # found is a failed check, not a pass.

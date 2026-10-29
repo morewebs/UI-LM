@@ -23,7 +23,7 @@ because their first proof had been remembered rather than recorded.
 | `check-interaction` | typing reaches the program | neutralising **both** key writers printed "interaction failed: the typed text never appeared on screen" |
 | `check-live-page` | the live page moves, a finished one does not | a constant document printed "the page did not change across three seconds of a drawing program" |
 | `check-render-scale` | exporting stays linear | a 50 ms delay per page printed "a page cost 53.1 ms, more than the 11.0 ms limit" |
-| `check-fresh` | new material matches the model | an older model scored below the floor on the same batch |
+| `check-fresh` | new material matches the model, and the batch finishes | an older model scored below the floor on the same batch; with the time limit at one second it printed "recording the batch took 262 s, beyond the 1 s limit" |
 | `check-diff-fresh` | a diff on new material is read exactly | removing the diff request printed "no diff appeared, so the check measured nothing" |
 
 And four properties that run under `cargo test`, each proven by mutation:
