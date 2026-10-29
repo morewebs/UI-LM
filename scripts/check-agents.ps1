@@ -65,6 +65,7 @@ $ceiling = @{
     "second-agent-4" = 13
     "second-agent-5" = 10
     "second-agent-6" = 13
+    "second-agent-7" = 15
 }
 foreach ($session in $sessions) {
     $busiest = 0
