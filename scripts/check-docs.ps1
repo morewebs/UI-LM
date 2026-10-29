@@ -53,9 +53,16 @@ if (-not $cited) {
     Write-Host "the state page no longer says which release it describes"
     exit 1
 }
-if ($cited -ne $latest) {
-    Write-Host "the state page names a release that is not the newest one"
+# The page must not name a release *older* than the newest tag — that is how a stale front page looks. It may
+# name one **newer**, because `docs/release.md` updates the documents before it tags them, so during a release the
+# page is one step ahead on purpose. The old rule required an exact match, which made the documented order
+# impossible: pages-first was red until the tag existed, and the only way to a green gate was to tag first.
+if ([version]($cited -replace '^v', '') -lt [version]($latest -replace '^v', '')) {
+    Write-Host "the state page names an older release than the newest tag"
     exit 1
+}
+if ($cited -ne $latest) {
+    Write-Host ("  a release is in progress: the page names {0}, the newest tag is {1}" -f $cited, $latest)
 }
 Write-Host "the state page names the release it is describing"
 
