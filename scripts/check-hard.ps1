@@ -36,6 +36,9 @@ $expected = @{
     "vim-floating-popup" = 100.0
     "whiptail-dialog" = 100.0
     "whiptail-menu" = 100.0
+    # A counterexample, not a positive case: a borderless popup is a block, and this recording exists to fail
+    # loudly if a future predicate starts calling one a floating window.
+    "vim-completion-popup" = 100.0
     "every-kind-one-screen" = 100.0
     # The orchestration shapes, promoted from `eval/apps` in round 100: one agent beside a shell, an agent
     # working in a pane, two agents on one screen, and a divider that moves mid-session. They were recorded
@@ -59,6 +62,13 @@ $expected = @{
 # floating window proved it: three blocks would satisfy the popup's ceiling of 3 while the `Frame` the case
 # exists for had silently gone missing. Step 5 of `docs/adding-a-component.md`: a new kind is proven by
 # breaking it and watching a named check fail.
+# Kinds a screen must NOT claim. The other tables say what a case proves is there; this one says what a case
+# proves is absent, which is the only way to guard a boundary — the `Frame` predicate must keep declining vim's
+# borderless completion popup, and a rule that starts accepting it should fail here rather than look like progress.
+$forbidden = @{
+    "vim-completion-popup" = @("Frame")
+}
+
 $required = @{
     # Each entry is a kind the case exists for. Breaking the predicate that produces it must fail this check,
     # and `docs/checks.md` records the message each break produced.
@@ -120,6 +130,14 @@ foreach ($case in (Get-ChildItem -LiteralPath $cases -Directory)) {
         foreach ($kind in $required[$case.Name]) {
             if (-not $kinds.ContainsKey($kind)) {
                 Write-Host ("  {0,-22} no {1} component, and this case exists for it" -f $case.Name, $kind)
+                $regressed++
+            }
+        }
+    }
+    if ($forbidden.ContainsKey($case.Name)) {
+        foreach ($kind in $forbidden[$case.Name]) {
+            if ($kinds.ContainsKey($kind)) {
+                Write-Host ("  {0,-22} holds a {1}, and this screen is the counterexample for it" -f $case.Name, $kind)
                 $regressed++
             }
         }

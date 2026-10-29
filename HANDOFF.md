@@ -140,7 +140,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
 
 **Nineteen checks, about twelve minutes, every axis green**: six evaluation sets at 100%, 779 frames
 assembled against the reader's own answers, 5,957 components with 0 differences and 0 contradictions,
-**14 hard cases** at 100% on score, round trip and shape, and **v0.19.0** verified by download and by
+**15 hard cases** at 100% on score, round trip and shape, and **v0.19.0** verified by download and by
 asking the binary what it was built from (`version` prints the commit and a digest of the working tree).
 
 The corpus is **88 recordings, 1,019 frames** per path, from three applications: Grok (the training one),
