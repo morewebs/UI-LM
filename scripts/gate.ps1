@@ -1,4 +1,4 @@
-# The gate every commit must pass: formatting, lints, tests. One exit code.
+# The gate every commit must pass: formatting, lints, tests, and the documents. One exit code.
 #
 # This exists because the discipline was in my attention rather than in the tooling, and in round 101
 # a commit went through while clippy and the tests were both failing. A gate that depends on someone
@@ -7,7 +7,7 @@
 #   powershell -File scripts/gate.ps1
 #   powershell -File scripts/gate.ps1 -Commit "message"    # gate, then commit if it passed
 #
-# Exit code 1 if any check fails. With -Commit, nothing is committed unless all three pass.
+# Exit code 1 if any check fails. With -Commit, nothing is committed unless all five pass.
 
 param(
     [string]$Commit = ""
@@ -23,6 +23,13 @@ $clippy = $LASTEXITCODE
 $format = $LASTEXITCODE
 & cargo test --workspace --quiet *> $null
 $tests = $LASTEXITCODE
+# The documents were outside the gate until round 73, and a command added in round 66 went unlisted for six
+# rounds while every gate stayed open: `check-readme` says "the handoff does not list every command". Both
+# checks take about a second, which is what makes their absence indefensible.
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "check-docs.ps1") *> $null
+$docs = $LASTEXITCODE
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "check-readme.ps1") *> $null
+$readme = $LASTEXITCODE
 
 function Report($name, $code) {
     if ($code -eq 0) {
@@ -34,11 +41,15 @@ function Report($name, $code) {
 Report "clippy" $clippy
 Report "fmt" $format
 Report "test" $tests
+Report "docs" $docs
+Report "readme" $readme
 
 $failed = 0
 if ($clippy -ne 0) { $failed++ }
 if ($format -ne 0) { $failed++ }
 if ($tests -ne 0) { $failed++ }
+if ($docs -ne 0) { $failed++ }
+if ($readme -ne 0) { $failed++ }
 
 if ($failed -gt 0) {
     Write-Host ""
