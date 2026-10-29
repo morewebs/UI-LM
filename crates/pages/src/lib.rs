@@ -1436,8 +1436,11 @@ fn segments(lines: &[String], first: usize, last: usize) -> Vec<Segment> {
 }
 
 /// Whether a line opens a bordered box.
-fn opens_box(line: &str) -> bool {
-    line.trim_start().starts_with(['╭', '┌'])
+pub(crate) fn opens_box(line: &str) -> bool {
+    // ╔ counts anywhere on the line: vim's popup_create draws its window over the buffer, so the
+    // border sits at the window's left edge rather than the screen's. ADR 0006, and the corpus draws
+    // that glyph in exactly one recording.
+    line.trim_start().starts_with(['╭', '┌']) || line.contains('╔')
 }
 
 /// Whether a line closes a bordered box.
@@ -1445,7 +1448,7 @@ pub(crate) fn closes_box(line: &str) -> bool {
     let trimmed = undecorated(line).trim_start();
     // A tree branch starts the same way and closes nothing, so a border must also end in a corner —
     // after the scrollbar column is stripped, or a panel that ends `╯  █` stops being a panel.
-    trimmed.starts_with(['╰', '└']) && trimmed.ends_with(['╯', '┘'])
+    trimmed.starts_with(['╰', '└']) && trimmed.ends_with(['╯', '┘', '╝']) || line.contains('╚')
 }
 
 /// The line without the block glyphs a terminal draws in its last column.

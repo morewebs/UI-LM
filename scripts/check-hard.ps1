@@ -56,7 +56,9 @@ $ceiling = @{
     "wsl-two-agents-in-split"  = 20
     "wsl-vim-in-split"         = 2
     "freebuff-refusal"         = 13
-    "vim-floating-popup"       = 1
+    # Was 1: the floating window was swallowed into the block around it. The box rules now see a heavy
+    # border drawn mid-line, so the window is its own component and the floor fell from 100% to 75%.
+    "vim-floating-popup"       = 3
 }
 $regressed = 0
 foreach ($case in (Get-ChildItem -LiteralPath $cases -Directory)) {

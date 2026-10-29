@@ -37,7 +37,7 @@ fn runs(labels: &[String], text: &[String]) -> Vec<(usize, usize, String)> {
         // the score while everything else was perfect.
         let opens = text
             .get(row)
-            .map(|line| line.trim().starts_with(['╭', '┌']))
+            .map(|line| crate::opens_box(line))
             .unwrap_or(false);
         let closes = text
             .get(row)
