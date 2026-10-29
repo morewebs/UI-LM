@@ -72,8 +72,8 @@ foreach ($session in $sessions) {
     $page = (& $capture @(@("page", "--session", $session.FullName, "--seq", "0") + $modelArgs) 2>$null) -join ""
     if ($page -match '"panes"\s*:\s*\[\s*\[') {
         $wrappers = ([regex]::Matches($raw, '<div class="pane">')).Count
-        if (-not ($raw -match '<div class="panes">')) {
-            $missing += ("  " + $session.Name + " (" + $flavour + ") -> a paned page was drawn without a pane wrapper")
+        if (-not ($raw -match '<div class="panes" data-layout="row">')) {
+            $missing += ("  " + $session.Name + " (" + $flavour + ") -> a paned page was drawn without a side-by-side container")
         } elseif ($wrappers -lt 2) {
             $missing += ("  " + $session.Name + " (" + $flavour + ") -> only " + $wrappers + " pane div(s) were drawn")
         }
@@ -163,8 +163,8 @@ if (Test-Path $hard) {
             $raw2 = Get-Content -LiteralPath $document2 -Raw -Encoding UTF8
             $panedPages++
             $divs = ([regex]::Matches($raw2, '<div class="pane">')).Count
-            if (-not ($raw2 -match '<div class="panes">')) {
-                $panedFailures += ("  " + $session.Name + " (" + $flavour + ", frame 20) -> no pane wrapper")
+            if (-not ($raw2 -match '<div class="panes" data-layout="row">')) {
+                $panedFailures += ("  " + $session.Name + " (" + $flavour + ", frame 20) -> no side-by-side container")
             } elseif ($divs -lt 2) {
                 $panedFailures += ("  " + $session.Name + " (" + $flavour + ", frame 20) -> " + $divs + " pane div(s)")
             }

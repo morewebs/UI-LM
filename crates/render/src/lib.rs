@@ -51,7 +51,10 @@ fn body_of(page: &Envelope, out: &mut String) {
         }
         return;
     }
-    out.push_str("<div class=\"panes\">");
+    // The marker says how the container lays its children out, in the document rather than only in the
+    // stylesheet. A check can read an attribute; it cannot read a cascade, and an assertion that parsed the CSS
+    // was reverted in round 122 because no mutant could be made to fail it.
+    out.push_str("<div class=\"panes\" data-layout=\"row\">");
     for group in panes {
         out.push_str("<div class=\"pane\">");
         for id in group {
