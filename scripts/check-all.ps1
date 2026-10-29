@@ -41,7 +41,12 @@ foreach ($set in (Get-ChildItem -LiteralPath $evalRoot -Directory -ErrorAction S
     }
     $frames = [int]$Matches[1]
     $share = if ($line -match "model ([\d.]+)%") { [double]$Matches[1] } else { 0 }
-    $rows += "  {0,-16} {1,6:N1}%  over {2} frame(s)" -f $set.Name, $share, $frames
+    # The floor is printed beside the score because a set whose floor is 100% cannot tell the model from a
+    # converter that splits paragraphs: 45 of 75 evaluation recordings are in that state, and "100%" beside
+    # "floor 100%" means the set proved nothing about the vocabulary.
+    $floor = if ($line -match "floor ([\d.]+)%") { [double]$Matches[1] } else { -1 }
+    $verdict = if ($floor -ge 99.95) { "  (floor 100%, proves nothing about kinds)" } else { "" }
+    $rows += "  {0,-16} {1,6:N1}%  over {2} frame(s), floor {3,5:N1}%{4}" -f $set.Name, $share, $frames, $floor, $verdict
     if ($share -lt 100) { $failures += "$($set.Name): $share%" }
 }
 
