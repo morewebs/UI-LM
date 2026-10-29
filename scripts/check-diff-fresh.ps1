@@ -27,12 +27,12 @@ $changed = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("one`nTWO`nt
 # The agent is asked to run `git diff` and mostly does. Once in a while it answers from context without
 # running anything — which is not a defect in this project, but it does leave the check measuring nothing.
 # So the scenario is attempted up to three times, and a run with no diff is retried rather than believed.
-$attempts = 3
 $keys = Join-Path $work "k.keys"
 Set-Content -LiteralPath $keys -Value @('8000 y\r', '6000 \r', '8000 run git diff and show me the output\r', '25000 \r') -Encoding ASCII
 $session = Join-Path $work "s"
-# Up to three attempts: a run that produces no diff measured nothing, and is retried rather than believed.
-$session = Join-Path $work "s"
+# The scenario is attempted up to five times: a live agent fails to show a diff about one run in
+# three, so three attempts left this check red roughly half the time. Five leave it under 1%.
+$attempts = 5
 $diffs = 0
 $attempt = 0
 while ($attempt -lt $attempts -and $diffs -lt 1) {
