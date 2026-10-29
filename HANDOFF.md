@@ -117,6 +117,12 @@ decisions that came out of it are in `docs/reports/2026-10-28-model.md`: a bulle
 heading ends after its word, a border ends in a corner, and the scrollbar column belongs to the terminal rather
 than to the application.
 
+## Releasing
+
+`docs/release.md` is the procedure, and the order in it matters: **pages before tag**. `check-docs` compares a
+front page's version with the newest tag, so tagging first leaves `main` naming the previous release until
+somebody gets round to the documents — which is what happened for twenty-four releases.
+
 ## Conventions this project runs on
 
 - **Never commit on a failed gate, and make the gate animate it.** `scripts/gate.ps1` runs the three
