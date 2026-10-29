@@ -30,7 +30,7 @@ the code constructs.
 | new screens, recorded after training, read perfectly | **12 of 12 recordings** in the batch that closed the last gap; earlier batches, five clean |
 | a split screen's panes hold their own components | both paths ask the same question before splitting; read out of the v0.8.0 archive |
 | an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
-| every word the page holds reaches the browser document | 58 recordings, 1,524 words, checked |
+| every word the page holds reaches the browser document | 58 recordings **on both paths**, 3,048 words, checked |
 | every recording on this machine can be read at all | 58 sessions, 288 pages, no error |
 | the download works | **v0.8.0**, three platforms, verified by downloading it and running it |
 | the viewer keeps up | typing, redraws, half-written files, cleared screens — each checked |
