@@ -1,5 +1,8 @@
 # Handoff
 
+> **The short version:** `docs/reports/2026-10-29-month-in-review.md` — what this is, what it
+> proves, what it cannot, and how to check it in one command.
+
 Written at the end of a month's autonomous work. Everything here was measured; where it wasn't,
 the gap is named.
 
