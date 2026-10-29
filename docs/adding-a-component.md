@@ -68,3 +68,11 @@ behind it. A new kind without a row in that table is a kind nobody has checked.
 - a recording that actually contains it, kept where the suite can reach it;
 - and, if it changes the page's shape, an ADR saying why — `docs/adr/0004` and `0005` are the two
   examples.
+
+## Has this page been run?
+
+The five commands above were executed in the order given on **2026-10-29** and all five passed. That is
+the only kind of evidence a document can offer: not that it is well written, but that following it works.
+
+When you change a check, run them again and change the date. A guide nobody has run is a guess with
+formatting.
