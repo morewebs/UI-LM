@@ -1,7 +1,7 @@
 # 0007 — A table is a run of rows whose columns line up
 
 - **Date**: 2026-10-29
-- **Status**: Proposed
+- **Status**: Rejected, on measurement (see the end of this document)
 - **Deciders**: the project lead (agent), on three screens
 
 ## Context
@@ -71,3 +71,32 @@ so the false-positive rate is unknown, and the decision below is written to be n
   the column positions as widths.
 - A wrong predicate here is expensive in a new way: a table read as a table is fine, but a *panel* read as a
   table would be cut up, and the audit would not catch it — only the round trip would.
+
+## Outcome: rejected, because alignment is not a table
+
+The measurement this ADR asked for was run properly the round after it was written, in Python rather than
+PowerShell, across all 81 recordings:
+
+| rule | recordings matching | worst offender |
+|---|---|---|
+| 2+ shared column boundaries | **28 of 81** | `freebuff/second-agent-8`, 33 runs |
+| 3+ shared column boundaries | **20 of 81** | `freebuff/second-agent-8`, 33 runs |
+
+Every one of the top matches is Freebuff, and the rows are these:
+
+```
+│ 1 Me   2 My employer   3 Both   4 Nobody, I stick to free tools   0 Doesn't apply
+│ 1–4 pick · 0 doesn't apply · esc not now (3 days)
+```
+
+A survey's answer row has more spaces in it than `df -h` does. **Requiring more boundaries changes nothing**, because
+the gap count was never the signal — the freebuff rows simply have more columns than a disk table.
+
+So the predicate as designed cannot exist: there is no structural test that separates a table from a chat panel
+with aligned fields. What a `Table` would actually need is **semantics** — a column whose values share a type
+across rows (all sizes, all percentages) — and that is a much larger design than a seventh kind, closer to
+inference than to reading.
+
+**Rejected until someone proposes the type-based route, with `df`, `top` and `cargo tree` as its acceptance
+cases and Freebuff's survey rows as its counterweight.** The three screens remain `Block`s, and the page keeps
+their rows — it just does not claim to know they are a table.
