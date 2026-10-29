@@ -26,8 +26,8 @@ stated here rather than in a footnote.
 | set | what it is | result |
 |---|---|---|
 | curated corpus | 60 recordings, 343 frames, both builders | 100% agreement, no audit violations |
-| seven evaluation sets | Grok and non-Grok screens, 185 frames | 100% every set |
-| **a second agent CLI** | **11 recordings, 580 frames, never trained on** | **100%, every component** |
+| seven evaluation sets | Grok and non-Grok screens, 234 frames | 100% every set |
+| **a second agent CLI** | **11 recordings, 591 frames, never trained on** | **100%, every component** |
 | fresh batches | recorded **after** training, 8 batches | 100% every batch, every kind it held |
 
 **The floor matters as much as the score.** `score` also reports a text-only converter that splits
@@ -57,9 +57,10 @@ all perfect.
 ## What it can do that it was not trained for
 
 **A second agent CLI, read without ever seeing it.** Freebuff (`freebuff`, an npm package that draws its own
-TUI) was recorded eleven times, 580 frames, across five kinds of work: reading a file, creating one, showing a
-`git diff`, showing a *rename* in a diff, searching several files, a full fix cycle, and two refusals where the
-task could not succeed. Every component in every frame is reproduced.
+TUI) was recorded eleven times, 591 frames, across the whole shape of agent work: reading a file, creating one,
+showing a `git diff`, showing a *rename* in a diff, searching several files, a full fix cycle, two refusals where
+the task could not succeed, a repository it had never seen, and one session cut short by a quota. Every component
+in every frame is reproduced.
 
 | | |
 |---|---|
