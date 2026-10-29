@@ -42,23 +42,30 @@ if ($sessions.Count -eq 0) {
 
 $failed = @()
 $frames = 0
-foreach ($session in $sessions) {
-    $out = & $capture page --session $session.FullName --all 2>&1
-    $code = $LASTEXITCODE
-    $pages = @($out | Where-Object { "$_".TrimStart().StartsWith("{") }).Count
-    $stderr = @($out | Where-Object { "$_" -match "^ui-lm-capture:" })
-    $frames += $pages
+$model = Join-Path $repo "models\page.json"
+# Both builders read every recording here. Only the reader's was checked, so a model path that fell over
+# on one odd session — an empty screen, a shape it had never seen — would have gone unnoticed while
+# every other check stayed green.
+foreach ($flavour in @("reader", "model")) {
+    $modelArgs = if ($flavour -eq "model") { @("--model", $model) } else { @() }
+    foreach ($session in $sessions) {
+        $out = & $capture @(@("page", "--session", $session.FullName, "--all") + $modelArgs) 2>&1
+        $code = $LASTEXITCODE
+        $pages = @($out | Where-Object { "$_".TrimStart().StartsWith("{") }).Count
+        $stderr = @($out | Where-Object { "$_" -match "^ui-lm-capture:" })
+        $frames += $pages
 
-    if ($code -ne 0) {
-        $failed += ("  " + $session.Name + " -> exit " + $code)
-    } elseif ($stderr.Count -gt 0) {
-        $failed += ("  " + $session.Name + " -> " + $stderr[0])
-    } elseif ($pages -eq 0) {
-        $failed += ("  " + $session.Name + " -> no page at all")
+        if ($code -ne 0) {
+            $failed += ("  " + $session.Name + " (" + $flavour + ") -> exit " + $code)
+        } elseif ($stderr.Count -gt 0) {
+            $failed += ("  " + $session.Name + " (" + $flavour + ") -> " + $stderr[0])
+        } elseif ($pages -eq 0) {
+            $failed += ("  " + $session.Name + " (" + $flavour + ") -> no page at all")
+        }
     }
 }
 
-Write-Host ("recordings: {0}, pages read: {1}" -f $sessions.Count, $frames)
+Write-Host ("recordings: {0} on both paths, pages read: {1}" -f $sessions.Count, $frames)
 if ($failed.Count -gt 0) {
     $failed | ForEach-Object { Write-Host $_ }
     Write-Host ("{0} recording(s) broke the reader" -f $failed.Count)
