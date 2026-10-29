@@ -38,7 +38,17 @@ foreach ($case in (Get-ChildItem -LiteralPath $cases -Directory)) {
     $line = (& $capture score --session $case.FullName --model $model 2>&1 | Select-Object -First 1) -join ""
     $share = 0.0
     if ($line -match "model ([\d.]+)%") { $share = [double]$Matches[1] }
+# Score says the two pages agree; it says nothing about whether the page can be drawn back.
+    # Two full panes agreed perfectly and round tripped at 23.8% for four rounds, because this
+    # check only ever asked the first question.
+    $trip = (& $capture tui --session $case.FullName --all 2>&1 | Select-Object -Last 1) -join ""
+    $tripped = 0.0
+    if ($trip -match "\(([\d.]+)%\)") { $tripped = [double]$Matches[1] }
     $was = if ($expected.ContainsKey($case.Name)) { $expected[$case.Name] } else { $null }
+    if ($tripped -lt 100.0) {
+        Write-Host ("  {0,-22} draws back at {1:N1}% ({2})" -f $case.Name, $tripped, $trip.Trim())
+        $regressed++
+    }
     if ($null -eq $was) {
         Write-Host ("  {0,-22} {1,5:N1}%  (no expectation recorded)" -f $case.Name, $share)
     } elseif ($share -lt $was) {
