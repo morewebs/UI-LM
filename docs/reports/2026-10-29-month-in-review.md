@@ -1,6 +1,6 @@
 # The month in review
 
-**UI-LM, 2026-10-27 to 2026-10-29.** 19 releases, 19 checks and four fuzz properties. This page is
+**UI-LM, 2026-10-27 to 2026-10-29.** 20 releases, 19 checks and four fuzz properties. This page is
 the short version; the long version is `2026-10-28-model.md`, the state of the product is
 `2026-10-28-state-of-the-project.md`, and the model itself is described in `docs/model-card.md`.
 
@@ -19,7 +19,7 @@ description of the screen, and anything that can read the page can rebuild the s
 
 | | |
 |---|---|
-| releases | **v0.1.0 → v0.14.0**, three platforms each, every one verified by downloading it |
+| releases | **v0.1.0 → v0.15.0**, three platforms each, every one verified by downloading it |
 | checks | **19 scripts**, one table, **every check shown failing with its output kept** |
 | fuzz properties | 4 — reader, renderers, model, raw bytes |
 | model card | `docs/model-card.md` — weights, features, training data, and four things it cannot do |

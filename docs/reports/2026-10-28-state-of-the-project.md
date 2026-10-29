@@ -34,7 +34,7 @@ the code constructs.
 | every word the page holds reaches the browser document | 66 recordings **on both paths**, checked; markup arrives escaped |
 | every recording on this machine reads on either builder | **66 recordings, 1352 pages**, reader and model, no error |
 | every page a builder makes is consistent with its screen | 676 frames audited on **each** path, no violations |
-| the download works | **v0.14.0**, three platforms, verified by downloading it and running it |
+| the download works | **v0.15.0**, three platforms, verified by downloading it and running it |
 | the checks can fail | **19 scripts and 4 fuzz properties, each shown failing with the output kept** (`docs/checks.md`); three refuse to pass on empty material and one has a clock |
 | the viewer keeps up | typing, redraws, half-written files, cleared screens — each checked |
 | exporting a session is cheap | 4.4 ms and 3.9 KB per page, linear to 1,510 pages, capped by a check |
