@@ -68,28 +68,13 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 
 | claim | evidence |
 |---|---|
-| a screen's text becomes a page holding blocks, tool calls, meters, thoughts, diffs, panes | 42 evaluation sets, 100% |
-| a page draws back every line of content | 1,986/1,986 lines; split screens included; **the same on model-built pages** |
-| the page carries the screen's styling | 6,303 spans on the training batch; reaches HTML, terminal and the live view |
-| provenance is honest | 967 components, 0 contradictions |
-| the model generalises off its training application | trained on one application, 100% on 141 frames from 13 other programs |
-| the download works | **v0.5.0** verified by downloading, unzipping and running `fields` and `tui --model` |
-
-## What is not proven
-
-- **One machine, one recorder's judgement.** Every evaluation set was recorded here and mostly
-  chosen by the person building the model. Four consecutive clean fresh batches is the strongest
-  claim available, and it is modest.
-- **The corpus cannot be broadened the obvious way.** Seven non-agent programs recorded for
-  training produced eleven screens and not one structured component: only software that renders
-  *state* draws the things this catalogue describes.
-- **Plain text measures nothing.** A paragraph splitter reproduces a build log exactly, so those
-  frames are not counted as evidence.
-- **An unnumbered tab strip is plain text.** An editor that numbers its tabs is read as tabs; one
-  that does not is indistinguishable from a line of words.
-- **Live is not continuous.** A frame exists at a settled screen; a fast program yields fewer
-  moments than it drew.
-
+| a screen's text becomes a page holding blocks, tool calls, meters, thoughts, diffs, frames and panes | **six kinds**, 779 frames assembled at 100% given the reader's own answers |
+| a page draws back every line of content | **0 sessions below 100%**, split screens and resized dividers included, on both reader and model pages |
+| the page carries the screen's styling | 5,957 components compared field by field, **0 differing** |
+| provenance is honest | 5,957 components, 5,008 carried, **0 contradictions** |
+| the reader and the label path agree | every evaluation set at 100%, and every hard case on score, round trip and shape |
+| the model generalises off its training application | trained on Grok alone; **591 frames of Freebuff at 100%** — Block 4652, ToolCall 158, Thought 385, Diff 54 |
+| the download works | **v0.19.0** verified by downloading, unzipping, and running `version` and `score` on a real session |
 ## Fragile spots, and why they are written this way
 
 - **Assembly guards are deliberately narrow.** `crates/pages/src/labeled.rs` demotes labels the
@@ -145,11 +130,15 @@ than to the application.
   of its four checks.
 - **No vocabulary from one screen.** Components and roles are added with three screens of
   evidence, or not at all.
-## Where it stands at the end of the month
+## Where it stands now
 
-Seven scripts, about six minutes, every axis green: five evaluation axes (kind, text, styling,
-provenance, round trip on both reader and model pages), 683 components with 0 differences and 0
-contradictions, five consecutive clean fresh batches, a three-platform release verified by download.
+**Nineteen checks, about twelve minutes, every axis green**: six evaluation sets at 100%, 779 frames
+assembled against the reader's own answers, 5,957 components with 0 differences and 0 contradictions,
+**13 hard cases** at 100% on score, round trip and shape, and **v0.19.0** verified by download and by
+asking the binary what it was built from (`version` prints the commit and a digest of the working tree).
+
+The corpus is **88 recordings, 1,019 frames** per path, from three applications: Grok (the training one),
+Freebuff (a second agent CLI), and `man`, `less`, `df` and `git` (programs that are not agents at all).
 
 ### Attempts that were made and abandoned, so they are not repeated
 
@@ -157,18 +146,21 @@ Each of these was tried, measured, and reverted. The reason matters more than th
 
 | attempt | why it failed |
 |---|---|
-| widen the pane rule so a dialog would not mask a split | the obstacle was not the box guard but the single-block precondition; the change did nothing |
-| give panes their styling (reader only) | worked — 25 of 26 lines per pane — but the model pages have no panes in five sessions, so `fields` went from 0 to 12 differing |
-| give panes styling on both sides at once | the label path's pane condition is the blocker; changing one side first makes every axis worse |
-| drive `tmux` with keystrokes to build a specific layout | the prefix and its command need **separate writes**; in one write the text lands in the shell |
+| widen the pane rule so a dialog would not mask a split | the obstacle was not the box guard but the single-pane decision |
+| give panes their styling (reader only) | worked — 25 of 26 lines per pane — but the model pages had none |
+| drive `tmux` with keystrokes to build a layout | `tmux send-keys` never reaches an agent under it; the recorder's own key script does |
 | add the pane field to `Column` | 11 construction sites; moved to `Surface` (5), which landed |
+| narrow `Diff` to require a hunk header | **34 of the corpus's 61 diffs have no header** — Freebuff shows edits as bare `-`/`+` |
+| read a table from column alignment | matched **28 of 81** recordings, every one a Freebuff survey; ADR 0007 is Rejected |
+| move the wait above the record write | five attempts; the status is one `if let` away, and `record_exit` stamps it afterwards |
 
-**The pattern in the failures is order and symmetry:** every change that made one side of a mapping
-richer before the other could follow was reverted, and every change that added an inert field first
-landed.
+**The pattern in the failures is symmetry and evidence:** every change that made one side of a mapping richer
+before the other could follow was reverted; every change that added an inert field first landed; and every kind
+refused was refused by counting something.
 
-### The one thing worth doing next
+### The two things worth doing next
 
-Make the label path split panes the same way the reader does — one condition in
-`crates/pages/src/labeled.rs` — and change both sides in a single commit. That is the whole of
-ADR 0004's first step, and three rounds of evidence say it cannot be done half at a time.
+1. **A `Table`, by semantics rather than alignment** — a column whose values share a type across rows, with
+   `df`, `top` and `cargo tree` as the positives and Freebuff's survey rows as the counterweight.
+2. **A meter inside a panel** — the rule is written; what blocks it is that a panel owns its rows, and splitting
+   one out costs the whole panel's round trip (measured: 320 lines).
