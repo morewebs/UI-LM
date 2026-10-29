@@ -73,3 +73,25 @@ the defect, written down.
 If a non-floating panel in the corpus uses double rules, `as_frame` would lift it out of the page as a dialog.
 The corpus was checked for `╔` before this decision was written: it appears in exactly one recording, the one
 above. If that changes, this ADR is reopened.
+
+## Addendum, 2026-10-29: the case this ADR predicted has arrived
+
+The original text says: *"A future application may draw a floating window with single rules. Then this predicate
+will not fire… the honest response will be a second predicate tied to that screen's evidence."*
+
+`whiptail` is that application. It draws
+
+```
+               ┌──────────────────┤ Confirm ├───────────────────┐
+               │ Delete the build folder?                       │
+               │                     <Ok>                       │
+               └────────────────────────────────────────────────┘
+```
+
+a **centred box with single rules and its title embedded in the top border** — a floating window by any reading.
+The page describes it as one `Block`, `floor 100%`, which is the project's warning that the score proves nothing.
+
+So the second predicate is now the work: **a box that does not start at column zero, does not reach the last
+column, and carries a title in its top border.** It must be narrow enough not to claim the two indented panels
+already in the corpus, and the recording is kept as `cases/hard/whiptail-dialog` with a ceiling of **one
+component** — the defect, written down — until it lands.

@@ -34,6 +34,7 @@ $expected = @{
     "wsl-vim-in-split" = 100.0
     "wsl-blank-in-split" = 100.0
     "vim-floating-popup" = 100.0
+    "whiptail-dialog" = 100.0
     # Fixed: an advertisement panel whose border ends `╯  █` stopped being a panel once the scrollbar
     # column was not stripped, so the reader swallowed the rest of the screen into one block. Measured at
     # 99.7% before the fix and 100% after it; that is the number a regression would have to fall below.
@@ -72,6 +73,9 @@ $ceiling = @{
     # Was 1: the floating window was swallowed into the block around it. The box rules now see a heavy
     # border drawn mid-line, so the window is its own component and the floor fell from 100% to 75%.
     "vim-floating-popup"       = 3
+    # 1 until ADR 0006's second predicate lands: whiptail draws its window with single rules, and the
+    # heavy-rule predicate correctly does not claim it.
+    "whiptail-dialog"          = 1
 }
 $regressed = 0
 foreach ($case in (Get-ChildItem -LiteralPath $cases -Directory)) {
