@@ -3,10 +3,9 @@
 A check that has never failed is a check of unknown strength. This is the ledger: every script in
 `scripts/`, what it protects, and the failure that was produced to prove it can fail.
 
-**Where a row quotes a message, that is what the check actually printed when it was broken on purpose.**
-Five rows do not quote one yet — they were proven when they were written, in the early part of the month,
-and the output was not kept. They are marked *(proven, message not kept)* rather than given a quotation
-that would be reconstructed from memory; each is being re-proven with its output kept.
+**Every row quotes a message the check actually printed when it was broken on purpose.** Sixteen scripts
+and four properties were each made to fail, and the output kept — five of them re-proven in the last week
+because their first proof had been remembered rather than recorded.
 
 | check | protects | how it was made to fail |
 |---|---|---|
@@ -20,7 +19,7 @@ that would be reconstructed from memory; each is being re-proven with its output
 | `check-sizes` | the smallest and largest screens round trip | demanding more lines than exist printed "only 30 line(s) of content, so nothing was really drawn" |
 | `check-scrub` | a shared pair keeps its catalogue | removing the protection printed "the catalogue's name was scrubbed away" |
 | `check-corrupt` | damaged recordings are skipped, not fatal | rewording the skip message printed "nothing said the frame was skipped" |
-| `check-race` (proven, message not kept) | the viewer survives redraws and half-written files | a truncated append made the viewer draw a torn frame |
+| `check-race` | the viewer survives redraws and half-written files | flipping the blank-screen test printed "the viewer served the blank screen a program left behind instead of the last one with content" |
 | `check-interaction` | typing reaches the program | neutralising **both** key writers printed "interaction failed: the typed text never appeared on screen" |
 | `check-live-page` | the live page moves, a finished one does not | a constant document printed "the page did not change across three seconds of a drawing program" |
 | `check-render-scale` | exporting stays linear | a 50 ms delay per page printed "a page cost 53.1 ms, more than the 11.0 ms limit" |
