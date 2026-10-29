@@ -1390,6 +1390,25 @@ fn segments(lines: &[String], first: usize, last: usize) -> Vec<Segment> {
             continue;
         }
         if closes && !inside_box {
+            // A closing border whose opening is above the frame still belongs to the panel above it:
+            // that row is drawn as part of the same panel (`│ … │`), and splitting it off gave Freebuff's
+            // status panel a block of its own — 22 components on one recording, and a page that said a
+            // border was content. Grok's panels always show their top border, so nothing here ever
+            // asked the question before.
+            if let Some(current) = found.last_mut() {
+                let above_is_panel = lines
+                    .get(row.saturating_sub(1))
+                    .is_some_and(|previous| previous.trim_start().starts_with('│'));
+                // A tree branch also starts with `└` — `└── crates/` — and joining those to the row
+                // above cost `cargo-tree` 6.7 points. A border closes with a corner and carries no
+                // text after it; a branch carries a name.
+                let is_border = line.trim_end().ends_with(['┘', '╯']);
+                if current.last == row && above_is_panel && is_border {
+                    current.last = row + 1;
+                    current.boxed = true;
+                    continue;
+                }
+            }
             // A closing border with no opening: its own stretch, so the shape is kept.
             found.push(Segment {
                 first: row,
