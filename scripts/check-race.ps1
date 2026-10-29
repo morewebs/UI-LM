@@ -70,6 +70,8 @@ $copy = Join-Path $work "truncated"
 Copy-Item -LiteralPath $session -Destination $copy -Recurse -Force
 $frames = Join-Path $copy "frames.jsonl"
 $lines = [System.IO.File]::ReadAllLines($frames)
+# A race needs two things to race: one line of output cannot show whether a split read tore a line in half,
+# so a session holding one line measured nothing.
 if ($lines.Count -lt 2) {
     $failures += "the recording held too few frames to truncate"
 } else {

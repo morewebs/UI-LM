@@ -19,6 +19,8 @@ $commands = @(& $capture --help 2>&1 | Select-String -Pattern '^  (\w+)' | ForEa
 
 $missing = @($commands | Where-Object { $text -notmatch [regex]::Escape($_) })
 Write-Host ("  {0} command(s), {1} documented" -f $commands.Count, ($commands.Count - $missing.Count))
+# Ten is a floor against a command list that has been emptied by an edit, not a count of the CLI: the binary
+# has twenty. A list that shrinks to nine without anyone meaning to is the failure this catches.
 if ($commands.Count -lt 10) {
     Write-Host "the binary reports fewer commands than it has, so this check is reading nothing"
     exit 1

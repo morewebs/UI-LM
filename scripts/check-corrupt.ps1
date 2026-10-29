@@ -30,6 +30,8 @@ $cut = Join-Path $work "cut"
 Copy-Session $cut
 $lines = [System.IO.File]::ReadAllLines((Join-Path $cut "frames.jsonl"))
 $total = @($lines | Where-Object { $_.Trim() }).Count
+# Two corruptions, because one mutation can be survived by accident — a byte that happens to land in padding
+# still parses, and a check that passes on one lucky mutation has shown nothing.
 if ($total -lt 2) {
     Write-Host "the recording is too short to damage"
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue

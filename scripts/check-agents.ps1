@@ -87,6 +87,9 @@ foreach ($session in $sessions) {
 $share = if ($frames -gt 0) { 100.0 * $structuredFrames / $frames } else { 0 }
 $distinct = @($kinds.Keys | Where-Object { $_ -ne "Column" }).Count
 Write-Host ("  {0:N0}% of frames hold more than one component, across {1} kind(s)" -f $share, $distinct)
+# Half, not a hundredth: this asks whether the reader *works* on an application it was never trained on, not
+# whether it is perfect there. A floor of 100 would have failed on the first run for reasons that were fixed
+# later; 50 fails only if a second agent falls back to being read as plain text.
 if ($share -lt 50) {
     $failures += ("only {0:N0}% of frames hold structure, so a perfect score here proves nothing" -f $share)
 }
