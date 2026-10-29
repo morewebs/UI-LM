@@ -26,13 +26,13 @@ the code constructs.
 | a page draws back into a terminal, every line of content | 100% on every recording, split screens included |
 | the page carries the screen's colour | 6,303 spans on the corpus; reaches HTML, terminal and the live view |
 | pages say honestly whether a component was read or carried | 688 components, 0 contradictions |
-| the model works off its training application | trained on one; **141 frames from 13 other programs, every component** |
+| the model works off its training application | trained on one; **476 fresh frames from seven batches, every component** |
 | new screens, recorded after training, read perfectly | **476 frames across seven batches**; every kind held, nothing missed |
 | a split screen's panes hold their own components | both paths ask the same question before splitting; audited on model pages too |
 | an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
-| every word the page holds reaches the browser document | 58 recordings **on both paths**, 3,048 words, checked; markup arrives escaped |
+| every word the page holds reaches the browser document | 60 recordings **on both paths**, checked; markup arrives escaped |
 | every recording on this machine reads on either builder | 58 recordings, **576 pages**, reader and model, no error |
-| every page a builder makes is consistent with its screen | 288 frames audited on **each** path, no violations |
+| every page a builder makes is consistent with its screen | 343 frames audited on **each** path, no violations |
 | the download works | **v0.13.0**, three platforms, verified by downloading it and running it |
 | the checks can fail | **18 scripts and 4 fuzz properties, each shown failing with the output kept** (`docs/checks.md`); three refuse to pass on empty material and one has a clock |
 | the viewer keeps up | typing, redraws, half-written files, cleared screens — each checked |
@@ -44,7 +44,7 @@ the code constructs.
   the components this catalogue describes — seven other programs recorded for training produced
   eleven screens and not one structured component. A second agent's transcripts are the only way to
   test whether these shapes are general, and I don't have any.
-- **Every screen came from this machine**, and most were chosen by me. Five clean batches is the
+- **Every screen came from this machine**, and most were chosen by me. Seven clean batches is the
   strongest claim available; it is not the same as a stranger's workflow.
 - **The model is at its ceiling, and that is measured three ways.** 60% more corpus: +0.1% row
   accuracy. A twentieth feature: worse on every screen family. Training on plain screens: three
@@ -108,7 +108,7 @@ continuation cell in the frame format, which is a format change rather than a re
 written down rather than wished away.
 ## What "100% on fresh material" does and does not mean
 
-Three batches recorded after the model was trained, 200 frames, 1,155 components, **nothing missed**:
+Seven batches recorded after the model was trained, 476 frames, **nothing missed**:
 Block, Meter, Thought and ToolCall all perfect.
 
 **`Diff` was missing until it was asked for.** The agent reports an *edit* as a tool line with
