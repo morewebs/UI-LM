@@ -109,20 +109,33 @@ def load_pairs(path):
             pair = json.loads(line)
             page = json.loads(pair["target"])
             rows = pair["input"].split("\n")
-            pairs.append((rows, page))
+            # The recording a pair came from is kept when the export carries it, so a measurement can ask how a
+            # model does on *this* application. Before round 112 the export did not write it and this loader could
+            # not have kept it; now both do, and `compare_capacity.py` reads it.
+            source = pair.get("source", "")
+            pairs.append((rows, page, source))
     return pairs
 
 
 def build_dataset(pairs):
     """Rows, labels and the index of the pair each row came from."""
     samples, labels, groups = [], [], []
-    for index, (rows, page) in enumerate(pairs):
+    for index, (rows, page, _source) in enumerate(pairs):
         kinds = label_rows(page)
         for row, line in enumerate(rows):
             samples.append(features(line, row, len(rows)))
             labels.append(KINDS.index(kinds.get(row, "Block")))
             groups.append(index)
-    return np.array(samples, dtype=np.float64), np.array(labels), np.array(groups)
+    sources = [
+        (pair[2] if len(pair) > 2 else "")
+        for pair in pairs
+    ]
+    return (
+        np.array(samples, dtype=np.float64),
+        np.array(labels),
+        np.array(groups),
+        sources,
+    )
 
 
 def softmax(logits):
@@ -180,7 +193,7 @@ def main():
     pairs = load_pairs(arguments.pairs)
     if not pairs:
         sys.exit("no pairs to train on")
-    x, y, groups = build_dataset(pairs)
+    x, y, groups, _sources = build_dataset(pairs)
 
     # Split by pair, not by row: rows of one screen are not independent, and splitting them
     # would let a model that memorised a screen report success on the rest of it.

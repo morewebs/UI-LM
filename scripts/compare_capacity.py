@@ -23,7 +23,7 @@ try:
 except SystemExit:
     pass
 
-X, LABELS, GROUPS = TRAINER.build_dataset(TRAINER.load_pairs(os.environ["PAIRS"]))
+X, LABELS, GROUPS, SOURCES = TRAINER.build_dataset(TRAINER.load_pairs(os.environ["PAIRS"]))
 CLASSES = int(LABELS.max()) + 1
 ONEHOT = np.eye(CLASSES)[LABELS]
 
@@ -35,6 +35,7 @@ def split(seed=0, holdout=0.2):
     cut = int(len(ids) * (1 - holdout))
     train_ids = set(ids[:cut].tolist())
     train = np.array([g in train_ids for g in GROUPS])
+    globals()["train_ids"] = train_ids
     return X[train], ONEHOT[train], X[~train], LABELS[~train]
 
 
@@ -98,6 +99,18 @@ def main():
     width = 64
     parameters = X.shape[1] * width + width + width * CLASSES + CLASSES
     print(f"hidden, {parameters} parameters:  {accuracy(hidden(x_train, y_train, x_test), truth):.3f}")
+
+    # Split the same held-out rows by the recording they came from, which is the only way to say how much of a
+    # model's error belongs to an application it has never been trained on.
+    board = np.argmax(x_test @ weights + bias, axis=1)
+    held_pairs = np.flatnonzero(np.array([g not in train_ids for g in GROUPS]))
+    by_pair = np.zeros(len(SOURCES), dtype=bool)
+    by_pair[: len(SOURCES)] = True
+    is_agent = np.array(["agent" in (s or "") for s in SOURCES]) if SOURCES else np.zeros(0, dtype=bool)
+    row_agent = is_agent[GROUPS[held_pairs]]
+    for name, mask in (("from a second agent", row_agent), ("from the trained application", ~row_agent)):
+        if mask.sum():
+            print(f"  {name:30s} {int(mask.sum()):5d} rows  accuracy {accuracy(board[mask], truth[mask]):.3f}")
 
 
 if __name__ == "__main__":
