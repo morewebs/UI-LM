@@ -54,6 +54,7 @@ $required = @{
     # Each entry is a kind the case exists for. Breaking the predicate that produces it must fail this check,
     # and `docs/checks.md` records the message each break produced.
     "vim-floating-popup"     = @("Frame")
+    "whiptail-dialog"        = @("Frame")
     "freebuff-refusal"       = @("Thought")
     "wsl-agent-in-pane"      = @("Meter", "ToolCall")
     "wsl-agent-in-split"     = @("Meter", "Thought", "ToolCall")

@@ -1655,13 +1655,37 @@ struct MeterParts {
 fn as_frame(lines: &[String]) -> Option<String> {
     let first = lines.first()?;
     let bottom = lines.last()?;
-    let start = first.find('╔')?;
-    let end = first.find('╗')?;
-    if end <= start || !bottom.contains('╚') || !bottom.contains('╝') {
+    // Shape one, from vim: a box ruled with heavy lines, whose border sits at the window's own left edge.
+    if let (Some(start), Some(end)) = (first.find('╔'), first.find('╗')) {
+        if end > start && bottom.contains('╚') && bottom.contains('╝') {
+            let title = first[start + '╔'.len_utf8()..end].trim_matches('═').trim();
+            return Some(title.to_owned());
+        }
+    }
+    // Shape two, from whiptail: a centred box ruled with single lines and its title set into the top border.
+    // Narrow on purpose — it must be indented, must not reach the last column, and must carry a title. A
+    // full-width sheet (Freebuff's survey, docked at the bottom) fails the first test, and an indented panel
+    // with no title fails the last.
+    let open = first.find('┌')?;
+    if open == 0 {
         return None;
     }
-    let title = first[start + '╔'.len_utf8()..end].trim_matches('═').trim();
-    Some(title.to_owned())
+    let close = open + first[open..].find('┐')?;
+    // "Centred" is measured by alignment, not by width: a row is right-trimmed, so "does it reach the last
+    // column" cannot be asked of it. The box's bottom must start in the same column its top does, and that
+    // column must not be zero — which is what tells a floating window from a panel docked to the edge.
+    let foot = bottom.find('└')?;
+    if foot != open || !bottom.contains('┘') {
+        return None;
+    }
+    let border = &first[open..close];
+    let title_start = border.find('┤')?;
+    let title_end = border.find('├')?;
+    if title_end <= title_start {
+        return None;
+    }
+    let title = border[title_start + '┤'.len_utf8()..title_end].trim();
+    (!title.is_empty()).then(|| title.to_owned())
 }
 
 fn as_meter(lines: &[String]) -> Option<MeterParts> {

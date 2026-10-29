@@ -95,3 +95,18 @@ So the second predicate is now the work: **a box that does not start at column z
 column, and carries a title in its top border.** It must be narrow enough not to claim the two indented panels
 already in the corpus, and the recording is kept as `cases/hard/whiptail-dialog` with a ceiling of **one
 component** — the defect, written down — until it lands.
+
+## The second predicate, landed
+
+Both shapes are now one function, `as_frame`, and each answers a different question:
+
+| shape | the test | where it came from |
+|---|---|---|
+| heavy rules | `╔`…`╗` above `╚`…`╝` | vim's `popup_create` |
+| centred, titled | an indented `┌`, a `└` in the **same column**, and a title between `┤` and `├` | whiptail |
+
+"Centred" is measured by **alignment, not width**: a row is right-trimmed, so "does it reach the last column"
+cannot be asked of it — the first version asked exactly that and rejected whiptail's own dialog.
+
+The counterweight was written before the code: **Freebuff's survey is a full-width sheet docked at the bottom**,
+it fails the indented-`┌` test, and it stays a `Block`. Measured on the frame that draws it.

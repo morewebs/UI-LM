@@ -149,6 +149,6 @@ with `+++` and `---` headers.
 _Avoid_: patch, change
 
 **Frame**:
-A floating window: a box drawn *over* the page rather than beside it, named by the words on its top border.
+A floating window: a box drawn *over* the page rather than beside it, named by the words on its top border. Two shapes so far: heavy rules (vim) and a centred titled box (whiptail); a full-width sheet docked at the edge is not one.
 Its rows are the screen's own, so it draws back unchanged.
 _Avoid_: modal, dialog box, overlay
