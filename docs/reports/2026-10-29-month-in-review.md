@@ -1,6 +1,6 @@
 # The month in review
 
-**UI-LM, 2026-10-27 to 2026-10-29.** Seventeen releases, 316 commits, eighteen checks and four fuzz
+**UI-LM, 2026-10-27 to 2026-10-29.** 18 releases, 351 commits, eighteen checks and four fuzz
 properties. This page is the short version; the long version is `2026-10-28-model.md`, and the current
 state of the product is `2026-10-28-state-of-the-project.md`.
 
@@ -19,7 +19,7 @@ description of the screen, and anything that can read the page can rebuild the s
 
 | | |
 |---|---|
-| releases | **v0.1.0 → v0.12.1**, three platforms each, every one verified by downloading it |
+| releases | **v0.1.0 → v0.13.0**, three platforms each, every one verified by downloading it |
 | checks | **18 scripts**, one table, **every check shown failing with its output kept** |
 | fuzz properties | 4 — reader, renderers, model, raw bytes |
 | fresh material | **476 frames, seven batches, not one component missed** |
