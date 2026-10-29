@@ -20,20 +20,29 @@ can honestly name:
 - **`Block`** — a run of rows that reads as one thing, with a role, its lines, and the styling
   of each line as per-span attributes (`bold`, `italic`, `underline`, `reverse`, and colours
   as `indexed:N` or `rgb:R,G,B`). Per-span attributes are the gap every surveyed standard has.
-- **`ToolCall`** — a run of `♦`-prefixed lines, each with its tool (`Read`, `Edited`), its
-  target, a `status`, and for an edit the `+A -R` counts the application prints.
+- **`ToolCall`** — a run of marked lines — `♦` from Grok, `•` from Freebuff — each with its tool
+  (`Read`, `Edited`, `Thinking`), its target, a `status`, and for an edit the `+A -R` counts the
+  application prints.
+- **`Thought`** — a reasoning heading: `♦ Thought for 3.0s`, or `• Thinking` with the words on the
+  rows below. The heading ends after its own word, or names how long it took; `• Thinking about the
+  problem` is a list item and stays a block.
 - **`Meter`** — a line reporting a quantity against a limit (`1.3K / 500K │ [Dashboard]`),
-  keeping the drawn figures and computing the fraction beside them.
-- **`Diff`** — a block carrying both a `+` and a `-` line, with a per-line kind. No screen in
-  the corpus has drawn one yet: with auto-approval on, an edit is reported as a `ToolCall`
-  line, which is why the detector is tested against the shape rather than a capture.
+  keeping the drawn figures and computing the fraction beside them. It will not invent a limit
+  from a percentage, so `15.4K (1%)` and `40,000,000 100%` stay blocks.
+- **`Diff`** — a block carrying both a `+` and a `-` line, with a per-line kind. Two shapes are in the
+  corpus now: the `+++`/`---` kind and a staged rename (`similarity index 72%`, `rename from`/`rename to`).
 
 Every component carries `source: "seen"`, and describing a whole session marks one
-`carried` once it has already appeared. There is no `Table` or `Thought` yet, no actions, and
+`carried` once it has already appeared. There is no `Table` yet, no actions, and
 no `guessed` provenance, because nothing has been reconstructed. A component's id is derived
 from its own text rather than its position, so it keeps its id when it scrolls. Role detection
 reads only a block's first line, so a
 turn whose prompt line sits below other text is reported as `text`.
+
+**Two agent CLIs are in the corpus.** The model was trained on Grok Build alone (434 screens) and has been
+measured on Freebuff — a different application, a different glyph for a tool row, its own reasoning heading
+and its own diff rendering — eleven times, 580 frames, with every component reproduced. `check-agents` holds
+that; the recordings are local, like the hard cases.
 
 Plus two operator scripts: `scripts/capture-w1.ps1` (a scripted capture session) and `scripts/k5-dump.md` (how to build a throwaway patched fork that dumps its draw buffer, and how to compare).
 
