@@ -116,7 +116,7 @@ fn captures_output_from_a_spawned_process() {
     // The stream ended because the child exited, so its status is available and
     // clean: an EOF that arrived while the child was still running would mean an
     // ended session reported as a successful one.
-    assert_eq!(d.try_wait().unwrap(), Some(0));
+    assert_eq!(exit_status(&mut d), Some(0));
 }
 
 #[test]
@@ -176,7 +176,7 @@ fn a_quiet_child_is_not_the_end_of_the_stream() {
         screen.contains("second"),
         "output after the pause was lost: {screen:?}"
     );
-    assert_eq!(d.try_wait().unwrap(), Some(0));
+    assert_eq!(exit_status(&mut d), Some(0));
 }
 
 #[test]
@@ -413,6 +413,26 @@ fn read_to_end(d: &mut Driver) {
     }
 }
 
+/// Waits for the child to be reaped, failing rather than hanging if it never is.
+///
+/// On Linux the terminal reports end-of-stream when the child closes its output, which happens a moment before
+/// the process itself is reaped: `try_wait()` then answers `None` and an assertion made straight after
+/// `read_to_end` fails on that machine and passes on the others. The exit status is what these tests are about,
+/// so they wait for it with the same deadline `read_to_end` uses.
+fn exit_status(d: &mut Driver) -> Option<i32> {
+    let deadline = Instant::now() + POLL_DEADLINE;
+    loop {
+        if let Some(status) = d.try_wait().unwrap() {
+            return Some(status);
+        }
+        assert!(
+            Instant::now() < deadline,
+            "the child never exited after its stream ended"
+        );
+        std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
 /// The screen the driver holds, as text: one line per row, padding removed.
 fn screen_text(d: &Driver, rows: u16, cols: u16) -> String {
     (0..rows)
@@ -484,7 +504,7 @@ fn a_child_runs_in_the_directory_the_config_names() {
         reported.is_some(),
         "the child did not run in the directory the config named ({wanted:?}); its screen was {screen:?}"
     );
-    assert_eq!(d.try_wait().unwrap(), Some(0));
+    assert_eq!(exit_status(&mut d), Some(0));
 }
 
 #[test]
@@ -541,5 +561,5 @@ fn a_child_runs_in_the_recorders_directory_when_none_is_configured() {
              exists to rule out"
         );
     }
-    assert_eq!(d.try_wait().unwrap(), Some(0));
+    assert_eq!(exit_status(&mut d), Some(0));
 }
