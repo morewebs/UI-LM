@@ -183,3 +183,28 @@ if (Test-Path $reviewPage) {
     }
     Write-Host ("  releases counted: {0}" -f $tagCount)
 }
+
+# A front page whose opening paragraph is a fragment is a page that lost its beginning to an edit. This
+# caught a real one: the review's header was replaced by a dangling "properties. This page is the short
+# version..." while a link was being added, and the page still passed every numeric check.
+$opens = @{"README.md" = "open"; "HANDOFF.md" = "open"; "docs\reports\2026-10-28-state-of-the-project.md" = "open"; "docs\reports\2026-10-29-month-in-review.md" = "open"; "docs\model-card.md" = "open"; "docs\checks.md" = "open"}
+$broken = @()
+foreach ($docName in $opens.Keys) {
+    $docPath = Join-Path $repo $docName
+    if (-not (Test-Path $docPath)) { continue }
+    $lines = Get-Content -LiteralPath $docPath
+    $index = 0
+    while ($index -lt $lines.Count -and ($lines[$index].Trim() -eq "" -or $lines[$index].StartsWith("#"))) { $index++ }
+    if ($index -ge $lines.Count) { $broken += ($docName + " has no opening paragraph at all"); continue }
+    $first = $lines[$index].Trim().TrimStart(">").Trim()
+    $startsProperly = $first.StartsWith("**") -or $first.StartsWith("*") -or [char]::IsUpper($first[0])
+    if (-not $startsProperly) {
+        $broken += ("{0} opens with '{1}'" -f $docName, $first.Substring(0, [Math]::Min(50, $first.Length)))
+    }
+}
+if ($broken.Count -gt 0) {
+    $broken | ForEach-Object { Write-Host ("  " + $_) }
+    Write-Host "a front page opens with a fragment"
+    exit 1
+}
+Write-Host "every front page opens with a sentence"
