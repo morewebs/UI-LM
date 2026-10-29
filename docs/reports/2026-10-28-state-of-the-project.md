@@ -31,7 +31,7 @@ the code constructs.
 | a split screen's panes hold their own components | both paths ask the same question before splitting; audited on model pages too |
 | an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
 | every word the page holds reaches the browser document | 60 recordings **on both paths**, checked; markup arrives escaped |
-| every recording on this machine reads on either builder | 58 recordings, **576 pages**, reader and model, no error |
+| every recording on this machine reads on either builder | **60 recordings, 686 pages**, reader and model, no error |
 | every page a builder makes is consistent with its screen | 343 frames audited on **each** path, no violations |
 | the download works | **v0.13.0**, three platforms, verified by downloading it and running it |
 | the checks can fail | **18 scripts and 4 fuzz properties, each shown failing with the output kept** (`docs/checks.md`); three refuse to pass on empty material and one has a clock |
