@@ -326,3 +326,25 @@ fn a_bare_bullet_list_reads_as_one_tool_call() {
         "the documented boundary"
     );
 }
+
+#[test]
+fn a_heading_drawn_inside_a_panel_belongs_to_the_panel() {
+    // The mirror of the scrollbar bug: a marker hidden *behind* a leading glyph. `│  ♦ Thinking…` occurs
+    // seven times in the corpus — Grok draws its reasoning inside a panel — and both builders keep such a
+    // row with the panel rather than lifting it out as a Thought. That is a decision, and this pins it:
+    // a panel is one thing, and its interior is described as part of it.
+    let page = page_of(
+        &[
+            "   ╭──────────────────────────────╮",
+            "   │  ♦ Thinking…                 │",
+            "   │  the words of the thought    │",
+            "   ╰──────────────────────────────╯",
+        ],
+        "Block",
+    );
+    assert_eq!(
+        kinds(&page),
+        vec!["Block".to_owned()],
+        "a panel is one block"
+    );
+}
