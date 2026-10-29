@@ -23,7 +23,15 @@ $session = Join-Path $work "s"
 $failures = @()
 
 # A program that prints three characters and waits: no prompt, nothing to predict but "abc".
-& $capture record --rows 10 --cols 40 --out $session --stop-after 8000 -- wsl.exe -e sh -c "printf abc; sleep 3" *> $null
+# The command is written to a script and run from there: passing it inline means PowerShell strips the quotes
+# before `wsl` sees them, and `sh -c printf abc; sleep 3` splits into two commands. That made this check compare
+# a screen holding more than "abc" against a dump that holds only those three cells — three cells disagreed, on
+# every run, and the message read like an emulator fault rather than a quoting one.
+$script = Join-Path $work "print.sh"
+Set-Content -LiteralPath $script -Value "printf abc`nsleep 3`n" -Encoding ASCII -NoNewline
+$wslPath = (& wsl.exe -e wslpath -a ($script.Replace('\', '/'))) 2>$null
+if (-not $wslPath) { $wslPath = "/mnt/" + ($script.Substring(0,1).ToLower()) + ($script.Substring(2).Replace('\', '/')) }
+& $capture record --rows 10 --cols 40 --out $session --stop-after 8000 -- wsl.exe -e sh $wslPath *> $null
 if (-not (Test-Path (Join-Path $session "session.json"))) {
     Write-Host "the recording failed, so the validator was not exercised"
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
