@@ -56,7 +56,20 @@ jobs:
       # letting a hang consume the runner, so a regression fails loudly.
       - run: cargo test --locked
 
-  # The declared MSRV must hold against the real lockfile: transitive
+    # Every recording in this repository was made on one Windows laptop. This job makes the same measurement on a
+  # machine nobody has recorded before: it runs the shipped recorder on the runner, asks the reader to describe the
+  # screen, and fails if the page does not round trip. It is the smallest honest test of "the reader works on a
+  # screen from another machine" — a claim the project has argued rather than measured.
+  second-machine:
+    name: second machine (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@d124f86f28ff42855784ff3319f48ac182c248f8 # 1.99.1
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: cargo build --locked -p ui-lm-capture
+      - run: pwsh -NoProfile -File scripts/check-second-machine.ps1
+# The declared MSRV must hold against the real lockfile: transitive
   # dependencies can silently raise the floor. It is tight here already,
   # because clap_builder, clap_derive, clap_lex and getrandom all resolve at
   # exactly 1.85.0, so any bump of any of them would break the declared

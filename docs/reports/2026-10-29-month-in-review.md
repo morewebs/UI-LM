@@ -20,7 +20,7 @@ description of the screen, and anything that can read the page can rebuild the s
 | | |
 |---|---|
 | releases | **v0.1.0 → v0.22.0**, three platforms each, every one verified by downloading it |
-| checks | **19 scripts**, one table, **every check shown failing with its output kept** |
+| checks | **20 scripts**, one table, **every check shown failing with its output kept** |
 | fuzz properties | 4 — reader, renderers, model, raw bytes |
 | model card | `docs/model-card.md` — weights, features, training data, and four things it cannot do |
 | fresh material | **ten batches, not one component missed** — counted per batch in the report |
@@ -45,7 +45,7 @@ description of the screen, and anything that can read the page can rebuild the s
 
 ## What the month learned about checking
 
-- **Every check now carries its proof.** docs/checks.md lists all 19 scripts and four fuzz\n  properties with the failure each one actually printed when it was broken on purpose — five of them\n  re-proven in the final week because their first proof had been remembered rather than recorded.\n- **A check that cannot be shown to fail is not a check.** Three of them refuse to pass on empty
+- **Every check now carries its proof.** docs/checks.md lists all 20 scripts and four fuzz\n  properties with the failure each one actually printed when it was broken on purpose — five of them\n  re-proven in the final week because their first proof had been remembered rather than recorded.\n- **A check that cannot be shown to fail is not a check.** Three of them refuse to pass on empty
   material for exactly this reason: the audit on zero recordings, `check-sizes` on under eight lines,
   `check-diff-fresh` on zero diffs.
 - **The defect is usually in what nothing was pointed at**, not in what is hard. The diff, the browser
@@ -85,7 +85,7 @@ that ships.
 |---|---|
 | releases | **27**, v0.1.0 through v0.22.0, three platforms each, every one verified by downloading it |
 | commits | 494 |
-| checks | **19 scripts** and 4 fuzz properties, each with the failure that proved it in `docs/checks.md` |
+| checks | **20 scripts** and 4 fuzz properties, each with the failure that proved it in `docs/checks.md` |
 | hard recordings | **13** shapes, twelve at 100% on score and both round trips |
 | fresh material | **10 batches**, every one perfect, every one recorded after training |
 | the final audit | `every check passed in 699.3s` |
