@@ -70,7 +70,7 @@ foreach ($session in $sessions) {
     # Structure, not just words. A paned page drawn in one column still contains every word, which is
     # how the browser put an agent's meter above a shell's prompt for weeks without this check noticing.
     $page = (& $capture @(@("page", "--session", $session.FullName, "--seq", "0") + $modelArgs) 2>$null) -join ""
-    if ($page -match '"panes":\[\[') {
+    if ($page -match '"panes"\s*:\s*\[\s*\[') {
         $wrappers = ([regex]::Matches($raw, '<div class="pane">')).Count
         if (-not ($raw -match '<div class="panes">')) {
             $missing += ("  " + $session.Name + " (" + $flavour + ") -> a paned page was drawn without a pane wrapper")
@@ -139,6 +139,9 @@ Write-Host "markup on a screen arrives in the document as text, escaped"
 # have panes from frame 19, so a second pass renders one of those frames and requires the document to
 # draw the panes as panes — the assertion above only runs when `page` says the frame is split.
 $panedPages = 0
+# The block below decides its own exit: appending it after the summary meant its findings were
+# collected into $missing and then never looked at, which is why the assertion never fired.
+$panedFailures = @()
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 $hard = Join-Path $repo "cases\hard"
 if (Test-Path $hard) {
@@ -148,15 +151,22 @@ if (Test-Path $hard) {
             $document2 = Join-Path $work ("paned-" + $flavour + ".html")
             & $capture @(@("render", "--session", $session.FullName, "--seq", "20", "--out", $document2) + $modelArgs) 2>&1 | Out-Null
             if (-not (Test-Path $document2)) { continue }
+            $page2 = (& $capture @(@("page", "--session", $session.FullName, "--seq", "20") + $modelArgs) 2>$null) -join ""
+            if ($page2 -notmatch '"panes"\s*:\s*\[\s*\[') { continue }
             $raw2 = Get-Content -LiteralPath $document2 -Raw -Encoding UTF8
             $panedPages++
             $divs = ([regex]::Matches($raw2, '<div class="pane">')).Count
             if (-not ($raw2 -match '<div class="panes">')) {
-                $missing += ("  " + $session.Name + " (" + $flavour + ", frame 20) -> no pane wrapper")
+                $panedFailures += ("  " + $session.Name + " (" + $flavour + ", frame 20) -> no pane wrapper")
             } elseif ($divs -lt 2) {
-                $missing += ("  " + $session.Name + " (" + $flavour + ", frame 20) -> " + $divs + " pane div(s)")
+                $panedFailures += ("  " + $session.Name + " (" + $flavour + ", frame 20) -> " + $divs + " pane div(s)")
             }
         }
     }
 }
 Write-Host ("paned documents checked: {0}" -f $panedPages)
+if ($panedFailures.Count -gt 0) {
+    $panedFailures | ForEach-Object { Write-Host $_ }
+    Write-Host "a paned page was not drawn as panes"
+    exit 1
+}
