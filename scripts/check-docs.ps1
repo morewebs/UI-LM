@@ -62,3 +62,40 @@ if ($wrong.Count -gt 0) {
     exit 1
 }
 Write-Host "every document counts the checks the way the folder does"
+
+# The corpus counts the documents state, counted here. Three of them had drifted — the batches, the
+# training programs and the recordings — and each read as evidence while being wrong.
+$recordings = 0
+$frames = 0
+foreach ($root in @("eval", "cases")) {
+    $dir = Join-Path $repo $root
+    if (-not (Test-Path $dir)) { continue }
+    foreach ($session in (Get-ChildItem -LiteralPath $dir -Recurse -Directory | Where-Object { Test-Path (Join-Path $_.FullName "session.json") })) {
+        $recordings++
+        $file = Join-Path $session.FullName "frames.jsonl"
+        if (Test-Path $file) { $frames += @(Get-Content -LiteralPath $file | Where-Object { $_.Trim() }).Count }
+    }
+}
+Write-Host ("  the corpus holds {0} recording(s) and {1} frame(s)" -f $recordings, $frames)
+if ($recordings -lt 1 -or $frames -lt 1) {
+    Write-Host "no corpus on this machine, so the counts were not checked"
+    exit 1
+}
+
+$corpusPage = Join-Path $repo "docs\reports\2026-10-28-state-of-the-project.md"
+if (Test-Path $corpusPage) {
+    $text = Get-Content -LiteralPath $corpusPage -Raw -Encoding UTF8
+    $bad = @()
+    foreach ($match in [regex]::Matches($text, '(\d+)\s+recordings')) {
+        if ([int]$match.Groups[1].Value -ne $recordings) { $bad += ("the page says {0} recordings, the corpus holds {1}" -f $match.Groups[1].Value, $recordings) }
+    }
+    foreach ($match in [regex]::Matches($text, '(\d+)\s+frames audited')) {
+        if ([int]$match.Groups[1].Value -ne $frames) { $bad += ("the page says {0} frames audited, the corpus holds {1}" -f $match.Groups[1].Value, $frames) }
+    }
+    if ($bad.Count -gt 0) {
+        $bad | ForEach-Object { Write-Host ("  " + $_) }
+        Write-Host "a document counts the corpus wrongly"
+        exit 1
+    }
+}
+Write-Host "the corpus counts in the documents match the corpus"
