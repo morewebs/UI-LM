@@ -85,9 +85,12 @@ $review = Join-Path $repo "docs\reports\2026-10-29-month-in-review.md"
 if (Test-Path $review) {
     $reviewText = Get-Content -LiteralPath $review -Raw -Encoding UTF8
     $named = @([regex]::Matches($reviewText, 'v0\.\d+\.\d+') | ForEach-Object { $_.Value } | Sort-Object { [version]($_ -replace '^v', '') })
-    if ($named.Count -gt 0 -and $named[-1] -ne $latest) {
+    # Same rule as the state page, for the same reason: a release in progress updates the pages before it tags
+    # them, so the review may be one release ahead — and must never name an older one. An exact match was the
+    # rule until round 105, and it made `docs/release.md` unrunnable: pages-first was red until the tag existed.
+    if ($named.Count -gt 0 -and [version]($named[-1] -replace '^v', '') -lt [version]($latest -replace '^v', '')) {
         Write-Host ("  the review's newest version is {0}; the newest tag is {1}" -f $named[-1], $latest)
-        Write-Host "the review names a release that is not the newest one"
+        Write-Host "the review names an older release than the newest tag"
         exit 1
     }
     Write-Host ("  the review's newest version is " + $named[-1])
