@@ -105,7 +105,7 @@ fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
             // and the model called none of them a tool call; the guard could only remove labels, so
             // they stayed plain blocks. A thought carries the same mark and says so, and is checked
             // first — exactly the order the reader uses.
-            if line.starts_with('♦') {
+            if crate::tool_marker(line).is_some() {
                 return if is_thought_row(line) {
                     "Thought".to_owned()
                 } else {
@@ -178,7 +178,7 @@ fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
 /// Whether the reader would call this row a thought.
 fn is_thought_row(line: &str) -> bool {
     let row = [line.to_owned()];
-    matches!(tool_calls(&row).as_slice(), [only] if only.tool.eq_ignore_ascii_case("thought"))
+    matches!(tool_calls(&row).as_slice(), [only] if only.tool.eq_ignore_ascii_case("thought") || only.tool.eq_ignore_ascii_case("thinking"))
 }
 
 fn settled(label: &str, lines: &[String]) -> String {

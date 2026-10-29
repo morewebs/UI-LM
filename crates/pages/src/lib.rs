@@ -672,6 +672,10 @@ pub struct DiffLine {
 /// only thing it is used for is *splitting* a transcript — anything it does not
 /// match stays an ordinary block, which is a smaller mistake than mislabelling prose.
 const TOOL_GLYPH: char = '♦';
+const TOOL_GLYPH_TEXT: &str = "♦";
+/// Freebuff marks a tool row with a bullet instead of a diamond.
+const TOOL_BULLET: char = '•';
+const TOOL_BULLET_TEXT: &str = "•";
 
 /// A run of tool lines inside a transcript block.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -1424,7 +1428,24 @@ fn closes_box(line: &str) -> bool {
 
 /// Whether a line is a tool line.
 fn is_tool_line(line: &str) -> bool {
-    line.trim_start().starts_with(TOOL_GLYPH)
+    tool_marker(line).is_some()
+}
+
+/// The glyph that marks a tool row, and the text after it — for either application seen so far.
+///
+/// Grok draws `♦ Read notes.txt`. Freebuff draws `• Read notes.txt`, and the same bullet introduces a
+/// reasoning row: `• Thinking`. The glyph alone is not enough to decide, because prose also uses a
+/// bullet — so a bullet counts only when the word after it starts with a capital letter, which is how
+/// both applications spell a tool name and how neither spells a list item.
+pub(crate) fn tool_marker(line: &str) -> Option<(&'static str, &str)> {
+    let trimmed = line.trim_start();
+    if let Some(rest) = trimmed.strip_prefix(TOOL_GLYPH) {
+        return Some((TOOL_GLYPH_TEXT, rest));
+    }
+    let rest = trimmed.strip_prefix(TOOL_BULLET)?;
+    let after = rest.trim_start();
+    let first = after.chars().next()?;
+    first.is_uppercase().then_some((TOOL_BULLET_TEXT, rest))
 }
 
 /// The tool calls a run of tool lines describes.
