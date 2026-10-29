@@ -122,6 +122,20 @@ Write-Host ("the pinned diff count holds: {0} of {1} carry no @@ header" -f $noH
 # Every kind the catalogue claims must have enough material to be more than an anecdote. `Frame` was found to have
 # two components in the whole corpus (round 136) and a third arrived only when a centred dialog was recorded; a kind
 # that thins out should fail here rather than be described with confidence it has not earned.
+# Each floor is the smallest count at which the corpus still supports the claim that kind's 100% means something,
+# and the reason is beside the number because a bare threshold invites being lowered:
+#
+#   Block     1019 of 1092 frames hold one; a floor of 1000 fails if the reader stops seeing ordinary text.
+#   Thought   391 frames hold one — the second agent's reasoning lines. A floor of 200 survives losing one
+#             application but not two.
+#   ToolCall  274 frames. Same reasoning: it is the kind that only agents produce, so it is the first to thin out
+#             when recordings are pruned.
+#   Meter     230 frames. The kind has one producer, so a floor of 100 is generous and still catches a collapse.
+#   Diff      61 components today; the narrowing that was reverted in round 61 would have halved them, so 40 is
+#             the line the cost was measured against.
+#   Frame     **3 components**, all from `whiptail`, in three frames. The floor is the truth rather than an
+#             aspiration: a kind carried by three examples cannot be claimed more strongly, and lowering this
+#             number would be the exact move this check exists to prevent.
 $kindFloor = @{
     "Block"    = 1000
     "Thought"  = 200
