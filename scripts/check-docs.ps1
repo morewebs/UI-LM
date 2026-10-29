@@ -8,6 +8,34 @@ param()
 $ErrorActionPreference = "Continue"
 $repo = Split-Path -Parent $PSScriptRoot
 $page = Join-Path $repo "docs\reports\2026-10-28-state-of-the-project.md"
+# The page claims how many kinds the vocabulary has, and the code knows: the catalogue's array minus `Column`,
+# which is the container rather than a kind of thing. A claim kept in prose drifts — this one said five for as
+# long as the vocabulary had six, which is the whole reason the count checks below exist.
+$lib = Join-Path $repo "crates/pages/src/lib.rs"
+if ((Test-Path $lib) -and (Test-Path $page)) {
+    $source = Get-Content -LiteralPath $lib -Raw -Encoding UTF8
+    $match = [regex]::Match($source, 'pub const COMPONENTS: \[&str; (\d+)\]')
+    if ($match.Success) {
+        $kinds = [int]$match.Groups[1].Value - 1
+        $words = @{ 1="one"; 2="two"; 3="three"; 4="four"; 5="five"; 6="six"; 7="seven"; 8="eight" }
+        $said = Get-Content -LiteralPath $page -Raw -Encoding UTF8
+        $claimed = @()
+        foreach ($pair in $words.GetEnumerator()) {
+            if ($said -match ("all " + $pair.Value + " kinds")) { $claimed += $pair.Key }
+        }
+        foreach ($number in $claimed) {
+            if ($number -ne $kinds) {
+                Write-Host ("the page says all {0} kinds; the catalogue defines {1}" -f $words[$number], $kinds)
+                exit 1
+            }
+        }
+        if ($claimed.Count -eq 0) {
+            Write-Host "the state page no longer says how many kinds there are, so nothing was compared"
+            exit 1
+        }
+    }
+}
+
 if (-not (Test-Path $page)) { Write-Host "no state page, so nothing was compared"; exit 1 }
 
 $tags = @(& git -C $repo tag --list "v*" | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' })
