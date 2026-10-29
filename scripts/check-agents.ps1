@@ -54,11 +54,29 @@ Write-Host ("  {0} recording(s), {1} frame(s): {2}" -f $sessions.Count, $frames,
 # a recording that quietly became a page of prose would still score 100% and still pass. So the material
 # itself is checked: most frames must hold more than one component, and more than one kind must appear.
 $structuredFrames = 0
+# The busiest frame of each recording, measured after the tree decision of round 26. A page can score 100%
+# and still be wrong — the model copies the reader, so both are wrong the same way — and a recording cut
+# into twice the pieces it used to have would pass the score *and* the structure share. The shape is
+# checked here, as `check-hard` checks its own.
+$ceiling = @{
+    "second-agent"   = 12
+    "second-agent-2" = 13
+    "second-agent-3" = 12
+    "second-agent-4" = 13
+    "second-agent-5" = 10
+    "second-agent-6" = 13
+}
 foreach ($session in $sessions) {
+    $busiest = 0
     foreach ($raw in (& $capture page --session $session.FullName --all 2>$null)) {
         $page = $raw | ConvertFrom-Json -ErrorAction SilentlyContinue
         if (-not $page) { continue }
-        if (@($page.createSurface.components | Where-Object { $_.component -ne "Column" }).Count -gt 1) { $structuredFrames++ }
+        $count = @($page.createSurface.components | Where-Object { $_.component -ne "Column" }).Count
+        if ($count -gt 1) { $structuredFrames++ }
+        if ($count -gt $busiest) { $busiest = $count }
+    }
+    if ($ceiling.ContainsKey($session.Name) -and $busiest -gt $ceiling[$session.Name]) {
+        $failures += ("{0}: busiest frame holds {1} components, the ceiling is {2}" -f $session.Name, $busiest, $ceiling[$session.Name])
     }
 }
 $share = if ($frames -gt 0) { 100.0 * $structuredFrames / $frames } else { 0 }
