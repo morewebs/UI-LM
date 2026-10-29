@@ -56,7 +56,9 @@ the code constructs.
 - **Some shapes are not representable — and the cost is measured.** A floating window is read as
   a block of text: vim's help window over a buffer round tripped at **74/74 lines (100%)**, so a
   consumer loses the *structure* of the overlay and none of its content. A tab strip is recognised
-  only when numbered.
+  only when numbered. **A divider-only pane row was on this list and is no longer**: a split
+  with both panes blank round trips at **67/67 lines (100%)** with every row covered, so it is now
+  a fifth hard recording rather than a claimed limitation.
 - **Live is not continuous.** A frame exists when the screen settles, so a fast program yields fewer
   moments than it drew.
 

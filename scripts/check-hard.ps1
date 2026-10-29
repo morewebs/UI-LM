@@ -32,6 +32,7 @@ $expected = @{
     "wsl-agent-in-split" = 100.0
     "wsl-two-agents-in-split" = 100.0
     "wsl-vim-in-split" = 100.0
+    "wsl-blank-in-split" = 100.0
 }
 
 $regressed = 0
