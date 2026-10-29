@@ -4,7 +4,7 @@ A check that has never failed is a check of unknown strength. This is the ledger
 `scripts/`, what it protects, and the failure that was produced to prove it can fail.
 
 **Every row quotes a message the check actually printed when it was broken on purpose.**
-Eighteen scripts and four properties were each made to fail, and the output kept — five of them re-proven in the last week
+Nineteen scripts and four properties were each made to fail, and the output kept — five of them re-proven in the last week
 because their first proof had been remembered rather than recorded.
 
 | check | protects | how it was made to fail |
@@ -18,6 +18,7 @@ because their first proof had been remembered rather than recorded.
 | `check-validate` | the validator agrees and disagrees correctly | a validator forced to accept everything printed "the validator accepted a dump with a wrong cell" |
 | `check-sizes` | the smallest and largest screens round trip | demanding more lines than exist printed "only 30 line(s) of content, so nothing was really drawn" |
 | `check-scrub` | a shared pair keeps its catalogue | removing the protection printed "the catalogue's name was scrubbed away" |
+| `check-agents` | the second Agent CLI reads perfectly, untrained | with the recordings moved away it printed "no second-agent recordings on this machine, so nothing was exercised" |
 | `check-corrupt` | damaged recordings are skipped, not fatal | rewording the skip message printed "nothing said the frame was skipped" |
 | `check-readme` | the README describes every command the binary has | replacing a command's name in the README printed "the README never mentions: disagree" |
 | `check-docs` | the documents' numbers match the tree | the page said v0.10.0 while v0.13.0 was tagged: "the state page names a release that is not the newest one"; and a spelled count printed "spells 'eighteen checks' - counts belong in digits here" |
