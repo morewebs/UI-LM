@@ -1006,9 +1006,16 @@ fn dataset(args: &DatasetArgs) -> Result<ExitCode> {
                 session.display()
             );
         }
+        // Each pair remembers which recording it came from, so a measurement can ask how a model does on *this*
+        // application rather than on a mixture. Round 111 could not answer that question because the set held no
+        // such field, and the answer had to be inferred from a filename that was never written down.
+        let source = session
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_default();
         for (input, target) in found {
             if seen.insert(input.clone()) {
-                pairs.push((input, target));
+                pairs.push((input, target, source.clone()));
             } else {
                 repeated += 1;
             }
@@ -1026,7 +1033,7 @@ fn dataset(args: &DatasetArgs) -> Result<ExitCode> {
     // next to the other rather than leaving a reader to assume the first means the second.
     let deep = pairs
         .iter()
-        .filter(|(_, target)| {
+        .filter(|(_, target, _)| {
             serde_json::from_str::<serde_json::Value>(target)
                 .ok()
                 .and_then(|page| {
@@ -1053,12 +1060,14 @@ fn dataset(args: &DatasetArgs) -> Result<ExitCode> {
         let scrubber = ui_lm_capture::scrub::Scrubber::for_this_machine();
         pairs = pairs
             .into_iter()
-            .map(|(input, target)| (scrubber.apply(&input), scrubber.apply(&target)))
+            .map(|(input, target, source)| {
+                (scrubber.apply(&input), scrubber.apply(&target), source)
+            })
             .collect();
     } else {
         let personal = pairs
             .iter()
-            .filter(|(input, target)| {
+            .filter(|(input, target, _)| {
                 ui_lm_capture::scrub::mentions_account(input)
                     || ui_lm_capture::scrub::mentions_account(target)
             })
@@ -1074,10 +1083,10 @@ fn dataset(args: &DatasetArgs) -> Result<ExitCode> {
     use std::io::Write as _;
     let mut out = std::fs::File::create(&args.out)
         .with_context(|| format!("failed to create {}", args.out.display()))?;
-    for (input, target) in &pairs {
+    for (input, target, source) in &pairs {
         // One JSON object per line, so a trainer can stream it without holding the whole
         // set in memory, and a person can read a single example with `head -1`.
-        let line = serde_json::json!({ "input": input, "target": target });
+        let line = serde_json::json!({ "input": input, "target": target, "source": source });
         writeln!(out, "{line}")?;
     }
     println!("wrote {} pair(s) to {}", pairs.len(), args.out.display());
