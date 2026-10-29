@@ -128,7 +128,7 @@ One command answers "is this tree sound", and takes about eight minutes:
 powershell -File scripts/check-everything.ps1
 ```
 
-It runs nineteen checks and prints one table. With `-Quick` it skips the five that record new material
+It runs eighteen checks and prints one table. With `-Quick` it skips the five that record new material
 and answers in under a minute — that is the loop for working; the full run is the loop for shipping.
 With `-Tag v0.11.1` it also downloads that release and proves the archive does what this document says.
 

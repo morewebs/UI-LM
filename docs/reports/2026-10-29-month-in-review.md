@@ -1,6 +1,6 @@
 # The month in review
 
-**UI-LM, 2026-10-27 to 2026-10-29.** Seventeen releases, 316 commits, nineteen checks and four fuzz
+**UI-LM, 2026-10-27 to 2026-10-29.** Seventeen releases, 316 commits, eighteen checks and four fuzz
 properties. This page is the short version; the long version is `2026-10-28-model.md`, and the current
 state of the product is `2026-10-28-state-of-the-project.md`.
 
@@ -20,7 +20,7 @@ description of the screen, and anything that can read the page can rebuild the s
 | | |
 |---|---|
 | releases | **v0.1.0 → v0.12.1**, three platforms each, every one verified by downloading it |
-| checks | **19 scripts**, one table, **every check shown failing with its output kept** |
+| checks | **18 scripts**, one table, **every check shown failing with its output kept** |
 | fuzz properties | 4 — reader, renderers, model, raw bytes |
 | fresh material | **476 frames, seven batches, not one component missed** |
 | hardest recording | two agents in two panes: **describes 100%, draws back 100%** |
@@ -70,8 +70,8 @@ description of the screen, and anything that can read the page can rebuild the s
 ## How to check any of it
 
 ```
-powershell -File scripts/check-everything.ps1          # 19 checks, ~8 minutes
-powershell -File scripts/check-everything.ps1 -Quick   # 19 checks, ~75 seconds
+powershell -File scripts/check-everything.ps1          # 18 checks, ~8 minutes
+powershell -File scripts/check-everything.ps1 -Quick   # 18 checks, ~75 seconds
 ```
 
 Every line in the table can fail, and each was made to fail before it was trusted. The full run includes
