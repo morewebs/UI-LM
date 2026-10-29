@@ -1760,6 +1760,18 @@ fn as_frame(lines: &[String]) -> Option<String> {
 }
 
 fn as_meter(lines: &[String]) -> Option<MeterParts> {
+    // DELIBERATE BREAK, ON A THROWAWAY BRANCH: any line with a percent sign is claimed as a meter, which `top`
+    // draws on its first row and a directory listing never does. It exists to prove the second-machine job fails
+    // on the runner when the reader is wrong, and it is never merged.
+    if lines.first().is_some_and(|line| line.contains('%')) {
+        return Some(MeterParts {
+            used: "1".to_owned(),
+            limit: "2".to_owned(),
+            fraction: Some(0.5),
+            label: Some("broken".to_owned()),
+            text: lines.first().cloned().unwrap_or_default(),
+        });
+    }
     let line = lines.first()?;
     let words: Vec<&str> = line.split_whitespace().collect();
     let slash = words.iter().position(|word| *word == "/")?;
