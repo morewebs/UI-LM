@@ -12,7 +12,7 @@
 use ui_lm_pages::page_from_labels;
 use ui_lm_pages::Envelope;
 
-/// The kinds a page carries, in order, ignoring the root column.
+// The kinds a page carries, in order, ignoring the root column.
 fn kinds(page: &Envelope) -> Vec<String> {
     page.create_surface
         .components
@@ -22,7 +22,7 @@ fn kinds(page: &Envelope) -> Vec<String> {
         .collect()
 }
 
-/// Builds a page where every row carries the same label.
+// Builds a page where every row carries the same label.
 fn page_of(text: &[&str], label: &str) -> Envelope {
     let text: Vec<String> = text.iter().map(|line| (*line).to_owned()).collect();
     let labels: Vec<String> = text.iter().map(|_| label.to_owned()).collect();
@@ -310,13 +310,13 @@ fn a_bullet_that_starts_with_thinking_is_not_reasoning() {
     );
 }
 
-/// A bullet list at the margin reads as one tool call, and that boundary is deliberate.
-///
-/// Every application in the corpus draws a list inside a panel — a changelog, a menu — and the box
-/// guard keeps those rows together as one `Block`. A bare list at the margin has never appeared, and no
-/// rule here can tell `• Read the docs` from `• Read notes.txt` without inventing a vocabulary of verbs.
-/// This test pins the boundary so that a future change cannot move it silently: either way it moves,
-/// this line stops being true and somebody has to decide why.
+// A bullet list at the margin reads as one tool call, and that boundary is deliberate.
+//
+// Every application in the corpus draws a list inside a panel — a changelog, a menu — and the box
+// guard keeps those rows together as one `Block`. A bare list at the margin has never appeared, and no
+// rule here can tell `• Read the docs` from `• Read notes.txt` without inventing a vocabulary of verbs.
+// This test pins the boundary so that a future change cannot move it silently: either way it moves,
+// this line stops being true and somebody has to decide why.
 #[test]
 fn a_bare_bullet_list_reads_as_one_tool_call() {
     let page = page_of(&["• Read the docs", "• Write tests"], "Block");
@@ -366,4 +366,37 @@ fn a_heavy_ruled_box_is_a_frame() {
         "a heavy-ruled box must be a Frame, not a block: {:?}",
         kinds
     );
+}
+
+#[test]
+fn two_prose_lines_read_as_a_diff() {
+    // The same boundary as the bare bullet list: at the margin, `- buy milk` beside `+ buy eggs` satisfies the
+    // rule for `Diff`, which asks for an addition and a removal. Real lists are drawn inside panels, where the
+    // box guard keeps them together, and a patch always carries `---`/`+++` headers — so the cost is a screen
+    // no application here draws. Narrowing the rule to require a hunk header was tried in round 55 and broke a
+    // pinned floor measurement elsewhere; the boundary is recorded instead of patched.
+    let page = page_of(&["- buy milk", "+ buy eggs"], "Block");
+    assert_eq!(
+        kinds(&page),
+        vec!["Diff".to_owned()],
+        "the documented boundary"
+    );
+}
+
+#[test]
+fn a_new_file_diff_is_a_diff() {
+    // It qualifies because `--- /dev/null` supplies the removal row. Accidental, and stable: every patch git
+    // prints carries those headers. Recorded so a future rule that drops them knows it has changed this answer.
+    let rows = [
+        "diff --git a/added.txt b/added.txt",
+        "new file mode 100644",
+        "--- /dev/null",
+        "+++ b/added.txt",
+        "@@ -0,0 +1,3 @@",
+        "+alpha",
+        "+beta",
+        "+gamma",
+    ];
+    let page = page_of(&rows, "Diff");
+    assert_eq!(kinds(&page), vec!["Diff".to_owned()]);
 }
