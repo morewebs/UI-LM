@@ -118,6 +118,12 @@ pub struct SessionRecord {
     /// different screens, and a training set that cannot tell them apart cannot
     /// say which one it was taught.
     pub app_version: Option<String>,
+    /// How the program ended, when anyone learned.
+    ///
+    /// A recording that holds almost nothing is usually a capture of a program that failed — a missing file, a
+    /// bad argument, an exit in ninety milliseconds — and without this field the recording cannot say so.
+    #[serde(default)]
+    pub exit: Option<i32>,
     /// What the session cost to produce, when anything priced it.
     ///
     /// Absent for a session with no model behind it, which is why it is an
@@ -232,6 +238,28 @@ impl SessionWriter {
         write_record(&self.dir.join(SESSION_FILE), &record)?;
         Ok(record)
     }
+}
+
+/// Records how the program ended, after the session record has been written.
+///
+/// The recorder learns the child's status after it finishes the record — the wait that reaps the child comes
+/// later — and moving that wait has cost five rounds. This is the same information by the shorter route: read
+/// the record, set the field, write it back through the same function the writer uses, so the staging-file and
+/// one-object rules still hold. A missing record is not an error; a capture that left none has already said, by
+/// its absence, that it never got to describe itself.
+pub fn record_exit(dir: &Path, exit: Option<i32>) -> io::Result<()> {
+    let path = dir.join(SESSION_FILE);
+    let text = match fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(error),
+    };
+    let mut record: SessionRecord = match serde_json::from_str(text.trim()) {
+        Ok(record) => record,
+        Err(error) => return Err(io::Error::new(io::ErrorKind::InvalidData, error)),
+    };
+    record.exit = exit;
+    write_record(&path, &record)
 }
 
 /// Writes the record as one JSON object, replacing whatever was there.
@@ -450,6 +478,7 @@ mod tests {
             ],
             cwd: Some("/scratch/project".into()),
             app_version: Some("1.2.3".into()),
+            exit: None,
             cost: None,
         }
     }

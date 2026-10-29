@@ -1452,6 +1452,7 @@ fn record(args: Record) -> Result<ExitCode> {
         child_env,
         cwd: Some(child_cwd.display().to_string()),
         app_version: None,
+        exit: None,
         cost: None,
     };
     // Opened before the child is spawned, so a bad output directory fails the run
@@ -1732,6 +1733,12 @@ fn record(args: Record) -> Result<ExitCode> {
         if let Some(code) = status {
             if code != 0 {
                 eprintln!("{}", exit_warning(std::slice::from_ref(&cfg.command), code));
+            }
+            // The status belongs in the record, not only on stderr: a capture of a program that failed holds
+            // almost nothing, and a reader should not have to guess why. Stamped here rather than carried into
+            // `finish` — the wait comes after the record is written, and moving it has cost five rounds.
+            if let Err(error) = ui_lm_frames::record_exit(&args.out, Some(code)) {
+                eprintln!("warning: the exit status could not be added to the record: {error}");
             }
         }
     }

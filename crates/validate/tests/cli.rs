@@ -57,6 +57,7 @@ fn write_session_of(dir: &Path, screens: &[Vec<Vec<char>>]) {
         child_env: vec![("TERM".to_owned(), "xterm-256color".to_owned())],
         cwd: Some("scratch".to_owned()),
         app_version: None,
+        exit: None,
         cost: None,
     };
     let mut writer = SessionWriter::new(dir, record).expect("the session opens");
