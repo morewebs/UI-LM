@@ -11,7 +11,7 @@ because their first proof had been remembered rather than recorded.
 |---|---|---|
 | `gate.ps1` | clippy, fmt, tests | an unformatted function in a shipped file printed "the gate is closed: 2 check(s) failed, nothing is committed" |
 | `check-all` | every curated axis, both builders | making the label path report a different role printed "fields: 688 component(s) compared, 2 differing" | Attempts this month made the reader and the label path change *together*, which this check cannot see — it compares the two builders, so it catches divergence and not a systematic error. Its earlier proof is remembered, not kept. |
-| `check-corpus` | every recording reads with both builders | a session with no readable frame produced "no page at all" |
+| `check-corpus` | everything ever recorded reads without an error — and a failed program holding nothing is caught | every recording reads with both builders | a session with no readable frame produced "no page at all" |
 | `check-audit` | pages agree with their screens, both builders | a masked span placed outside its screen produced a violation |
 | `check-html` | words and pane structure reach the document | forcing the renderer flat printed "no pane wrapper" |
 | `check-hard` | the hard recordings are no worse — in score, in round trip, and in shape | disabling the paned renderer printed "draws back at 23.8%"; lowering a component ceiling printed "busiest frame holds 2 components, the ceiling is 1"; and blinding a kind's predicate printed "vim-floating-popup — no Frame component, and this case exists for it", the same for Thought and Meter |

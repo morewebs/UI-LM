@@ -72,3 +72,27 @@ if ($failed.Count -gt 0) {
     exit 1
 }
 Write-Host "every recording read without an error"
+
+# A recording can be read perfectly and still be worthless: a capture of a program that failed holds almost
+# nothing, and the reader will describe those few rows without complaint. The session now records how its
+# program ended, so this asks the only question a reader cannot: did the program work?
+$withStatus = 0
+$broken = @()
+foreach ($session in $sessions) {
+    $record = Get-Content -LiteralPath (Join-Path $session.FullName "session.json") -Raw | ConvertFrom-Json
+    if ($null -eq $record.exit) { continue }
+    $withStatus++
+    $frames = @(Get-Content -LiteralPath (Join-Path $session.FullName "frames.jsonl") | Where-Object { $_.Trim() }).Count
+    if ($record.exit -ne 0 -and $frames -le 1) {
+        $broken += ("{0}: the program exited {1} and drew {2} frame(s)" -f $session.Name, $record.exit, $frames)
+    }
+}
+if ($withStatus -eq 0) {
+    Write-Host "no recording carries an exit status, so nothing was judged about how its program ended"
+    exit 1
+}
+if ($broken.Count -gt 0) {
+    $broken | ForEach-Object { Write-Host ("  " + $_) }
+    Write-Host "a recording exists whose program failed and which holds almost nothing"
+    exit 1
+}
