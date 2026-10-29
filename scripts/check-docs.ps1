@@ -168,3 +168,18 @@ if ((Test-Path $corpusPage2) -and $hard -gt 0) {
     }
     Write-Host ("  the hard recordings on disk: {0}" -f $hard)
 }
+
+# The review opens by counting the releases, so that number is counted here as well.
+$reviewPage = Join-Path $repo "docs\reports\2026-10-29-month-in-review.md"
+if (Test-Path $reviewPage) {
+    $reviewText2 = Get-Content -LiteralPath $reviewPage -Raw -Encoding UTF8
+    $tagCount = @(& git -C $repo tag --list "v*" | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' }).Count
+    foreach ($found in [regex]::Matches($reviewText2, '(\d+)\s+releases')) {
+        if ([int]$found.Groups[1].Value -ne $tagCount) {
+            Write-Host ("  the review says {0} releases, there are {1}" -f $found.Groups[1].Value, $tagCount)
+            Write-Host "the review counts the releases wrongly"
+            exit 1
+        }
+    }
+    Write-Host ("  releases counted: {0}" -f $tagCount)
+}
