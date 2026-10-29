@@ -120,6 +120,10 @@ pub fn audit(page: &Envelope) -> Vec<String> {
             Body::Block {
                 lines, spans, rows, ..
             } => {
+                // A component must describe every row it claims. Splitting a row out of a panel left the panel
+                // one line short of its span, and nothing noticed until the round trip lost the whole panel:
+                // 320 lines on `freebuff-refusal`. This is the rule that would have said so first.
+                check_filled(&mut problems, &component.id, rows, lines.len());
                 if lines.len() != spans.len() {
                     problems.push(format!(
                         "component {:?} has {} line(s) and {} span list(s)",
@@ -157,10 +161,15 @@ pub fn audit(page: &Envelope) -> Vec<String> {
                 }
                 check_rows(&mut problems, &component.id, rows);
             }
-            Body::ToolCall { rows, .. }
-            | Body::Meter { rows, .. }
-            | Body::Thought { rows, .. }
-            | Body::Frame { rows, .. } => {
+            Body::ToolCall { rows, calls, .. } => {
+                check_rows(&mut problems, &component.id, rows);
+                check_filled(&mut problems, &component.id, rows, calls.len());
+            }
+            Body::Meter { rows, .. } | Body::Thought { rows, .. } => {
+                check_rows(&mut problems, &component.id, rows);
+                check_filled(&mut problems, &component.id, rows, 1);
+            }
+            Body::Frame { rows, .. } => {
                 check_rows(&mut problems, &component.id, rows);
             }
         }
@@ -173,6 +182,20 @@ pub fn audit(page: &Envelope) -> Vec<String> {
         ));
     }
     problems
+}
+
+/// Records a component whose content does not fill the rows it claims.
+///
+/// A page describes a screen: every row a component names must have something said about it, or the page is
+/// short and a renderer drawing it back will leave a hole. The check is cheap, and the defect it catches is not
+/// hypothetical — removing one row from a panel silently shifted every row below it.
+fn check_filled(problems: &mut Vec<String>, id: &str, rows: &[u16; 2], lines: usize) {
+    let span = usize::from(rows[1]).saturating_sub(usize::from(rows[0]));
+    if span != lines {
+        problems.push(format!(
+            "component {id:?} claims {span} row(s) and describes {lines}"
+        ));
+    }
 }
 
 /// Records a row range that covers nothing, which no component should describe.
