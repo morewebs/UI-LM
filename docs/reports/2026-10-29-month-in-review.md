@@ -44,7 +44,7 @@ description of the screen, and anything that can read the page can rebuild the s
 
 ## What the month learned about checking
 
-- **Every check now carries its proof.** docs/checks.md lists all seventeen scripts and four fuzz\n  properties with the failure each one actually printed when it was broken on purpose — five of them\n  re-proven in the final week because their first proof had been remembered rather than recorded.\n- **A check that cannot be shown to fail is not a check.** Three of them refuse to pass on empty
+- **Every check now carries its proof.** docs/checks.md lists all eighteen scripts and four fuzz\n  properties with the failure each one actually printed when it was broken on purpose — five of them\n  re-proven in the final week because their first proof had been remembered rather than recorded.\n- **A check that cannot be shown to fail is not a check.** Three of them refuse to pass on empty
   material for exactly this reason: the audit on zero recordings, `check-sizes` on under eight lines,
   `check-diff-fresh` on zero diffs.
 - **The defect is usually in what nothing was pointed at**, not in what is hard. The diff, the browser
