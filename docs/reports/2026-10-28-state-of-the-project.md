@@ -26,7 +26,7 @@ the code constructs.
 | a page draws back into a terminal, every line of content | 100% on every recording, split screens included |
 | the page carries the screen's colour | 6,303 spans on the corpus; reaches HTML, terminal and the live view |
 | pages say honestly whether a component was read or carried | 688 components, 0 contradictions |
-| the model works off its training application | trained on one; **every component of every batch recorded since**, batch by batch in the report |
+| the model works off its training application | trained on one; **every component of every batch recorded since**; and on the eight non-Grok recordings, three of which have a floor low enough to prove anything — all three perfect. Five of those eight have a floor of 100% and prove nothing |
 | new screens, recorded after training, read perfectly | **every batch since training, every kind it held, nothing missed** — the per-batch numbers are in the report |
 | a split screen's panes hold their own components | both paths ask the same question before splitting; audited on model pages too |
 | an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
