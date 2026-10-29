@@ -52,9 +52,15 @@ impl Scrubber {
 
     /// The text with the machine taken out of it.
     pub fn apply(&self, text: &str) -> String {
+        // The catalogue's name is a schema identifier, not personal data, and it contains the
+        // organisation's name — so a plain replacement turns `moreweb.terminal/v1` into
+        // `<user>.terminal/v1` and every shared pair carries a catalogue nothing can validate.
+        // It is protected across the substitutions and put back afterwards.
+        const GUARD: &str = "\u{0}catalogue-id\u{0}";
+        let guarded = text.replace(ui_lm_pages::CATALOGUE_ID, GUARD);
         // The home directory first: it contains the account name, and replacing the larger
         // string first is what keeps the smaller one from cutting it in half.
-        let mut out = text.to_owned();
+        let mut out = guarded;
         if let Some(home) = &self.home {
             out = replace_both_cases(&out, home, "<home>");
             // A screen may spell the same path with forward slashes.
@@ -66,7 +72,7 @@ impl Scrubber {
         if let Some(user) = &self.user {
             out = replace_both_cases(&out, user, "<user>");
         }
-        redact_identifiers(&out)
+        redact_identifiers(&out).replace(GUARD, ui_lm_pages::CATALOGUE_ID)
     }
 }
 
