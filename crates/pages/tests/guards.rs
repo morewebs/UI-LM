@@ -373,8 +373,9 @@ fn two_prose_lines_read_as_a_diff() {
     // The same boundary as the bare bullet list: at the margin, `- buy milk` beside `+ buy eggs` satisfies the
     // rule for `Diff`, which asks for an addition and a removal. Real lists are drawn inside panels, where the
     // box guard keeps them together, and a patch always carries `---`/`+++` headers — so the cost is a screen
-    // no application here draws. Narrowing the rule to require a hunk header was tried in round 55 and broke a
-    // pinned floor measurement elsewhere; the boundary is recorded instead of patched.
+    // no application here draws. Narrowing the rule to require a hunk header was tried in round 55 and reverted;
+    // round 61 measured why it must stay wide: 34 of the corpus's 61 `Diff` components carry no header at all,
+    // because Freebuff shows an edit as a bare `-`/`+` pair beside the line it changed.
     let page = page_of(&["- buy milk", "+ buy eggs"], "Block");
     assert_eq!(
         kinds(&page),
@@ -385,8 +386,9 @@ fn two_prose_lines_read_as_a_diff() {
 
 #[test]
 fn a_new_file_diff_is_a_diff() {
-    // It qualifies because `--- /dev/null` supplies the removal row. Accidental, and stable: every patch git
-    // prints carries those headers. Recorded so a future rule that drops them knows it has changed this answer.
+    // It qualifies because `--- /dev/null` supplies the removal row — and that dependence is now known to be
+    // harmless rather than load-bearing: a patch may carry no header at all (Freebuff's edit previews do not)
+    // and still be a diff, so nothing here rests on git's headers being present.
     let rows = [
         "diff --git a/added.txt b/added.txt",
         "new file mode 100644",
