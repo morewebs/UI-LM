@@ -112,3 +112,25 @@ if (Test-Path $corpusPage) {
     }
 }
 Write-Host "the corpus counts in the documents match the corpus"
+
+# A document that points at a file which is not there sends its reader nowhere. Only this repository's own
+# `docs/` and `scripts/` paths are checked: the reports also cite paths from other projects and from
+# machines that are gone, and those are history rather than instructions.
+$sources = @(Get-ChildItem -LiteralPath (Join-Path $repo "docs") -Recurse -Filter "*.md") +
+    @(Get-Item -LiteralPath (Join-Path $repo "README.md"), (Join-Path $repo "HANDOFF.md") -ErrorAction SilentlyContinue)
+$dead = @()
+foreach ($source in $sources) {
+    $text = Get-Content -LiteralPath $source.FullName -Raw -Encoding UTF8
+    foreach ($match in [regex]::Matches($text, '`((?:docs|scripts)/[^`]+\.(?:md|ps1))`')) {
+        $target = Join-Path $repo ($match.Groups[1].Value -replace '/', '\')
+        if (-not (Test-Path $target)) {
+            $dead += ("{0} points at {1}, which does not exist" -f $source.Name, $match.Groups[1].Value)
+        }
+    }
+}
+if ($dead.Count -gt 0) {
+    $dead | Sort-Object -Unique | Select-Object -First 5 | ForEach-Object { Write-Host ("  " + $_) }
+    Write-Host "a document points at a file that is not there"
+    exit 1
+}
+Write-Host "every docs/ and scripts/ reference in the documents resolves"
