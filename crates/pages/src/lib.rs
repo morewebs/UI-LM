@@ -1250,7 +1250,32 @@ pub(crate) fn as_panes(lines: &[String]) -> Option<(Vec<String>, Vec<String>, us
                 line.chars().nth(column) == Some('|') || line.chars().nth(column) == Some('│')
             })
             .count();
-        if hits * 10 >= lines.len() * 6 && best.is_none_or(|(_, most)| hits > most) {
+        // A divider separates two things; a box border belongs to the box. The hit count alone cannot tell
+        // them apart — a centred whiptail dialog draws a bar down both sides of one box, and its left border was
+        // taken for a divider, cutting the dialog in half.
+        //
+        // What distinguishes them is whether the bar is **matched**: the rows holding a bar at this column also
+        // hold a bar further right on the same row, which is a box. A divider's rows hold nothing else. Two earlier
+        // attempts are recorded here because both looked right and each broke a real screen: requiring content on
+        // both sides declined the tmux fixture (a split of two empty prompts is still a split), and refusing a
+        // column that holds a corner declined `grok-help-frame6` (a corner can sit in a divider's column).
+        let bar_rows: Vec<&String> = lines
+            .iter()
+            .filter(|line| matches!(line.chars().nth(column), Some('|') | Some('\u{2502}')))
+            .collect();
+        let matched = bar_rows
+            .iter()
+            .filter(|line| {
+                line.chars()
+                    .skip(column + 1)
+                    .any(|glyph| glyph == '|' || glyph == '\u{2502}')
+            })
+            .count();
+        let is_a_box_border = matched * 10 >= bar_rows.len() * 8;
+        if hits * 10 >= lines.len() * 6
+            && !is_a_box_border
+            && best.is_none_or(|(_, most)| hits > most)
+        {
             best = Some((column, hits));
         }
     }
