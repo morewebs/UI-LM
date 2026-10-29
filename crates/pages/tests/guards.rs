@@ -307,3 +307,20 @@ fn a_bullet_that_starts_with_thinking_is_not_reasoning() {
         "a sentence must not become reasoning"
     );
 }
+
+/// A bullet list at the margin reads as one tool call, and that boundary is deliberate.
+///
+/// Every application in the corpus draws a list inside a panel — a changelog, a menu — and the box
+/// guard keeps those rows together as one `Block`. A bare list at the margin has never appeared, and no
+/// rule here can tell `• Read the docs` from `• Read notes.txt` without inventing a vocabulary of verbs.
+/// This test pins the boundary so that a future change cannot move it silently: either way it moves,
+/// this line stops being true and somebody has to decide why.
+#[test]
+fn a_bare_bullet_list_reads_as_one_tool_call() {
+    let page = page_of(&["• Read the docs", "• Write tests"], "Block");
+    assert_eq!(
+        kinds(&page),
+        vec!["ToolCall".to_owned()],
+        "the documented boundary"
+    );
+}
