@@ -29,77 +29,87 @@ if (-not (Test-Path $capture)) { throw "build first: cargo build --workspace" }
 $work = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-machine-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 
-# A program every platform has, drawing a screen wide enough to have columns in it.
+# Two screens every POSIX machine has, chosen because they differ in kind: a listing is columns of text, and `top`
+# is a header plus columns. Text differs between machines and always will — different files, different processes —
+# so what is compared is the **shape**: which kinds the page claims and how many panes it splits into.
 $isWindows = $PSVersionTable.Platform -eq "Win32NT" -or $env:OS -eq "Windows_NT"
-if ($isWindows) {
-    # The same POSIX command on both machines: this is a Windows host, so it runs the listing through WSL, and
-    # `sh -c` is what the Linux runner uses. Text will differ — different files, different sizes — so the check
-    # asserts the *shape*: a plain listing is one Block, in one pane, with nothing claimed as a meter or a thought.
-    $command = "wsl.exe"
-    $arguments = @("-e", "sh", "-c", "ls -l /usr/bin | head -40; sleep 1")
-} else {
-    $command = "sh"
-    $arguments = @("-c", "ls -l /usr/bin | head -40; sleep 1")
-}
+$scenarios = @(
+    @{ Name = "a directory listing"; Command = "ls -l /usr/bin | head -40; sleep 1"; Forbidden = @("Meter", "Thought", "ToolCall", "Diff", "Frame"); Panes = 0 },
+    @{ Name = "a process monitor";   Command = "top -bn1 | head -25; sleep 1";     Forbidden = @("Meter", "Thought", "ToolCall", "Diff", "Frame"); Panes = 0 }
+)
 
-$session = Join-Path $work "s"
-& $capture record --rows $Rows --cols $Cols --out $session --stop-after $Seconds -- $command @arguments 2>&1 |
-    Select-Object -Last 1 | ForEach-Object { Write-Host ("  " + $_) }
+$failures = @()
+foreach ($scenario in $scenarios) {
+    if ($isWindows) {
+        $command = "wsl.exe"
+        $arguments = @("-e", "sh", "-c", $scenario.Command)
+    } else {
+        $command = "sh"
+        $arguments = @("-c", $scenario.Command)
+    }
 
-if (-not (Test-Path (Join-Path $session "session.json"))) {
-    Write-Host "the machine was not recorded: no session was written"
-    exit 1
-}
+    $session = Join-Path $work ("s-" + ($scenario.Name -replace ' ', '-'))
+    & $capture record --rows $Rows --cols $Cols --out $session --stop-after $Seconds -- $command @arguments 2>&1 |
+        Select-Object -Last 1 | Out-Null
 
-$frames = @(Get-Content -LiteralPath (Join-Path $session "frames.jsonl") | Where-Object { $_.Trim() }).Count
-if ($frames -eq 0) {
-    Write-Host "the machine was recorded but holds no frame, so nothing was measured"
-    exit 1
-}
+    if (-not (Test-Path (Join-Path $session "session.json"))) {
+        $failures += ("  " + $scenario.Name + " -> the machine was not recorded: no session was written")
+        continue
+    }
 
-$roundTrip = (& $capture tui --session $session --all 2>&1 | Select-Object -Last 1) -join ""
-Write-Host ("  " + $roundTrip)
+    $frames = @(Get-Content -LiteralPath (Join-Path $session "frames.jsonl") | Where-Object { $_.Trim() }).Count
+    if ($frames -eq 0) {
+        $failures += ("  " + $scenario.Name + " -> recorded but holds no frame, so nothing was measured")
+        continue
+    }
 
-$score = (& $capture score --session $session --model (Join-Path $repo "models\page.json") 2>&1 | Select-Object -First 1) -join ""
-Write-Host ("  " + $score)
+    $roundTrip = (& $capture tui --session $session --all 2>&1 | Select-Object -Last 1) -join ""
+    # A blank screen round trips at 100% — `0/0 line(s) of content came back (100.0%)` is what an empty recording
+    # prints. The first version of this check accepted that, which made it a check that could pass on nothing.
+    if ($roundTrip -notmatch "(\d+)/(\d+) line") {
+        $failures += ("  " + $scenario.Name + " -> the round trip printed no line count, so nothing was measured")
+        continue
+    }
+    $cameBack = [int]$Matches[1]
+    if ($cameBack -eq 0) {
+        $failures += ("  " + $scenario.Name + " -> the screen holds no lines, so a perfect round trip proves nothing")
+        continue
+    }
+    if ($roundTrip -notmatch "\(100\.0%\)") {
+        $failures += ("  " + $scenario.Name + " -> " + $roundTrip)
+        continue
+    }
 
-# A blank screen round trips at 100% — `0/0 line(s) of content came back (100.0%)` is what an empty recording
-# prints. The first version of this check accepted that, which made it a check that could pass on nothing.
-if ($roundTrip -notmatch "(\d+)/(\d+) line") {
-    Write-Host "the round trip printed no line count, so nothing was measured"
-    exit 1
-}
-$cameBack = [int]$Matches[1]
-if ($cameBack -eq 0) {
-    Write-Host "the screen holds no lines, so a perfect round trip would prove nothing"
-    exit 1
-}
-if ($roundTrip -notmatch "\(100\.0%\)") {
-    Write-Host "this machine's screen did not round trip exactly"
-    exit 1
-}
+    $kinds = @{}
+    $paneCount = 0
+    foreach ($raw in (& $capture page --session $session --all 2>$null)) {
+        $page = $raw | ConvertFrom-Json
+        foreach ($component in $page.createSurface.components) { $kinds[$component.component] = 1 + $kinds[$component.component] }
+        if (@($page.createSurface.panes | Where-Object { $null -ne $_ }).Count -gt 0) { $paneCount++ }
+    }
+    $shape = ($kinds.GetEnumerator() | Sort-Object Key | ForEach-Object { $_.Key + "=" + $_.Value }) -join ", "
+    Write-Host ("  {0,-22} {1,2} frame(s)  kinds: {2}  ({3})" -f $scenario.Name, $frames, $shape, $roundTrip.Trim())
 
-# The shape, not the text. A directory listing is one block in one pane on any machine; a reader that called some
-# of those lines meters or reasoning would still round trip perfectly and would be wrong. This is the claim that
-# can be compared between machines, because the files themselves cannot be.
-$kinds = @{}
-foreach ($raw in (& $capture page --session $session --all 2>$null)) {
-    $page = $raw | ConvertFrom-Json
-    foreach ($component in $page.createSurface.components) { $kinds[$component.component] = 1 + $kinds[$component.component] }
-}
-$shape = ($kinds.GetEnumerator() | Sort-Object Key | ForEach-Object { $_.Key + "=" + $_.Value }) -join ", "
-Write-Host ("  kinds: " + $shape)
-if (-not $kinds.ContainsKey("Block")) {
-    Write-Host "the listing was not read as a block, so the shape is not what a listing is"
-    exit 1
-}
-foreach ($unexpected in @("Meter", "Thought", "ToolCall", "Diff", "Frame")) {
-    if ($kinds.ContainsKey($unexpected)) {
-        Write-Host ("a plain directory listing was read as " + $unexpected + ", which no machine's listing is")
-        exit 1
+    if (-not $kinds.ContainsKey("Block")) {
+        $failures += ("  " + $scenario.Name + " -> was not read as a block, so the shape is not what it is")
+        continue
+    }
+    foreach ($unexpected in $scenario.Forbidden) {
+        if ($kinds.ContainsKey($unexpected)) {
+            $failures += ("  " + $scenario.Name + " -> a plain screen was read as " + $unexpected + ", which no machine's screen of it is")
+        }
+    }
+    $expectedPanes = [int]$scenario.Panes
+    if ($paneCount -gt $expectedPanes) {
+        $failures += ("  " + $scenario.Name + " -> split into " + $paneCount + " frame(s) with panes, and it has none")
     }
 }
 
+if ($failures.Count -gt 0) {
+    $failures | ForEach-Object { Write-Host $_ }
+    Write-Host "a screen from this machine was not read the way a screen of it reads anywhere"
+    exit 1
+}
 $platform = if ($isWindows) { "Windows" } else { (Get-Content /etc/os-release -EA SilentlyContinue | Where-Object { $_ -match '^PRETTY_NAME=' } | Select-Object -First 1) -replace 'PRETTY_NAME="?|"$', '' }
 Write-Host ("a screen recorded on {0} round trips exactly ({1} frame(s))" -f $(if ($platform) { $platform } else { "this machine" }), $frames)
 
