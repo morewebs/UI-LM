@@ -110,11 +110,20 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 
 1. **A third full-screen application with a floating window or a dialog.** vim and tmux both put
    panes in a plain rectangle; the design's trigger for a `Frame` component has not fired yet.
-2. **A corpus from a second agent.** The training material is one agent's transcripts because only
-   agents draw structure — a second agent's transcripts are the only way to test whether those
-   shapes are general or Grok's.
+2. **A `Meter` from something that is not an agent CLI.** Agents print a budget (`25K / 500K`) because a
+   budget is what they manage; file copies and monitors print percentages, and `as_meter` will not invent a
+   limit from one. A build tool with a step count, or a watcher with a quota, is what this needs.
 3. **Interaction.** Nothing here tests a screen mid-redraw or a keystroke arriving during a
    redraw; `serve` forwards input but no test asserts what happens when it does.
+
+## What was the second item, and is now done
+
+**A corpus from a second agent** — Freebuff, an npm TUI, installed and recorded eleven times: 580 frames
+across reading, writing, diffing (including a rename), searching, a full fix cycle, and two refusals. The model
+was trained on Grok alone and reproduces **every component at 100%**. `check-agents` holds it, and the
+decisions that came out of it are in `docs/reports/2026-10-28-model.md`: a bullet marks a tool row, a reasoning
+heading ends after its word, a border ends in a corner, and the scrollbar column belongs to the terminal rather
+than to the application.
 
 ## Conventions this project runs on
 

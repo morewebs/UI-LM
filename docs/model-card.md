@@ -27,6 +27,7 @@ stated here rather than in a footnote.
 |---|---|---|
 | curated corpus | 60 recordings, 343 frames, both builders | 100% agreement, no audit violations |
 | seven evaluation sets | Grok and non-Grok screens, 185 frames | 100% every set |
+| **a second agent CLI** | **11 recordings, 580 frames, never trained on** | **100%, every component** |
 | fresh batches | recorded **after** training, 8 batches | 100% every batch, every kind it held |
 
 **The floor matters as much as the score.** `score` also reports a text-only converter that splits
@@ -43,16 +44,33 @@ all perfect.
 
 ## What it cannot do
 
-- **It does not generalise beyond what it was trained on, and nobody has measured that it does.** No other
-  agent's screens exist on this machine; `claude`, `aider`, `codex`, `gemini`, `ollama` and `opencode`
-  were looked for and none is installed. The procedure for testing this is in
-  `docs/reports/2026-10-28-state-of-the-project.md`.
 - **It cannot grow by finding another kind.** The five kinds are the vocabulary; a sixth would be a change
   to the page format, the reader, both renderers and the checks — see `docs/adding-a-component.md`.
 - **It is at its ceiling on this data.** Measured three ways: 60% more corpus gave +0.1% row accuracy; a
   twentieth feature was worse on every screen family; training on plain screens was three times worse.
 - **Its raw labels disagree with the reader on 2–12% of rows.** Structural guards are what keep pages
   exact; the model is one voice in an assembly, not an oracle.
+- **`Meter` has one observed producer.** Agents print a budget — use against a limit — because that is what
+  they manage. Progress bars, monitors and file copies print percentages and counts instead, and `as_meter`
+  refuses to invent a limit from a percentage. The kind is real; the applications that draw it are few.
+
+## What it can do that it was not trained for
+
+**A second agent CLI, read without ever seeing it.** Freebuff (`freebuff`, an npm package that draws its own
+TUI) was recorded eleven times, 580 frames, across five kinds of work: reading a file, creating one, showing a
+`git diff`, showing a *rename* in a diff, searching several files, a full fix cycle, and two refusals where the
+task could not succeed. Every component in every frame is reproduced.
+
+| | |
+|---|---|
+| Block | 4652/4652 |
+| ToolCall | 158/158 |
+| Thought | 385/385 |
+| Diff | 54/54 (two shapes: `+++`/`---` and a `similarity index` rename) |
+| Meter | none — freebuff shows `15.4K (1%)` with no limit on screen, so it stays a Block |
+
+That is the claim this model exists to test, and `check-agents` holds it: the recordings are scored, drawn
+back, audited, counted, and bounded by shape. Its material is local, like the hard cases.
 
 ## Intended use
 
