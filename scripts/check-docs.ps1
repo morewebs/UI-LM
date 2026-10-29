@@ -320,4 +320,25 @@ if ((Test-Path $hard) -and (Test-Path $card)) {
     Write-Host ("every forbidden guard is named in the boundary table: " + ($guarded -join ", "))
 }
 
+# The model card says how many screens the weights were trained on, and that number lives in the model file too.
+# A card that quotes a corpus the weights never saw is the same defect as a front page naming an old release.
+$weights = Join-Path $repo "models\page.json"
+$cardPath = Join-Path $repo "docs\model-card.md"
+if ((Test-Path $weights) -and (Test-Path $cardPath)) {
+    $trained = (Get-Content -LiteralPath $weights -Raw | ConvertFrom-Json).trainedOn
+    $cardText = Get-Content -LiteralPath $cardPath -Raw -Encoding UTF8
+    $quoted = @([regex]::Matches($cardText, '(\d+) screens from') | ForEach-Object { [int]$_.Groups[1].Value })
+    if ($quoted.Count -eq 0) {
+        Write-Host "the model card no longer says how many screens the weights were trained on"
+        exit 1
+    }
+    $wrong = @($quoted | Where-Object { $_ -ne $trained })
+    if ($wrong.Count -gt 0) {
+        Write-Host ("  the card quotes {0} screens; the weights were trained on {1}" -f ($wrong -join ", "), $trained)
+        Write-Host "the model card quotes a training set that is not in the model file"
+        exit 1
+    }
+    Write-Host ("the card's training count matches the weights: {0} screens" -f $trained)
+}
+
 Write-Host "every front page opens with a sentence"
