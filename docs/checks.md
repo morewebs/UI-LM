@@ -11,12 +11,12 @@ that would be reconstructed from memory; each is being re-proven with its output
 | check | protects | how it was made to fail |
 |---|---|---|
 | `gate.ps1` | clippy, fmt, tests | an unformatted function in a shipped file printed "the gate is closed: 2 check(s) failed, nothing is committed" |
-| `check-all` (proven, message not kept) | every curated axis, both builders | a planted wrong field produced a `fields` miss |
+| `check-all` | every curated axis, both builders | **not yet re-proven.** Attempts this month made the reader and the label path change *together*, which this check cannot see — it compares the two builders, so it catches divergence and not a systematic error. Its earlier proof is remembered, not kept. |
 | `check-corpus` | every recording reads with both builders | a session with no readable frame produced "no page at all" |
 | `check-audit` | pages agree with their screens, both builders | a masked span placed outside its screen produced a violation |
 | `check-html` | words and pane structure reach the document | forcing the renderer flat printed "no pane wrapper" |
 | `check-hard` | the hard recordings are no worse | disabling the paned renderer printed "draws back at 23.8%" |
-| `check-validate` (proven, message not kept) | the validator agrees and disagrees correctly | a changed label made the two validators disagree |
+| `check-validate` | the validator agrees and disagrees correctly | a validator forced to accept everything printed "the validator accepted a dump with a wrong cell" |
 | `check-sizes` | the smallest and largest screens round trip | demanding more lines than exist printed "only 30 line(s) of content, so nothing was really drawn" |
 | `check-scrub` | a shared pair keeps its catalogue | removing the protection printed "the catalogue's name was scrubbed away" |
 | `check-corrupt` | damaged recordings are skipped, not fatal | rewording the skip message printed "nothing said the frame was skipped" |
