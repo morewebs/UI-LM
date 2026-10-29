@@ -27,7 +27,7 @@ the code constructs.
 | the page carries the screen's colour | 6,303 spans on the corpus; reaches HTML, terminal and the live view |
 | pages say honestly whether a component was read or carried | 688 components, 0 contradictions |
 | the model works off its training application | trained on one; **476 fresh frames from seven batches, every component** |
-| new screens, recorded after training, read perfectly | **476 frames across seven batches**; every kind held, nothing missed |
+| new screens, recorded after training, read perfectly | **558 frames across eight batches**; every kind held, nothing missed |
 | a split screen's panes hold their own components | both paths ask the same question before splitting; audited on model pages too |
 | an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
 | every word the page holds reaches the browser document | 60 recordings **on both paths**, checked; markup arrives escaped |
@@ -44,7 +44,7 @@ the code constructs.
   the components this catalogue describes — seven other programs recorded for training produced
   eleven screens and not one structured component. A second agent's transcripts are the only way to
   test whether these shapes are general, and I don't have any.
-- **Every screen came from this machine**, and most were chosen by me. Seven clean batches is the
+- **Every screen came from this machine**, and most were chosen by me. Eight clean batches is the
   strongest claim available; it is not the same as a stranger's workflow.
 - **The model is at its ceiling, and that is measured three ways.** 60% more corpus: +0.1% row
   accuracy. A twentieth feature: worse on every screen family. Training on plain screens: three
@@ -110,7 +110,7 @@ continuation cell in the frame format, which is a format change rather than a re
 written down rather than wished away.
 ## What "100% on fresh material" does and does not mean
 
-Seven batches recorded after the model was trained, 476 frames, **nothing missed**:
+Eight batches recorded after the model was trained, 558 frames, **nothing missed**:
 Block, Meter, Thought and ToolCall all perfect.
 
 **`Diff` was missing until it was asked for.** The agent reports an *edit* as a tool line with
