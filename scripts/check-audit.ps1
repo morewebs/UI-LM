@@ -53,3 +53,16 @@ if ($inspected -lt $sessions.Count) {
     exit 1
 }
 Write-Host "every recording is consistent with itself"
+
+# The same audit over pages built by the model. Every invariant it checks belongs to both builders, and
+# pointing it at the model's pages found three duplicated ids on one recording the moment it was tried.
+$modelArgs = @("audit", "--model", (Join-Path $repo "models\page.json"), "--") + @($sessions | ForEach-Object { $_.FullName })
+$modelOut = & $capture @modelArgs 2>&1
+$modelCode = $LASTEXITCODE
+if ($modelCode -ne 0) {
+    Write-Host "the model's pages:"
+    @($modelOut | Where-Object { "$_" -match "frame \d+:" }) | Select-Object -First 6 | ForEach-Object { Write-Host ("  " + "$_".Trim()) }
+    Write-Host "a model page contradicts its screen"
+    exit 1
+}
+Write-Host "the model's pages are consistent with their screens too"

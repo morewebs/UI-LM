@@ -1004,6 +1004,14 @@ fn page_from_lines(
             right_parts.remove(0);
             if !left_parts.is_empty() && !right_parts.is_empty() {
                 let left_ids: Vec<String> = left_parts.iter().map(|part| part.id.clone()).collect();
+                // Two panes can hold components with identical text, and an id comes from that text — so the
+                // merge was the one place ids could still collide, on both builders. The audit found it the
+                // moment it was pointed at model pages: three ids repeated twice on one recording.
+                let mut taken_ids: std::collections::HashSet<String> =
+                    left_parts.iter().map(|part| part.id.clone()).collect();
+                for part in &mut right_parts {
+                    part.id = crate::unique_id(part.id.clone(), &mut taken_ids);
+                }
                 let right_ids: Vec<String> =
                     right_parts.iter().map(|part| part.id.clone()).collect();
                 let all: Vec<String> = left_ids.iter().chain(&right_ids).cloned().collect();

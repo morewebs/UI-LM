@@ -187,6 +187,25 @@ pub fn session_pages(dir: &Path) -> std::io::Result<Vec<ui_lm_pages::Envelope>> 
 /// an id, or puts a span past the end of its line is describable content that no
 /// renderer could draw, and finding one here is cheaper than finding it in a renderer.
 pub fn audit_pages(roots: &[PathBuf]) -> std::io::Result<Vec<Violation>> {
+    audit_pages_with(roots, None)
+}
+
+/// The same audit, over pages built by the **model** instead of the reader.
+///
+/// Until this existed, the audit only ever described the reader's pages, so a model page that named a
+/// row the screen did not have, or repeated an id, could not be found by anything. The two builders
+/// share every invariant the audit checks, which is exactly why both deserve auditing.
+pub fn audit_model_pages(
+    roots: &[PathBuf],
+    model: &ui_lm_model::Model,
+) -> std::io::Result<Vec<Violation>> {
+    audit_pages_with(roots, Some(model))
+}
+
+fn audit_pages_with(
+    roots: &[PathBuf],
+    model: Option<&ui_lm_model::Model>,
+) -> std::io::Result<Vec<Violation>> {
     let mut violations = Vec::new();
     for root in roots {
         for dir in session_dirs(root)? {
@@ -198,7 +217,14 @@ pub fn audit_pages(roots: &[PathBuf]) -> std::io::Result<Vec<Violation>> {
                 .file_name()
                 .map(|name| name.to_string_lossy().into_owned())
                 .unwrap_or_else(|| "session".to_owned());
-            for (index, page) in ui_lm_pages::pages(&frames, &surface).iter().enumerate() {
+            let pages: Vec<ui_lm_pages::Envelope> = match model {
+                Some(model) => frames
+                    .iter()
+                    .map(|frame| model.page(&frame_text(frame), &surface))
+                    .collect(),
+                None => ui_lm_pages::pages(&frames, &surface),
+            };
+            for (index, page) in pages.iter().enumerate() {
                 for problem in ui_lm_pages::audit(page) {
                     violations.push(Violation {
                         session: dir.display().to_string(),

@@ -210,6 +210,14 @@ fn labeled_page(text: &[String], labels: &[String], surface: &str, allow_split: 
             right_parts.remove(0);
             if !left_parts.is_empty() && !right_parts.is_empty() {
                 let left_ids: Vec<String> = left_parts.iter().map(|part| part.id.clone()).collect();
+                // Two panes can hold components with identical text, and an id comes from that text — so the
+                // merge was the one place ids could still collide, on both builders. The audit found it the
+                // moment it was pointed at model pages: three ids repeated twice on one recording.
+                let mut taken_ids: std::collections::HashSet<String> =
+                    left_parts.iter().map(|part| part.id.clone()).collect();
+                for part in &mut right_parts {
+                    part.id = crate::unique_id(part.id.clone(), &mut taken_ids);
+                }
                 let right_ids: Vec<String> =
                     right_parts.iter().map(|part| part.id.clone()).collect();
                 let all_children: Vec<String> =
@@ -272,6 +280,10 @@ fn labeled_page(text: &[String], labels: &[String], surface: &str, allow_split: 
         }
         index += 1;
     }
+    // Every id on the page must be unique: a consumer keys by id, and two blocks that read
+    // alike — the same table header twice — would otherwise collide. The reader has had this
+    // since round 154; the label path did not, which the model-page audit found at once.
+    let mut taken: std::collections::HashSet<String> = Default::default();
     for (first, end, label) in runs {
         if first >= text.len() {
             continue;
@@ -288,7 +300,7 @@ fn labeled_page(text: &[String], labels: &[String], surface: &str, allow_split: 
         ];
 
         let (kind, body) = body_for(settled(&label, &lines).as_str(), &lines, rows);
-        let id = block_id(&lines);
+        let id = crate::unique_id(block_id(&lines), &mut taken);
         children.push(id.clone());
         components.push(Component {
             id,

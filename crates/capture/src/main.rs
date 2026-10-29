@@ -92,7 +92,7 @@ enum Command {
     /// Report what a set of recorded sessions contains.
     Summarize(Summarize),
     /// Check a corpus against the promises the volatile mask makes.
-    Audit(Summarize),
+    Audit(AuditArgs),
     /// Print the page a recorded frame describes, as an A2UI message.
     Page(PageArgs),
     /// Score the learned model against the pages the recorder produces.
@@ -431,7 +431,7 @@ fn run(command: Command) -> Result<ExitCode> {
             sessions.extend(args.named.iter().cloned());
             summarise(&sessions)
         }
-        Command::Audit(args) => audit(&args.sessions),
+        Command::Audit(args) => audit(&args),
         Command::Page(args) => page(&args),
         Command::Compare(args) => compare(&args),
         Command::Baseline(args) => baseline(&args),
@@ -1285,7 +1285,8 @@ fn page(args: &PageArgs) -> Result<ExitCode> {
 
 /// Checks a corpus against the promises the frames and the pages make, and fails if
 /// either breaks one.
-fn audit(sessions: &[PathBuf]) -> Result<ExitCode> {
+fn audit(args: &AuditArgs) -> Result<ExitCode> {
+    let sessions = &args.sessions[..];
     let context = || format!("failed to read the sessions under {sessions:?}");
     let (recordings, frames) =
         ui_lm_capture::summary::audit_counts(sessions).with_context(context)?;
@@ -1296,7 +1297,15 @@ fn audit(sessions: &[PathBuf]) -> Result<ExitCode> {
         return Ok(ExitCode::FAILURE);
     }
     let mut violations = ui_lm_capture::summary::audit(sessions).with_context(context)?;
-    violations.extend(ui_lm_capture::summary::audit_pages(sessions).with_context(context)?);
+    // Which builder draws the pages the page-level audit examines.
+    let pages = match &args.model {
+        Some(path) => {
+            let model = ui_lm_model::Model::load(path)?;
+            ui_lm_capture::summary::audit_model_pages(sessions, &model)
+        }
+        None => ui_lm_capture::summary::audit_pages(sessions),
+    };
+    violations.extend(pages.with_context(context)?);
     if violations.is_empty() {
         println!("audit: no violations");
         return Ok(ExitCode::SUCCESS);
@@ -1311,6 +1320,20 @@ fn audit(sessions: &[PathBuf]) -> Result<ExitCode> {
     Ok(ExitCode::FAILURE)
 }
 
+/// Checks that a corpus keeps the promises a page makes.
+#[derive(Debug, Args)]
+struct AuditArgs {
+    /// Audit pages built by this model instead of by the reader.
+    ///
+    /// Every invariant the audit checks belongs to both builders, and until this flag existed only the
+    /// reader's pages were ever examined.
+    #[arg(long, value_name = "FILE")]
+    model: Option<PathBuf>,
+
+    /// Session directories, or directories holding sessions, one or more.
+    #[arg(last = true, value_name = "DIR")]
+    sessions: Vec<PathBuf>,
+}
 /// Prints what the given sessions hold.
 fn summarise(sessions: &[PathBuf]) -> Result<ExitCode> {
     let summary = ui_lm_capture::summary::summarize(sessions)
