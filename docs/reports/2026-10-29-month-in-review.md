@@ -86,7 +86,7 @@ that ships.
 | releases | **19**, v0.1.0 through v0.14.0, three platforms each, every one verified by downloading it |
 | commits | 385 |
 | checks | **19 scripts** and 4 fuzz properties, each with the failure that proved it in `docs/checks.md` |
-| hard recordings | **8** shapes, seven at 100% on score and both round trips |
+| hard recordings | **9** shapes, eight at 100% on score and both round trips |
 | fresh material | **10 batches**, every one perfect, every one recorded after training |
 | the final audit | `every check passed in 472.9s` |
 | unproven | **one claim**: that the vocabulary generalises beyond the application it was built for |
