@@ -35,6 +35,18 @@ $expected = @{
     "wsl-blank-in-split" = 100.0
 }
 
+# How many components the busiest frame of each recording holds, measured after the tree decision of
+# round 26. A page can score 100% and still be wrong: `cargo tree` was read as seventeen blocks at 100%,
+# because the model copies the reader and both were wrong the same way. Fragmentation is invisible to a
+# score, so the shape of the page is checked directly — a frame that suddenly holds twice the components
+# it used to has been cut up, and somebody has to say why.
+$ceiling = @{
+    "wsl-agent-in-pane"        = 11
+    "wsl-agent-in-split"       = 10
+    "wsl-blank-in-split"       = 2
+    "wsl-two-agents-in-split"  = 19
+    "wsl-vim-in-split"         = 2
+}
 $regressed = 0
 foreach ($case in (Get-ChildItem -LiteralPath $cases -Directory)) {
     $line = (& $capture score --session $case.FullName --model $model 2>&1 | Select-Object -First 1) -join ""
@@ -46,6 +58,18 @@ foreach ($case in (Get-ChildItem -LiteralPath $cases -Directory)) {
     $trip = (& $capture tui --session $case.FullName --all 2>&1 | Select-Object -Last 1) -join ""
     $tripped = 0.0
     if ($trip -match "\(([\d.]+)%\)") { $tripped = [double]$Matches[1] }
+    # The busiest frame, against the recorded ceiling.
+    $busiest = 0
+    foreach ($raw in (& $capture page --session $case.FullName --all 2>$null)) {
+        $page = $raw | ConvertFrom-Json -ErrorAction SilentlyContinue
+        if (-not $page) { continue }
+        $count = @($page.createSurface.components | Where-Object { $_.component -ne "Column" }).Count
+        if ($count -gt $busiest) { $busiest = $count }
+    }
+    if ($ceiling.ContainsKey($case.Name) -and $busiest -gt $ceiling[$case.Name]) {
+        Write-Host ("  {0,-22} busiest frame holds {1} components, the ceiling is {2}" -f $case.Name, $busiest, $ceiling[$case.Name])
+        $regressed++
+    }
     $was = if ($expected.ContainsKey($case.Name)) { $expected[$case.Name] } else { $null }
     if ($tripped -lt 100.0) {
         Write-Host ("  {0,-22} draws back at {1:N1}% ({2})" -f $case.Name, $tripped, $trip.Trim())

@@ -14,7 +14,7 @@ because their first proof had been remembered rather than recorded.
 | `check-corpus` | every recording reads with both builders | a session with no readable frame produced "no page at all" |
 | `check-audit` | pages agree with their screens, both builders | a masked span placed outside its screen produced a violation |
 | `check-html` | words and pane structure reach the document | forcing the renderer flat printed "no pane wrapper" |
-| `check-hard` | the hard recordings are no worse | disabling the paned renderer printed "draws back at 23.8%" |
+| `check-hard` | the hard recordings are no worse — in score, in round trip, and in shape | disabling the paned renderer printed "draws back at 23.8%"; lowering a component ceiling printed "busiest frame holds 2 components, the ceiling is 1" |
 | `check-validate` | the validator agrees and disagrees correctly | a validator forced to accept everything printed "the validator accepted a dump with a wrong cell" |
 | `check-sizes` | the smallest and largest screens round trip | demanding more lines than exist printed "only 30 line(s) of content, so nothing was really drawn" |
 | `check-scrub` | a shared pair keeps its catalogue | removing the protection printed "the catalogue's name was scrubbed away" |
