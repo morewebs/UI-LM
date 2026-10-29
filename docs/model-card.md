@@ -56,6 +56,18 @@ all perfect.
   | Grok (trained) | **2.0%** to **10.3%** |
   | Freebuff (never trained on) | **17.6%** to **26.3%** |
 
+And the disagreements are not spread evenly — they have one shape, measured by confusion pair:
+
+  | reader says | model says | where |
+  |---|---|---|
+  | Block | **Thought** | 177 rows on one session, 155 on another |
+  | Block | **Meter** | 56 rows, 381 on a long one |
+  | Thought / ToolCall | Block | 22–90 rows |
+
+  The model over-reads reasoning and meters on an application whose screens it has never seen, and the guards
+  that stop it are the **narrow** ones — a reasoning heading must end after its word, a meter needs a drawn limit
+  — both written for other screens, and both doing their job here.
+
   The pages are still exact on both — because the guards correct what the model gets wrong, not because the model
   learned a second application. **What generalises is the assembly, and the vocabulary it asks the reader for.**
 - **Its raw labels disagree with the reader on 2–12% of rows.** Structural guards are what keep pages
