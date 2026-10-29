@@ -158,7 +158,7 @@ fn adjusted(labels: &[String], text: &[String]) -> Vec<String> {
                 // merely begins with a verb is prose: `Read notes.txt first line` is the
                 // user's own message echoed back, and calling it a tool call cut a block in
                 // two on the one screen where it appeared.
-                "ToolCall" if !line.starts_with('♦') => "Block".to_owned(),
+                "ToolCall" if crate::tool_marker(line).is_none() => "Block".to_owned(),
                 "Meter" if as_meter(&[line.to_owned()]).is_none() => "Block".to_owned(),
                 other => other.to_owned(),
             }
@@ -182,6 +182,9 @@ fn is_thought_row(line: &str) -> bool {
 }
 
 fn settled(label: &str, lines: &[String]) -> String {
+    if crate::is_reasoning_heading(lines) {
+        return "Thought".to_owned();
+    }
     // The reader's own diff test, applied to an unstyled run: a diff is a change with both an
     // addition and a removal. Counting `+` and `-` rows by hand was that rule in different words,
     // and words drift.
@@ -373,7 +376,7 @@ fn body_for(label: &str, lines: &[String], rows: [u16; 2]) -> (String, Body) {
     // depended on the model's label.
     if text.len() == 1 {
         let calls = tool_calls(&text);
-        if calls.len() == 1 && calls[0].tool.eq_ignore_ascii_case("thought") {
+        if calls.len() == 1 && crate::is_thought_word(&calls[0].tool) {
             return (
                 "Thought".to_owned(),
                 Body::Thought {
@@ -392,7 +395,7 @@ fn body_for(label: &str, lines: &[String], rows: [u16; 2]) -> (String, Body) {
             }
             // A reasoning line is a tool line whose name is Thought; the label comes from
             // the model but the shape is the same one the reader produces.
-            if calls.len() == 1 && calls[0].tool.eq_ignore_ascii_case("thought") {
+            if calls.len() == 1 && crate::is_thought_word(&calls[0].tool) {
                 return (
                     "Thought".to_owned(),
                     Body::Thought {

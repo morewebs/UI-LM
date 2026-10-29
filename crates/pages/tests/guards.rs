@@ -279,3 +279,13 @@ fn word_art_is_not_a_thought() {
     );
     assert_eq!(kinds(&page), vec!["Block".to_owned()]);
 }
+
+#[test]
+fn a_reasoning_heading_the_model_called_a_tool_becomes_a_thought() {
+    // Freebuff draws `• Thinking`; a model trained on Grok calls it a tool call. The reader calls it a
+    // Thought, and four separate places in the label path had to be taught to ask the reader:
+    // `parse_tool_line` (which glyph), the ToolCall guard (which marker), `settled` (the promotion) and
+    // `body_for` (its own copy of the rule, which knew only `thought`, never `thinking`).
+    let page = page_of(&["  • Thinking"], "ToolCall");
+    assert_eq!(kinds(&page), vec!["Thought".to_owned()]);
+}

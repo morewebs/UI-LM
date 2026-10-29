@@ -1490,11 +1490,12 @@ fn tool_calls(lines: &[String]) -> Vec<ToolCallLine> {
 /// back to a screen has to put the glyph where the application put it, and trimming
 /// here would silently move it to the margin.
 fn parse_tool_line(line: &str) -> ToolCallLine {
-    let body = line
-        .trim_start()
-        .strip_prefix(TOOL_GLYPH)
-        .unwrap_or(line.trim_start())
-        .trim_start();
+    // The marker is whatever `tool_marker` recognises, so the parse cannot know one glyph while the
+    // decision knows two: stripping only the diamond made Freebuff's `• Thinking` a tool named `•`.
+    let body = match tool_marker(line) {
+        Some((_, rest)) => rest.trim_start(),
+        None => line.trim_start(),
+    };
     let (tool, rest) = match body.find(' ') {
         Some(space) => (&body[..space], body[space + 1..].trim_start()),
         None => (body, ""),
@@ -2119,6 +2120,14 @@ pub fn page_from_text(text: &str, surface: &str) -> Envelope {
         },
     }
 }
+/// Whether a run is exactly one reasoning heading.
+///
+/// Both paths ask this. Grok writes `♦ Thought for 3.0s`; Freebuff writes `• Thinking` and puts the words
+/// on the rows below, which stay a block of their own because a `Thought` holds one line.
+pub(crate) fn is_reasoning_heading(lines: &[String]) -> bool {
+    matches!(tool_calls(lines).as_slice(), [only] if is_thought_word(&only.tool))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
