@@ -402,3 +402,18 @@ fn a_new_file_diff_is_a_diff() {
     let page = page_of(&rows, "Diff");
     assert_eq!(kinds(&page), vec!["Diff".to_owned()]);
 }
+
+#[test]
+fn a_glued_n_of_m_is_not_a_meter_yet() {
+    // `as_meter` looks for a token that *is* a slash, so it accepts `25K / 500K` and declines `2/5`. Grok spaces
+    // its slash; Freebuff does not. Measured in round 62: 191 meters in the corpus, every one of them Grok's,
+    // and 35 declined rows that look like N/M — among them `2/5 hours remaining`, which is a budget with a
+    // limit, and `quick question 1/11`, which is a step counter. Telling those two apart is a decision nobody
+    // has made, so this pins today's answer: the glued form stays a block.
+    let page = page_of(&["│ 2/5 hours remaining │"], "Block");
+    assert_eq!(
+        kinds(&page),
+        vec!["Block".to_owned()],
+        "the documented boundary"
+    );
+}
