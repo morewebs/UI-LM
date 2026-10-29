@@ -97,6 +97,13 @@ foreach ($session in $sessions) {
 
 Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host ("recordings checked: {0} on both paths, words checked: {1}, paned pages: {2}" -f $sessions.Count, $lines, $panes)
+# The second agent is inside this check's scope, and saying so is the point: a reader of this output should
+# not have to go and count. Freebuff's pages — diffs, reasoning headings and all — reach the document by the
+# same route as Grok's, and this number is what "the same route" means.
+$agents = @($sessions | Where-Object { $_.FullName -match "freebuff" })
+if ($agents.Count -gt 0) {
+    Write-Host ("  of those, {0} are recordings of a second agent CLI, which this project was never trained on" -f $agents.Count)
+}
 if ($missing.Count -gt 0) {
     $missing | Select-Object -First 10 | ForEach-Object { Write-Host $_ }
     Write-Host ("{0} line(s) never reached the document" -f $missing.Count)
