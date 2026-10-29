@@ -175,6 +175,45 @@ pub fn audit(page: &Envelope) -> Vec<String> {
         }
     }
 
+    // Two components may not claim the same row: a page describes one screen, and a row has one owner. Panes are
+    // the deliberate exception, and the surface already says which components are panes — two components in
+    // *different* panes share rows because they describe different columns of the same rows. Round 69 concluded
+    // the page could not tell; that was wrong, and this is the field it needed.
+    let mut pane_of: std::collections::HashMap<&str, usize> = Default::default();
+    for (index, pane) in surface.panes.iter().enumerate() {
+        for id in pane {
+            pane_of.insert(id.as_str(), index);
+        }
+    }
+    let mut claimed: Vec<(&str, [u16; 2], Option<usize>)> = Vec::new();
+    for component in &surface.components {
+        let rows = match &component.body {
+            Body::Column { .. } => continue,
+            Body::Block { rows, .. }
+            | Body::Diff { rows, .. }
+            | Body::ToolCall { rows, .. }
+            | Body::Meter { rows, .. }
+            | Body::Thought { rows, .. }
+            | Body::Frame { rows, .. } => *rows,
+        };
+        let pane = pane_of.get(component.id.as_str()).copied();
+        for (id, taken, their_pane) in &claimed {
+            let overlap = rows[0] < taken[1] && taken[0] < rows[1];
+            let different_panes = match (pane, *their_pane) {
+                (Some(left), Some(right)) => left != right,
+                _ => false,
+            };
+            if overlap && !different_panes {
+                problems.push(format!(
+                    "component {id:?} and {:?} both claim row {}",
+                    component.id,
+                    rows[0].max(taken[0])
+                ));
+            }
+        }
+        claimed.push((component.id.as_str(), rows, pane));
+    }
+
     if !surface.components.iter().any(|c| c.id == surface.root) {
         problems.push(format!(
             "the root {:?} is not one of the page's components",
@@ -2277,6 +2316,87 @@ pub(crate) fn is_reasoning_heading(lines: &[String]) -> bool {
             )
     });
     is_thought_word(word) && (spoken.is_empty() || spoken.to_lowercase().starts_with("for "))
+}
+
+#[cfg(test)]
+mod ownership_tests {
+    use super::*;
+
+    fn block(id: &str, first: u16, last: u16) -> Component {
+        Component {
+            id: id.to_owned(),
+            component: "Block".to_owned(),
+            source: Provenance::Seen,
+            body: Body::Block {
+                role: "text".to_owned(),
+                rows: [first, last],
+                lines: (first..last).map(|row| format!("row {row}")).collect(),
+                spans: vec![Vec::new(); usize::from(last - first)],
+                tabs: Vec::new(),
+                shortcuts: Vec::new(),
+                properties: Vec::new(),
+            },
+        }
+    }
+
+    fn page(components: Vec<Component>, panes: Vec<Vec<String>>) -> Envelope {
+        Envelope {
+            version: ENVELOPE_VERSION.to_owned(),
+            create_surface: Surface {
+                surface_id: "test".to_owned(),
+                catalog_id: CATALOGUE_ID.to_owned(),
+                root: ROOT_ID.to_owned(),
+                components,
+                panes,
+            },
+        }
+    }
+
+    #[test]
+    fn two_components_may_not_claim_the_same_row() {
+        let components = vec![
+            Component {
+                id: ROOT_ID.to_owned(),
+                component: "Column".to_owned(),
+                source: Provenance::Seen,
+                body: Body::Column {
+                    children: vec!["a".to_owned(), "b".to_owned()],
+                },
+            },
+            block("a", 0, 2),
+            block("b", 1, 3),
+        ];
+        let problems = audit(&page(components, Vec::new()));
+        assert!(
+            problems
+                .iter()
+                .any(|problem| problem.contains("both claim row 1")),
+            "a shared row must be reported: {problems:?}"
+        );
+    }
+
+    #[test]
+    fn two_panes_may_claim_the_same_row() {
+        // The exception the surface field exists for: a split screen gives left and right the same rows.
+        let components = vec![
+            Component {
+                id: ROOT_ID.to_owned(),
+                component: "Column".to_owned(),
+                source: Provenance::Seen,
+                body: Body::Column {
+                    children: vec!["a".to_owned(), "b".to_owned()],
+                },
+            },
+            block("a", 0, 2),
+            block("b", 0, 2),
+        ];
+        let panes = vec![vec!["a".to_owned()], vec!["b".to_owned()]];
+        let problems = audit(&page(components, panes));
+        assert!(
+            problems.is_empty(),
+            "panes share rows by design: {problems:?}"
+        );
+    }
 }
 
 #[cfg(test)]
