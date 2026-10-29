@@ -45,6 +45,19 @@ if ($ledgerRows -ne $scripts) {
     exit 1
 }
 
+# The review names the newest release too, and it must not lag: it is the page a reader opens first.
+$review = Join-Path $repo "docs\reports\2026-10-29-month-in-review.md"
+if (Test-Path $review) {
+    $reviewText = Get-Content -LiteralPath $review -Raw -Encoding UTF8
+    $named = @([regex]::Matches($reviewText, 'v0\.\d+\.\d+') | ForEach-Object { $_.Value } | Sort-Object { [version]($_ -replace '^v', '') })
+    if ($named.Count -gt 0 -and $named[-1] -ne $latest) {
+        Write-Host ("  the review's newest version is {0}; the newest tag is {1}" -f $named[-1], $latest)
+        Write-Host "the review names a release that is not the newest one"
+        exit 1
+    }
+    Write-Host ("  the review's newest version is " + $named[-1])
+}
+
 $pages = @((Join-Path $repo "docs\reports\2026-10-28-state-of-the-project.md"), (Join-Path $repo "docs\reports\2026-10-29-month-in-review.md"))
 $wrong = @()
 foreach ($pagePath in $pages) {
