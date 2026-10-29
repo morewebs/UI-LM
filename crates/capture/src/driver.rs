@@ -684,7 +684,7 @@ fn process_output(
             (1, b'[') => 2,
             (2, b'6') => 3,
             (3, b'n') => {
-                parser.process(&bytes[fed..=index]);
+                feed(parser, &bytes[fed..=index]);
                 fed = index + 1;
                 let (row, col) = parser.screen().cursor_position();
                 // DSR replies are one-based.
@@ -695,8 +695,18 @@ fn process_output(
         };
     }
     if fed < bytes.len() {
-        parser.process(&bytes[fed..]);
+        feed(parser, &bytes[fed..]);
     }
+}
+
+/// Feeds bytes to the emulator without letting it end the recording.
+///
+/// `vt100` 0.15 panics when a wide glyph is written into a screen too narrow to hold it — a 1x1 screen
+/// given a CJK character, which the project's own fuzz test found by generating sizes nobody would
+/// choose. A panic in this thread would end an otherwise healthy session, so the bytes are dropped:
+/// the screen keeps what it had and the recording continues.
+fn feed(parser: &mut vt100::Parser, bytes: &[u8]) {
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| parser.process(bytes)));
 }
 
 impl Drop for Driver {
