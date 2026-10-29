@@ -46,9 +46,13 @@ $expected = @{
 # it used to has been cut up, and somebody has to say why.
 $ceiling = @{
     "wsl-agent-in-pane"        = 11
-    "wsl-agent-in-split"       = 10
+# Raised by one in round 43, with the reason: the scrollbar fix (round 33) lets a panel close when its
+    # border is followed by the terminal's own column, so the content under such a panel is no longer
+    # swallowed into it — one more component, and a truer page. A ceiling moves when a decision moves it,
+    # never to make a run pass.
+    "wsl-agent-in-split"       = 11
     "wsl-blank-in-split"       = 2
-    "wsl-two-agents-in-split"  = 19
+    "wsl-two-agents-in-split"  = 20
     "wsl-vim-in-split"         = 2
     "freebuff-refusal"         = 13
 }
