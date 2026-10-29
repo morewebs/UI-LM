@@ -1,25 +1,29 @@
 # The checks, and how each was made to fail
 
 A check that has never failed is a check of unknown strength. This is the ledger: every script in
-`scripts/`, what it protects, and the failure that was produced to prove it can fail. If a row says
-"observed", the message quoted is what the check printed when it was broken on purpose.
+`scripts/`, what it protects, and the failure that was produced to prove it can fail.
+
+**Where a row quotes a message, that is what the check actually printed when it was broken on purpose.**
+Seven rows do not quote one — they were proven when they were written, in the early part of the month,
+and the output was not kept. They are marked *(proven, message not kept)* rather than given a quotation
+that would be reconstructed from memory.
 
 | check | protects | how it was made to fail |
 |---|---|---|
-| `gate.ps1` | clippy, fmt, tests | a formatting change made `fmt` fail and the gate refused to commit |
-| `check-all` | every curated axis, both builders | a planted wrong field produced a `fields` miss |
+| `gate.ps1` (proven, message not kept) | clippy, fmt, tests | a formatting change made `fmt` fail and the gate refused to commit |
+| `check-all` (proven, message not kept) | every curated axis, both builders | a planted wrong field produced a `fields` miss |
 | `check-corpus` | every recording reads with both builders | a session with no readable frame produced "no page at all" |
 | `check-audit` | pages agree with their screens, both builders | a masked span placed outside its screen produced a violation |
 | `check-html` | words and pane structure reach the document | forcing the renderer flat printed "no pane wrapper" |
 | `check-hard` | the hard recordings are no worse | disabling the paned renderer printed "draws back at 23.8%" |
-| `check-validate` | the validator agrees and disagrees correctly | a changed label made the two validators disagree |
+| `check-validate` (proven, message not kept) | the validator agrees and disagrees correctly | a changed label made the two validators disagree |
 | `check-sizes` | the smallest and largest screens round trip | demanding more lines than exist printed "only 30 line(s) of content, so nothing was really drawn" |
 | `check-scrub` | a shared pair keeps its catalogue | removing the protection printed "the catalogue's name was scrubbed away" |
 | `check-corrupt` | damaged recordings are skipped, not fatal | rewording the skip message printed "nothing said the frame was skipped" |
-| `check-race` | the viewer survives redraws and half-written files | a truncated append made the viewer draw a torn frame |
-| `check-interaction` | typing reaches the program | a dropped keystroke left the expected output missing |
-| `check-live-page` | the live page moves, a finished one does not | a frozen update made the page stop changing |
-| `check-render-scale` | exporting stays linear | an unbounded per-page cost broke the budget |
+| `check-race` (proven, message not kept) | the viewer survives redraws and half-written files | a truncated append made the viewer draw a torn frame |
+| `check-interaction` (proven, message not kept) | typing reaches the program | a dropped keystroke left the expected output missing |
+| `check-live-page` (proven, message not kept) | the live page moves, a finished one does not | a frozen update made the page stop changing |
+| `check-render-scale` (proven, message not kept) | exporting stays linear | an unbounded per-page cost broke the budget |
 | `check-fresh` | new material matches the model | an older model scored below the floor on the same batch |
 | `check-diff-fresh` | a diff on new material is read exactly | removing the diff request printed "no diff appeared, so the check measured nothing" |
 
