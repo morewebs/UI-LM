@@ -65,6 +65,13 @@ pub fn render_terminal(page: &Envelope) -> String {
     } else {
         page.create_surface.panes.clone()
     };
+    // A paned page is drawn by the reader's own renderer: it places each component at the row it
+    // claims, which this function could only do by duplicating that logic. Stacking components
+    // instead lost the rows — two full panes came back at 23.8%, and the same page drawn by
+    // `ui_lm_pages::render_text` matched the screen line for line.
+    if !page.create_surface.panes.is_empty() {
+        return ui_lm_pages::render_text(page).join("\n");
+    }
     if groups.len() == 2 {
         let pane_rows = |ids: &[String]| -> Vec<String> {
             let mut out = Vec::new();
@@ -85,11 +92,11 @@ pub fn render_terminal(page: &Envelope) -> String {
         let mut merged: Vec<String> = Vec::new();
         for row in 0..left.len().max(right.len()) {
             let first = left.get(row).cloned().unwrap_or_default();
-            let _padding = width.saturating_sub(first.chars().count());
+            let padding = " ".repeat(width.saturating_sub(first.chars().count()));
             let second = right.get(row).cloned().unwrap_or_default();
             // Trailing space is not part of what a row says: a short row padded to the pane
             // width must come back as the short row it was.
-            merged.push(format!("{first}{second}").trim_end().to_owned());
+            merged.push(format!("{first}{padding}{second}").trim_end().to_owned());
         }
         return merged.join("\n");
     }
