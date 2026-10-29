@@ -227,6 +227,7 @@ fn labeled_page(text: &[String], labels: &[String], surface: &str, allow_split: 
                 return Envelope {
                     version: ENVELOPE_VERSION.to_owned(),
                     create_surface: Surface {
+                        model: None,
                         surface_id: surface.to_owned(),
                         catalog_id: CATALOGUE_ID.to_owned(),
                         root: split_root,
@@ -345,6 +346,7 @@ fn labeled_page(text: &[String], labels: &[String], surface: &str, allow_split: 
     Envelope {
         version: ENVELOPE_VERSION.to_owned(),
         create_surface: Surface {
+            model: None,
             surface_id: surface.to_owned(),
             catalog_id: CATALOGUE_ID.to_owned(),
             root,

@@ -22,6 +22,7 @@ fn page_with_diff(spans: Vec<InlineSpan>) -> Envelope {
     Envelope {
         version: "v0.9.1".to_owned(),
         create_surface: Surface {
+            model: None,
             surface_id: "test".to_owned(),
             catalog_id: "moreweb.terminal/v1".to_owned(),
             root: "root".to_owned(),

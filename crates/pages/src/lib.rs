@@ -605,6 +605,13 @@ pub struct Surface {
     /// until the reader splits before it segments (ADR 0004).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub panes: Vec<Vec<String>>,
+    /// Which model assembled this page, when a model assembled it.
+    ///
+    /// A page the reader built and a page the label path built look identical, and three rounds of measurement
+    /// (109 to 112) kept comparing them without being able to say which was which. This is the model's digest, so
+    /// a page carries the answer the way a binary carries its build stamp.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
 }
 
 /// One component in the `moreweb.terminal/v1` catalogue.
@@ -1134,6 +1141,7 @@ fn page_from_lines(
                 return Envelope {
                     version: ENVELOPE_VERSION.to_owned(),
                     create_surface: Surface {
+                        model: None,
                         surface_id: surface_id.to_owned(),
                         catalog_id: CATALOGUE_ID.to_owned(),
                         root: ROOT_ID.to_owned(),
@@ -1148,6 +1156,7 @@ fn page_from_lines(
     Envelope {
         version: ENVELOPE_VERSION.to_owned(),
         create_surface: Surface {
+            model: None,
             surface_id: surface_id.to_owned(),
             catalog_id: CATALOGUE_ID.to_owned(),
             root: ROOT_ID.to_owned(),
@@ -2278,6 +2287,7 @@ pub fn page_from_text(text: &str, surface: &str) -> Envelope {
     Envelope {
         version: ENVELOPE_VERSION.to_owned(),
         create_surface: Surface {
+            model: None,
             surface_id: surface.to_owned(),
             catalog_id: CATALOGUE_ID.to_owned(),
             root,
@@ -2343,6 +2353,7 @@ mod ownership_tests {
         Envelope {
             version: ENVELOPE_VERSION.to_owned(),
             create_surface: Surface {
+                model: None,
                 surface_id: "test".to_owned(),
                 catalog_id: CATALOGUE_ID.to_owned(),
                 root: ROOT_ID.to_owned(),
@@ -2770,6 +2781,7 @@ mod tests {
         let page = Envelope {
             version: ENVELOPE_VERSION.to_owned(),
             create_surface: Surface {
+                model: None,
                 surface_id: "bad".to_owned(),
                 catalog_id: CATALOGUE_ID.to_owned(),
                 root: "nowhere".to_owned(),
@@ -2800,6 +2812,7 @@ mod tests {
         let page = Envelope {
             version: ENVELOPE_VERSION.to_owned(),
             create_surface: Surface {
+                model: None,
                 surface_id: "bad".to_owned(),
                 catalog_id: CATALOGUE_ID.to_owned(),
                 root: "root".to_owned(),
