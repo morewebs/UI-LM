@@ -73,7 +73,7 @@ A frame exists only at a **settled** point — 150 ms of quiet. An animating scr
 
 ## The model
 
-A trained model turns a screen's text into the page that describes it — blocks, tool calls, meters, reasoning lines, diffs, and the panes of a full-screen application. It is a softmax regression over nineteen features read from the screen itself, trained by `scripts/train_model.py` on recorded screens and run in Rust by `crates/model`.
+A trained model turns a screen's text into the page that describes it — see `docs/model-card.md` for what it was trained on, what it cannot do, and how to reproduce its numbers. — blocks, tool calls, meters, reasoning lines, diffs, and the panes of a full-screen application. It is a softmax regression over nineteen features read from the screen itself, trained by `scripts/train_model.py` on recorded screens and run in Rust by `crates/model`.
 
 **Trained on 434 screens of one application, it reproduces every component of every frame in the seven evaluation sets** — `gh`, `git`, `npm`, `pip`, `cargo`, vim, tmux, nano, and screens where the application is failing — against floors between a quarter and seven eighths. The sets and their per-set figures are printed by `scripts/check-all.ps1`, which is where the number lives rather than here. Eight batches recorded after training have all come back at 100%. The floor is a converter that only splits paragraphs, so a screen it already reproduces exactly proves nothing; `scripts/check-all.ps1` reports which sets can still fail.
 
