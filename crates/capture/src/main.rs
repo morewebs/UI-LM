@@ -1321,6 +1321,7 @@ fn summarise(sessions: &[PathBuf]) -> Result<ExitCode> {
 
 /// Records one session, and reports how it ended.
 fn record(args: Record) -> Result<ExitCode> {
+    let started = std::time::Instant::now();
     if args.rows == 0 || args.cols == 0 {
         bail!(
             "a screen needs at least one row and one column, not {}x{}",
@@ -1329,6 +1330,12 @@ fn record(args: Record) -> Result<ExitCode> {
         );
     }
     let (program, program_args) = split_command(&args.command)?;
+    // What the recorder is about to launch, exactly as it was parsed. Four times this month a
+    // shell between the caller and this binary split a command at the wrong place, and the only
+    // way to see it afterwards was to open the session's own record. Printing it here makes the
+    // difference visible before the recording starts rather than after it is believed.
+    println!("running: {} {}", program, program_args.join(" "));
+    let _ = &started;
     let mut control = args
         .control
         .clone()
@@ -1642,6 +1649,16 @@ fn record(args: Record) -> Result<ExitCode> {
         args.out.display(),
         ended.describe(QUIESCE_GAP),
     );
+    // A program that is gone before it has drawn anything is usually a command that was split or
+    // quoted wrongly by whatever called this binary, and it looks exactly like a program that had
+    // nothing to say. Say which it might be, once, where the person running it will see it.
+    if matches!(ended, Ended::ProgramExited) && frames <= 1 {
+        eprintln!(
+            "warning: the program was gone after {} ms with {frames} frame(s); if that was not \
+             intended, check how its arguments were quoted",
+            started.elapsed().as_millis()
+        );
+    }
 
     // The child's own exit status is reported, not propagated. This process's exit
     // code describes *this* process's job, and the job is done: the session was
