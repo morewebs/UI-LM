@@ -119,6 +119,44 @@ if (Test-Path $card) {
 }
 Write-Host ("the pinned diff count holds: {0} of {1} carry no @@ header" -f $noHunk, $diffs)
 
+# Every kind the catalogue claims must have enough material to be more than an anecdote. `Frame` was found to have
+# two components in the whole corpus (round 136) and a third arrived only when a centred dialog was recorded; a kind
+# that thins out should fail here rather than be described with confidence it has not earned.
+$kindFloor = @{
+    "Block"    = 1000
+    "Thought"  = 200
+    "ToolCall" = 150
+    "Meter"    = 100
+    "Diff"     = 40
+    "Frame"    = 3
+}
+$kindCounts = @{}
+foreach ($session in $sessions) {
+    $out = & $capture page --session $session.FullName --all 2>$null
+    foreach ($raw in $out) {
+        $page = "$raw".TrimStart()
+        if (-not $page.StartsWith("{")) { continue }
+        $parsed = $page | ConvertFrom-Json -ErrorAction SilentlyContinue
+        if ($null -eq $parsed) { continue }
+        foreach ($component in $parsed.createSurface.components) {
+            $kindCounts[$component.component] = 1 + $kindCounts[$component.component]
+        }
+    }
+}
+$thin = @()
+foreach ($kind in $kindFloor.Keys) {
+    $held = if ($kindCounts.ContainsKey($kind)) { [int]$kindCounts[$kind] } else { 0 }
+    if ($held -lt $kindFloor[$kind]) {
+        $thin += ("  {0}: {1} component(s), and this corpus needs at least {2} to speak for it" -f $kind, $held, $kindFloor[$kind])
+    }
+}
+if ($thin.Count -gt 0) {
+    $thin | ForEach-Object { Write-Host $_ }
+    Write-Host "a kind is carried by too little material to be claimed"
+    exit 1
+}
+Write-Host ("every kind is carried by material above its floor: " + (($kindFloor.Keys | Sort-Object | ForEach-Object { $_ + "=" + [int]$kindCounts[$_] }) -join " "))
+
 $withStatus = 0
 $broken = @()
 foreach ($session in $sessions) {
