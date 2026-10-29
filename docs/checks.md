@@ -21,8 +21,8 @@ that would be reconstructed from memory; each is being re-proven with its output
 | `check-scrub` | a shared pair keeps its catalogue | removing the protection printed "the catalogue's name was scrubbed away" |
 | `check-corrupt` | damaged recordings are skipped, not fatal | rewording the skip message printed "nothing said the frame was skipped" |
 | `check-race` (proven, message not kept) | the viewer survives redraws and half-written files | a truncated append made the viewer draw a torn frame |
-| `check-interaction` (proven, message not kept) | typing reaches the program | a dropped keystroke left the expected output missing |
-| `check-live-page` (proven, message not kept) | the live page moves, a finished one does not | an attempt to freeze the served page did not change what the check measures, so nothing was proven either way |
+| `check-interaction` (proven, message not kept) | typing reaches the program | suppressing a write did not change what the check exercises — the typed marker still came back — so nothing was proven either way |
+| `check-live-page` | the live page moves, a finished one does not | a constant document printed "the page did not change across three seconds of a drawing program" |
 | `check-render-scale` | exporting stays linear | a 50 ms delay per page printed "a page cost 53.1 ms, more than the 11.0 ms limit" |
 | `check-fresh` | new material matches the model | an older model scored below the floor on the same batch |
 | `check-diff-fresh` | a diff on new material is read exactly | removing the diff request printed "no diff appeared, so the check measured nothing" |
