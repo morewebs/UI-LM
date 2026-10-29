@@ -119,3 +119,40 @@ kinds are perfect on new material.
 The claim is now: *all five kinds are perfect on new material from the training application* — with the
 one caveat that a diff only appears when the application is asked to show one. Every row of that sentence has a number behind it,
 and the sentence is narrower than the one it replaces.
+
+## How to check any of this yourself
+
+One command answers "is this tree sound", and takes about eight minutes:
+
+```
+powershell -File scripts/check-everything.ps1
+```
+
+It runs sixteen checks and prints one table. With `-Quick` it skips the five that record new material
+and answers in under a minute — that is the loop for working; the full run is the loop for shipping.
+With `-Tag v0.11.1` it also downloads that release and proves the archive does what this document says.
+
+**Every line in the table can fail**, and each was made to fail at least once before it was trusted:
+
+- the audit fails when it inspected nothing, and was proven failing by planting a masked span outside a
+  screen;
+- `check-corpus` fails on a recording that produces no page;
+- `check-sizes` fails when fewer than eight lines come back, so a perfect score on an empty screen is a
+  failure, not a pass;
+- `check-diff-fresh` fails when no diff appeared, even if every page it did see was perfect;
+- `check-scrub` fails when the catalogue's name is scrubbed away.
+
+If a run says "every check passed", that is what it means — and the number of checks is the number that
+have been caught lying at least once.
+
+## What I would do with another month
+
+1. **A second agent's transcripts.** This is the only claim the project cannot test for itself: every
+   screen ever recorded came from one application. The vocabulary's generality is assumed, not measured.
+2. **A layout check for the renderers.** `check-html` compares words and — since this week — pane
+   structure. It still cannot tell whether a page's *arrangement* matches the screen's.
+3. **Wide-character strings.** The page is column-exact and the string is padded; a flagged continuation
+   cell in the frame format would close the gap between the two.
+4. **Distrust the suite a little more.** Seventeen properties are proven; the ones that failed were
+   always the ones nobody had pointed at material they could not handle. The next defect is most likely
+   in a check that has only ever been given easy input.
