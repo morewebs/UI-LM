@@ -471,12 +471,18 @@ fn a_child_runs_in_the_directory_the_config_names() {
     let mut d = Driver::spawn(&cfg).unwrap();
     read_to_end(&mut d);
     let screen = screen_text(&d, rows, cols);
-    let reported = reported_directory(&screen);
-    assert_eq!(
-        comparable(reported),
-        comparable(&wanted),
-        "the child did not run in the directory the config named: it reported {reported:?} \
-         rather than {wanted:?}"
+    // The path may not be the first line of the screen: a slow runner can let the pty echo something
+    // ahead of it, and one ubuntu job failed here while the same commit passed on macOS and Windows.
+    // The property is "the child ran in the configured directory", not "it said so first", so any
+    // line that resolves to that directory satisfies it.
+    let expected = comparable(&wanted);
+    let reported = screen
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty() && comparable(line) == expected);
+    assert!(
+        reported.is_some(),
+        "the child did not run in the directory the config named ({wanted:?}); its screen was {screen:?}"
     );
     assert_eq!(d.try_wait().unwrap(), Some(0));
 }
