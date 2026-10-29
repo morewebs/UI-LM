@@ -18,7 +18,7 @@ screen decides how it *looks* and how a component is shaped.
 
 | | |
 |---|---|
-| `crates/capture` | records a program on a pty, and the CLI: `record summarize audit page score tui self-check fields disagree provenance baseline dataset render compare version` |
+| `crates/capture` | records a program on a pty, and the CLI: `record summarize audit page score tui self-check fields disagree provenance baseline dataset render frames compare version` |
 | `crates/frames` | the recording format — run-length cells with character and style |
 | `crates/pages` | the reader: screen → page, the A2UI envelope, the catalogue, `compare` |
 | `crates/model` | nineteen features, the weights, inference in Rust |

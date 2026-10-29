@@ -115,6 +115,9 @@ enum Command {
     Dataset(DatasetArgs),
     /// Draw recorded pages as one standalone HTML file you can open in a browser.
     Render(RenderArgs),
+
+    /// List every frame with the kinds it holds and whether it splits into panes.
+    Frames(FramesArgs),
     /// Score one recorded session's pages against another's.
     ///
     /// The use this exists for: record the same deterministic scenario twice and see
@@ -246,6 +249,17 @@ struct DatasetArgs {
     scrub: bool,
 }
 /// What to draw, and where to put it.
+#[derive(Debug, Args)]
+struct FramesArgs {
+    /// The session directory holding the frames.
+    #[arg(long, value_name = "DIR")]
+    session: PathBuf,
+
+    /// Show the kinds each page holds without the panes column.
+    #[arg(long)]
+    kinds_only: bool,
+}
+
 #[derive(Debug, Args)]
 struct RenderArgs {
     /// The session directory holding the frames.
@@ -449,6 +463,10 @@ fn run(command: Command) -> Result<ExitCode> {
         Command::Provenance(args) => provenance(&args),
         Command::Dataset(args) => dataset(&args),
         Command::Render(args) => render(&args),
+        Command::Frames(args) => {
+            frames(&args);
+            Ok(ExitCode::SUCCESS)
+        }
     }
 }
 
@@ -1097,6 +1115,61 @@ fn dataset(args: &DatasetArgs) -> Result<ExitCode> {
 }
 
 /// Draws recorded pages into one HTML file.
+/// One line per frame: the kinds its page holds and whether it splits.
+///
+/// Every question about a recording used to start with `page --seq N` until something appeared, or with a guess
+/// about which frame held the split — which cost three attempts in round 133 and produced the `render` hint in
+/// round 134. This prints the whole session's shape at once, so the answer is a lookup.
+fn frames(args: &FramesArgs) {
+    let pages = match ui_lm_capture::summary::session_pages(&args.session) {
+        Ok(pages) => pages,
+        Err(error) => {
+            eprintln!("{error:?}");
+            std::process::exit(1);
+        }
+    };
+    if pages.is_empty() {
+        eprintln!("this session holds no frame, so there is nothing to list");
+        std::process::exit(1);
+    }
+    for (index, page) in pages.iter().enumerate() {
+        let mut kinds: Vec<(String, usize)> = Vec::new();
+        for component in &page.create_surface.components {
+            if component.component == "Column" {
+                continue;
+            }
+            match kinds
+                .iter_mut()
+                .find(|(kind, _)| *kind == component.component)
+            {
+                Some((_, count)) => *count += 1,
+                None => kinds.push((component.component.clone(), 1)),
+            }
+        }
+        kinds.sort();
+        let shape = if kinds.is_empty() {
+            "(nothing on screen)".to_owned()
+        } else {
+            kinds
+                .iter()
+                .map(|(kind, count)| format!("{kind}={count}"))
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
+        let panes = page.create_surface.panes.len();
+        if args.kinds_only {
+            println!("frame {index:<3} {shape}");
+        } else {
+            let split = if panes >= 2 {
+                format!("{panes} panes")
+            } else {
+                "one pane".to_owned()
+            };
+            println!("frame {index:<3} {shape:<44} {split}");
+        }
+    }
+}
+
 fn render(args: &RenderArgs) -> Result<ExitCode> {
     let pages = ui_lm_capture::summary::session_pages(&args.session)
         .with_context(|| format!("failed to read the session {}", args.session.display()))?;
