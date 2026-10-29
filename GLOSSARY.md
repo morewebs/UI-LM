@@ -119,3 +119,31 @@ _Avoid_: equivalence, fidelity
 **Agent CLI**:
 A terminal application whose interface is a conversation with an agent and the tool calls it makes.
 _Avoid_: coding agent, chat CLI
+
+## The five kinds
+
+The catalogue holds five kinds. They are the project's whole vocabulary for what a screen is made of, and each
+one carries a narrowing learned from a real screen — the narrowings are the definitions, not footnotes to them.
+
+**Block**:
+A run of rows that reads as one thing, carrying a role, its lines, and per-span styling.
+_Avoid_: paragraph, text area
+
+**ToolCall**:
+A run of marked rows — `♦` from Grok, `•` from Freebuff — each naming a tool, a target and a status.
+_Avoid_: action, command
+
+**Thought**:
+A reasoning heading and nothing more: the marked word alone, or followed by how long it took. The words under an
+expanded heading are a `Block` of their own, and a bullet that keeps talking is a sentence, not reasoning.
+_Avoid_: reasoning block, chain of thought
+
+**Meter**:
+One drawn quantity against one drawn limit, with the fraction computed beside them. A percentage without a
+limit is not a meter, and neither is a status row carrying four figures.
+_Avoid_: progress bar, gauge, usage line
+
+**Diff**:
+A block holding both an addition and a removal, with a per-line kind. A staged rename is one, and so is a patch
+with `+++` and `---` headers.
+_Avoid_: patch, change
