@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "started_at": "2026-10-29T14:39:32Z",
+  "ended_at": "2026-10-29T14:39:35Z",
+  "command": "wsl.exe",
+  "args": [
+    "-e",
+    "sh",
+    "/tmp/ui-lm/cat.sh"
+  ],
+  "rows": 12,
+  "cols": 60,
+  "env": [
+    [
+      "TERM",
+      "xterm-256color"
+    ],
+    [
+      "COLORTERM",
+      "truecolor"
+    ]
+  ],
+  "child_env": [
+    [
+      "NO_COLOR",
+      "1"
+    ],
+    [
+      "TERM",
+      "xterm-256color"
+    ],
+    [
+      "COLORTERM",
+      "truecolor"
+    ]
+  ],
+  "cwd": "C:\\Users\\moreweb\\Documents\\Workspaces\\moreweb\\Projects\\UI-LM",
+  "app_version": null,
+  "cost": null
+}

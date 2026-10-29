@@ -841,3 +841,29 @@ fn the_floor_is_the_number_it_was_measured_at() {
         "the floor moved: {text:?}"
     );
 }
+
+#[test]
+fn a_real_screen_with_every_kind_has_a_floor_of_zero() {
+    // The other fixture is hand-built, and exists to show a *misleading* floor: a converter that only splits
+    // paragraphs recovers every block there and scores 40% of structure. This one is a real capture of the same
+    // shapes, and its floor is zero — the text converter recovers none of it, so the model's 100% on it means
+    // something. Two fixtures, two lessons; the hand-built one stays because it is the one that teaches the trap.
+    let fixture = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../pages/tests/fixtures/every-kind");
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_ui-lm-capture"))
+        .arg("baseline")
+        .arg("--session")
+        .arg(&fixture)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "the measurement failed: {}",
+        output.status
+    );
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        text.contains("structure 0.0%, weighted 0.0%, text 100.0%"),
+        "the floor moved: {text:?}"
+    );
+}
