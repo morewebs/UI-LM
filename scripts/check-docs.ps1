@@ -123,6 +123,47 @@ if ($recordings -lt 1 -or $frames -lt 1) {
     exit 1
 }
 
+# The model card states two corpus numbers of its own, and both had drifted: the evaluation sets were "185
+# frames" when they were 234, and the second agent was "580" when it was 591. Neither is derivable from the
+# totals above — they are two different slices of the same corpus — so each is counted here.
+$card = Join-Path $repo "docs\model-card.md"
+if ((Test-Path $card) -and $recordings -gt 0) {
+    $evalFrames = 0
+    foreach ($set in @("apps", "nongrok", "scratch", "structured", "tui", "unseen", "workflow")) {
+        $dir = Join-Path $repo ("eval\" + $set)
+        if (-not (Test-Path $dir)) { continue }
+        foreach ($session in (Get-ChildItem -LiteralPath $dir -Recurse -Directory | Where-Object { Test-Path (Join-Path $_.FullName "session.json") })) {
+            $file = Join-Path $session.FullName "frames.jsonl"
+            if (Test-Path $file) { $evalFrames += @(Get-Content -LiteralPath $file | Where-Object { $_.Trim() }).Count }
+        }
+    }
+    $agentFrames = 0
+    $agentDir = Join-Path $repo "eval\freebuff"
+    if (Test-Path $agentDir) {
+        foreach ($session in (Get-ChildItem -LiteralPath $agentDir -Recurse -Directory | Where-Object { Test-Path (Join-Path $_.FullName "session.json") })) {
+            $file = Join-Path $session.FullName "frames.jsonl"
+            if (Test-Path $file) { $agentFrames += @(Get-Content -LiteralPath $file | Where-Object { $_.Trim() }).Count }
+        }
+    }
+    $said = Get-Content -LiteralPath $card -Raw -Encoding UTF8
+    $wrong = @()
+    foreach ($match in [regex]::Matches($said, 'Grok and non-Grok screens, (\d+) frames')) {
+        if ([int]$match.Groups[1].Value -ne $evalFrames) { $wrong += ("the card says {0} evaluation frames, the sets hold {1}" -f $match.Groups[1].Value, $evalFrames) }
+    }
+    foreach ($match in [regex]::Matches($said, '\*\*(\d+) recordings, (\d+) frames, never trained on\*\*')) {
+        if ([int]$match.Groups[2].Value -ne $agentFrames) { $wrong += ("the card says {0} second-agent frames, the recordings hold {1}" -f $match.Groups[2].Value, $agentFrames) }
+    }
+    if ($wrong.Count -gt 0) {
+        $wrong | ForEach-Object { Write-Host ("  " + $_) }
+        Write-Host "the model card counts its material wrongly"
+        exit 1
+    }
+    if ($evalFrames -eq 0 -or $agentFrames -eq 0) {
+        Write-Host "the card's two slices are empty on this machine, so nothing was compared"
+        exit 1
+    }
+}
+
 $corpusPage = Join-Path $repo "docs\reports\2026-10-28-state-of-the-project.md"
 if (Test-Path $corpusPage) {
     $text = Get-Content -LiteralPath $corpusPage -Raw -Encoding UTF8
