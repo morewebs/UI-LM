@@ -78,3 +78,28 @@ powershell -File scripts/check-everything.ps1 -Quick   # 18 checks, ~75 seconds
 Every line in the table can fail, and each was made to fail before it was trusted. The full run includes
 five checks that record new material from the training application and score it against the same code
 that ships.
+
+## Where it stands, at the end
+
+| | |
+|---|---|
+| releases | **19**, v0.1.0 through v0.14.0, three platforms each, every one verified by downloading it |
+| commits | 385 |
+| checks | **18 scripts** and 4 fuzz properties, each with the failure that proved it in `docs/checks.md` |
+| hard recordings | **4** shapes, all 100% on score and both round trips |
+| fresh material | **10 batches**, every one perfect, every one recorded after training |
+| the final audit | `every check passed in 472.9s` |
+| unproven | **one claim**: that the vocabulary generalises beyond the application it was built for |
+
+## What I would do next, in order
+
+1. **Get a second agent's transcripts.** Every claim in the model card rests on one application. The
+   procedure for testing another one is in `2026-10-28-state-of-the-project.md` and takes minutes; it is
+   the only thing standing between this project and a general claim.
+2. **Record the divider glyph, not just its column.** The one limitation with a measured cost: a pane row
+   that holds only a divider loses its structure while keeping its text (76% of rows on a two-full-pane
+   screen before the renderer fix).
+3. **Add a layout check for the renderers.** `check-html` compares words and pane structure; it cannot
+   tell whether a page's *arrangement* matches the screen's.
+4. **Keep distrusting the suite.** Every defect this month was in something nobody had pointed at
+   material it could not handle. The next one is most likely in a check that has only seen easy input.
