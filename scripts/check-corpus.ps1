@@ -76,6 +76,49 @@ Write-Host "every recording read without an error"
 # A recording can be read perfectly and still be worthless: a capture of a program that failed holds almost
 # nothing, and the reader will describe those few rows without complaint. The session now records how its
 # program ended, so this asks the only question a reader cannot: did the program work?
+# The `Diff` boundary is pinned by a number in the model card: how many of this corpus's diffs carry no `@@` hunk
+# header. That number came from round 61 and the corpus has since doubled, so it is re-derived here on every run
+# rather than trusted. If it ever reaches zero the card's claim is stale, and this says so instead of the card
+# quietly describing a corpus that no longer exists.
+#
+# Parsed with `ConvertFrom-Json`, not a regex: a `Diff` keeps its rows in `lines[].text`, and the first version of
+# this check counted them with a pattern that matched every component and then reported 61 of 61.
+$diffs = 0
+$noHunk = 0
+foreach ($session in $sessions) {
+    $out = & $capture page --session $session.FullName --all 2>$null
+    foreach ($raw in $out) {
+        $page = "$raw".TrimStart()
+        if (-not $page.StartsWith("{")) { continue }
+        $parsed = $page | ConvertFrom-Json -ErrorAction SilentlyContinue
+        if ($null -eq $parsed) { continue }
+        foreach ($component in $parsed.createSurface.components) {
+            if ($component.component -ne "Diff") { continue }
+            $diffs++
+            $body = (@($component.lines | ForEach-Object { $_.text }) -join "`n")
+            if ($body -notmatch "@@") { $noHunk++ }
+        }
+    }
+}
+if ($diffs -eq 0) {
+    Write-Host "no Diff component in the corpus, so the pinned number cannot be checked"
+    exit 1
+}
+$card = Join-Path $repo "docs\model-card.md"
+if (Test-Path $card) {
+    $cardText = Get-Content -LiteralPath $card -Raw -Encoding UTF8
+    if ($cardText -match '(\d+) of (\d+) corpus diffs carry no') {
+        $claimed = [int]$Matches[1]
+        $claimedTotal = [int]$Matches[2]
+        if ($claimed -ne $noHunk -or $claimedTotal -ne $diffs) {
+            Write-Host ("  the card says {0} of {1} diffs carry no @@ header; the corpus holds {2} of {3}" -f $claimed, $claimedTotal, $noHunk, $diffs)
+            Write-Host "the model card quotes a corpus that no longer exists"
+            exit 1
+        }
+    }
+}
+Write-Host ("the pinned diff count holds: {0} of {1} carry no @@ header" -f $noHunk, $diffs)
+
 $withStatus = 0
 $broken = @()
 foreach ($session in $sessions) {
