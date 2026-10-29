@@ -38,6 +38,23 @@ And four properties that run under `cargo test`, each proven by mutation:
 | 300 screens through the model make no bad page | the audit was forced to refuse: "300 page(s) from the model fail the audit" |
 | 300 byte streams make a consistent frame | the emulator's panic was reproduced: a wide glyph on a 1x1 screen |
 
-**Three checks also refuse to pass on empty material**, which is a separate rule: `check-audit` when it
-inspected no recording, `check-sizes` when under eight lines came back, `check-diff-fresh` when no diff
-appeared.
+## The rule underneath them: nothing is judged from nothing
+
+**Eleven of the nineteen checks refuse to pass on empty material.** The count was written as three for a week,
+which is what a rule kept in prose rather than in code is worth — it was true when it was written and nobody
+counted again. Each guard prints its own sentence:
+
+- `check-audit` — it inspected no recording
+- `check-corpus` — there are no recordings, or none carries an exit status
+- `check-sizes` — under eight lines of content came back
+- `check-diff-fresh` — no diff appeared
+- `check-html` — there are no recordings
+- `check-agents` — there is no model, or no second-agent recordings
+- `check-hard` — the hard cases are not on this machine
+- `check-corrupt` — there is no recording to damage
+- `check-scrub` — no recording with a path was found
+- `check-docs` — there is no state page, or no corpus to count
+- `check-readme` — there is no README, or the handoff no longer lists the commands
+
+The reason is the floor's reason, one level up: **a check that passes on nothing has proved nothing**, and a
+green tick from an empty set is worse than a red one, because it looks like evidence.
