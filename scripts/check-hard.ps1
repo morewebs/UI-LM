@@ -30,6 +30,7 @@ if (-not (Test-Path $cases)) {
 $expected = @{
     "wsl-agent-in-pane"  = 100.0
     "wsl-agent-in-split" = 100.0
+    "wsl-two-agents-in-split" = 100.0
 }
 
 $regressed = 0
