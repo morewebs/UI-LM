@@ -134,6 +134,20 @@ button.action .target {{ color: #8ab4f8; margin-left: auto; }}
 fn render_component(out: &mut String, component: &Component) {
     match &component.body {
         Body::Column { .. } => {}
+        Body::Frame { title, lines, .. } => {
+            // ADR 0006: a window drawn over the page. Its rows carry the box art, so the same span renderer
+            // that draws a block draws this; the class says what it is and the title is readable without
+            // decoding the border.
+            out.push_str("<div class=\"component frame\"");
+            out.push_str(&format!(" data-title=\"{}\"", escape(title)));
+            out.push('>');
+            for line in lines {
+                out.push_str("<div class=\"line\">");
+                out.push_str(&escape(line));
+                out.push_str("</div>");
+            }
+            out.push_str("</div>");
+        }
         Body::Block {
             role,
             lines,

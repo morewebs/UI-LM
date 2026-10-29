@@ -65,7 +65,9 @@ pub const CATALOGUE_ID: &str = "moreweb.terminal/v1";
 /// draw, so it is a fault rather than an extension — an unknown component is what the
 /// degradation rule in the spec handles at *render* time, and a page this crate emits
 /// has no business relying on it.
-pub const COMPONENTS: [&str; 6] = ["Column", "Block", "ToolCall", "Meter", "Diff", "Thought"];
+pub const COMPONENTS: [&str; 7] = [
+    "Column", "Block", "ToolCall", "Meter", "Diff", "Thought", "Frame",
+];
 
 /// What is wrong with a page, in terms of the promises the page model makes.
 ///
@@ -155,7 +157,10 @@ pub fn audit(page: &Envelope) -> Vec<String> {
                 }
                 check_rows(&mut problems, &component.id, rows);
             }
-            Body::ToolCall { rows, .. } | Body::Meter { rows, .. } | Body::Thought { rows, .. } => {
+            Body::ToolCall { rows, .. }
+            | Body::Meter { rows, .. }
+            | Body::Thought { rows, .. }
+            | Body::Frame { rows, .. } => {
                 check_rows(&mut problems, &component.id, rows);
             }
         }
@@ -192,6 +197,14 @@ fn check_rows(problems: &mut Vec<String>, id: &str, rows: &[u16; 2]) {
 fn place<'a>(component: &'a Component, placed: &mut Vec<(u16, &'a str)>) {
     match &component.body {
         Body::Block {
+            rows: span, lines, ..
+        } => {
+            for (offset, line) in lines.iter().enumerate() {
+                let row = span[0].saturating_add(u16::try_from(offset).unwrap_or(u16::MAX));
+                placed.push((row, line.as_str()));
+            }
+        }
+        Body::Frame {
             rows: span, lines, ..
         } => {
             for (offset, line) in lines.iter().enumerate() {
@@ -262,6 +275,9 @@ pub fn render_text(page: &Envelope) -> Vec<String> {
     for component in &page.create_surface.components {
         match &component.body {
             Body::Block {
+                rows: span, lines, ..
+            }
+            | Body::Frame {
                 rows: span, lines, ..
             } => {
                 for (offset, line) in lines.iter().enumerate() {
@@ -471,6 +487,7 @@ pub fn component_text(body: &Body) -> Vec<String> {
     match body {
         Body::Column { .. } => Vec::new(),
         Body::Block { lines, .. } => lines.clone(),
+        Body::Frame { lines, .. } => lines.clone(),
         Body::Diff { lines, .. } => lines.iter().map(|line| line.text.clone()).collect(),
         Body::ToolCall { calls, .. } => calls
             .iter()
@@ -630,6 +647,20 @@ pub enum Body {
         /// How long the reasoning took, in seconds, when the line reports it.
         #[serde(skip_serializing_if = "Option::is_none")]
         seconds: Option<f64>,
+    },
+
+    /// A floating window: a box drawn over the base layer, not beside it.
+    ///
+    /// vim's `popup_create` draws one with heavy rules. Until ADR 0006 the page described it as part of
+    /// whatever block it landed in — a dialog was indistinguishable from the buffer behind it. `lines` holds
+    /// the rows as drawn, box art included, so the round trip places them back onto the screen unchanged.
+    Frame {
+        /// The words on the top border, between its corners.
+        title: String,
+        /// The rows it covers, as a half-open `[first, end)`.
+        rows: [u16; 2],
+        /// Its rows as drawn, right-trimmed.
+        lines: Vec<String>,
     },
     /// A line reporting a quantity against a limit: usage, a quota, a budget.
     ///
@@ -873,6 +904,17 @@ fn page_from_lines(
                 )
             } else if let Some(diff) = as_diff(text, &segment_spans) {
                 ("Diff".to_owned(), Body::Diff { rows, lines: diff })
+            } else if let Some(title) = as_frame(text) {
+                // A floating window, ADR 0006. Its lines are the rows as drawn, so the round trip places
+                // them back onto the screen without a renderer of its own.
+                (
+                    "Frame".to_owned(),
+                    Body::Frame {
+                        title,
+                        rows,
+                        lines: text.to_vec(),
+                    },
+                )
             } else {
                 (
                     "Block".to_owned(),
@@ -1605,6 +1647,23 @@ struct MeterParts {
 /// which is what a real frame draws: `1.3K / 500K │ [Dashboard]`. Requiring both
 /// neighbours of the `/` to be numbers is what keeps prose and paths out — a path
 /// containing a slash has a word, not a number, on each side of it.
+/// The title of a floating window, when a run is drawn as one.
+///
+/// ADR 0006: a box drawn with heavy rules — `╔` on its first row, `╚` and `╝` on its last — is a window over
+/// the page rather than beside it. The corpus draws those glyphs in exactly one recording, and a rule written
+/// wider than the shape it was learnt from has cost this project points four times running.
+fn as_frame(lines: &[String]) -> Option<String> {
+    let first = lines.first()?;
+    let bottom = lines.last()?;
+    let start = first.find('╔')?;
+    let end = first.find('╗')?;
+    if end <= start || !bottom.contains('╚') || !bottom.contains('╝') {
+        return None;
+    }
+    let title = first[start + '╔'.len_utf8()..end].trim_matches('═').trim();
+    Some(title.to_owned())
+}
+
 fn as_meter(lines: &[String]) -> Option<MeterParts> {
     let line = lines.first()?;
     let words: Vec<&str> = line.split_whitespace().collect();
@@ -2335,7 +2394,8 @@ mod tests {
                 | Body::Diff { .. }
                 | Body::ToolCall { .. }
                 | Body::Meter { .. }
-                | Body::Thought { .. } => None,
+                | Body::Thought { .. }
+                | Body::Frame { .. } => None,
             })
             .collect();
         assert_eq!(roles, vec!["text", "prompt"]);

@@ -380,6 +380,19 @@ fn body_for(label: &str, lines: &[String], rows: [u16; 2]) -> (String, Body) {
         }
     }
     match label {
+        // ADR 0006: a run drawn as a heavy-ruled box is a floating window, whatever the model called it. The
+        // predicate is the reader's, asked here rather than restated — the same arrangement as meter and diff.
+        _ if crate::as_frame(lines).is_some() => {
+            let title = crate::as_frame(lines).unwrap_or_default();
+            (
+                "Frame".to_owned(),
+                Body::Frame {
+                    title,
+                    rows,
+                    lines: text,
+                },
+            )
+        }
         "ToolCall" => {
             let calls = tool_calls(&text);
             if calls.is_empty() {

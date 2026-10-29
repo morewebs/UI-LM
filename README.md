@@ -29,6 +29,8 @@ can honestly name:
 - **`Meter`** — a line reporting a quantity against a limit (`1.3K / 500K │ [Dashboard]`),
   keeping the drawn figures and computing the fraction beside them. It will not invent a limit
   from a percentage, so `15.4K (1%)` and `40,000,000 100%` stay blocks.
+- **`Frame`** — a floating window: a box drawn with heavy rules (`╔`…`╗`) over the page rather than beside
+  it. vim's `popup_create` draws one; it carries its title from the top border and its rows as drawn.
 - **`Diff`** — a block carrying both a `+` and a `-` line, with a per-line kind. Two shapes are in the
   corpus now: the `+++`/`---` kind and a staged rename (`similarity index 72%`, `rename from`/`rename to`).
 

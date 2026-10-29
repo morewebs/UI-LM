@@ -147,3 +147,8 @@ _Avoid_: progress bar, gauge, usage line
 A block holding both an addition and a removal, with a per-line kind. A staged rename is one, and so is a patch
 with `+++` and `---` headers.
 _Avoid_: patch, change
+
+**Frame**:
+A floating window: a box drawn *over* the page rather than beside it, named by the words on its top border.
+Its rows are the screen's own, so it draws back unchanged.
+_Avoid_: modal, dialog box, overlay
