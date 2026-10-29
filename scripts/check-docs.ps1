@@ -134,3 +134,20 @@ if ($dead.Count -gt 0) {
     exit 1
 }
 Write-Host "every docs/ and scripts/ reference in the documents resolves"
+# A count written in words cannot be counted. One review said "seventeen scripts" while the folder held
+# eighteen, and every digit-based check passed, so the front pages must spell their counts as digits.
+$words = "sixteen|seventeen|eighteen|nineteen|twenty"
+$spelled = @()
+foreach ($pagePath in $pages) {
+    if (-not (Test-Path $pagePath)) { continue }
+    $page = Get-Content -LiteralPath $pagePath -Raw -Encoding UTF8
+    foreach ($found in [regex]::Matches($page, "(?i)\b($words)[\s-]+(scripts|checks|properties)")) {
+        $spelled += ("{0}: spells '{1} {2}' - counts belong in digits here" -f (Split-Path -Leaf $pagePath), $found.Groups[1].Value, $found.Groups[2].Value)
+    }
+}
+if ($spelled.Count -gt 0) {
+    $spelled | Select-Object -First 5 | ForEach-Object { Write-Host ("  " + $_) }
+    Write-Host "a front page spells a count that the checks cannot count"
+    exit 1
+}
+Write-Host "every count in the front pages is written as digits"

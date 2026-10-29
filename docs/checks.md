@@ -20,7 +20,7 @@ because their first proof had been remembered rather than recorded.
 | `check-scrub` | a shared pair keeps its catalogue | removing the protection printed "the catalogue's name was scrubbed away" |
 | `check-corrupt` | damaged recordings are skipped, not fatal | rewording the skip message printed "nothing said the frame was skipped" |
 | `check-readme` | the README describes every command the binary has | replacing a command's name in the README printed "the README never mentions: disagree" |
-| `check-docs` | the state page names the newest release | the page said v0.10.0 while v0.13.0 was tagged: "the state page names a release that is not the newest one" |
+| `check-docs` | the documents' numbers match the tree | the page said v0.10.0 while v0.13.0 was tagged: "the state page names a release that is not the newest one"; and a spelled count printed "spells 'eighteen checks' - counts belong in digits here" |
 | `check-race` | the viewer survives redraws and half-written files | flipping the blank-screen test printed "the viewer served the blank screen a program left behind instead of the last one with content" |
 | `check-interaction` | typing reaches the program | neutralising **both** key writers printed "interaction failed: the typed text never appeared on screen" |
 | `check-live-page` | the live page moves, a finished one does not | a constant document printed "the page did not change across three seconds of a drawing program" |
