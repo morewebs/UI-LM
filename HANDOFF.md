@@ -18,7 +18,7 @@ screen decides how it *looks* and how a component is shaped.
 
 | | |
 |---|---|
-| `crates/capture` | records a program on a pty, and the CLI: `record summarize audit page score tui self-check provenance baseline dataset render compare` |
+| `crates/capture` | records a program on a pty, and the CLI: `record summarize audit page score tui self-check fields disagree provenance baseline dataset render compare` |
 | `crates/frames` | the recording format — run-length cells with character and style |
 | `crates/pages` | the reader: screen → page, the A2UI envelope, the catalogue, `compare` |
 | `crates/model` | nineteen features, the weights, inference in Rust |
@@ -34,7 +34,7 @@ screen decides how it *looks* and how a component is shaped.
 ## How to verify anything
 
 ```powershell
-powershell -File scripts/check-everything.ps1    # every check below, one table, ~6 minutes
+powershell -File scripts/check-everything.ps1    # every check below, one table, ~9 minutes
 powershell -File scripts/check-all.ps1           # every set, both directions, provenance
 powershell -File scripts/check-fresh.ps1         # record new material and score it blind
 powershell -File scripts/check-interaction.ps1   # typing into the live view reaches the program
@@ -49,6 +49,9 @@ powershell -File scripts/check-html.ps1         # every word the page holds reac
 powershell -File scripts/check-audit.ps1        # every page row matches the screen it came from
 powershell -File scripts/check-sizes.ps1        # the smallest and largest screens round trip every line
 powershell -File scripts/check-scrub.ps1        # a shared pair keeps its catalogue and loses its account
+powershell -File scripts/check-corrupt.ps1       # damaged recordings are skipped, not fatal
+powershell -File scripts/check-readme.ps1        # every command and script the documents name exists
+powershell -File scripts/check-docs.ps1          # the documents' numbers match the tree
 
 # All seven, in order, about six minutes. The audit is the evidence; nothing below is a claim
 # that has not been through it.
