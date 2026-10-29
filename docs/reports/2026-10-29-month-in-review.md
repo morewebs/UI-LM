@@ -24,7 +24,7 @@ description of the screen, and anything that can read the page can rebuild the s
 | fuzz properties | 4 — reader, renderers, model, raw bytes |
 | model card | `docs/model-card.md` — weights, features, training data, and four things it cannot do |
 | fresh material | **ten batches, not one component missed** — counted per batch in the report |
-| hardest recordings | **4**, from an agent in a pane to two text buffers: all 100% on score and both round trips |
+| hardest recordings | **5**, from an agent in a pane to two text buffers: all 100% on score and both round trips |
 
 ## The five defects worth remembering
 
