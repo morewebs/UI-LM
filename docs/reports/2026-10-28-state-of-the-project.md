@@ -27,12 +27,14 @@ the code constructs.
 | the page carries the screen's colour | 6,303 spans on the corpus; reaches HTML, terminal and the live view |
 | pages say honestly whether a component was read or carried | 688 components, 0 contradictions |
 | the model works off its training application | trained on one; **141 frames from 13 other programs, every component** |
-| new screens, recorded after training, read perfectly | **12 of 12 recordings** in the batch that closed the last gap; earlier batches, five clean |
-| a split screen's panes hold their own components | both paths ask the same question before splitting; read out of the v0.8.0 archive |
+| new screens, recorded after training, read perfectly | **273 frames, all five component kinds, nothing missed** |
+| a split screen's panes hold their own components | both paths ask the same question before splitting; audited on model pages too |
 | an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
-| every word the page holds reaches the browser document | 58 recordings **on both paths**, 3,048 words, checked |
-| every recording on this machine can be read at all | 58 sessions, 288 pages, no error |
-| the download works | **v0.8.0**, three platforms, verified by downloading it and running it |
+| every word the page holds reaches the browser document | 58 recordings **on both paths**, 3,048 words, checked; markup arrives escaped |
+| every recording on this machine reads on either builder | 58 recordings, **576 pages**, reader and model, no error |
+| every page a builder makes is consistent with its screen | 288 frames audited on **each** path, no violations |
+| the download works | **v0.10.0**, three platforms, verified by downloading it and running it |
+| the checks can fail | 15 scripts, each shown failing at least once; three refuse to pass on empty material |
 | the viewer keeps up | typing, redraws, half-written files, cleared screens — each checked |
 | exporting a session is cheap | 4.4 ms and 3.9 KB per page, linear to 1,510 pages, capped by a check |
 
