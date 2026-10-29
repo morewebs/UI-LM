@@ -27,7 +27,7 @@ stated here rather than in a footnote.
 |---|---|---|
 | curated corpus | 60 recordings, 343 frames, both builders | 100% agreement, no audit violations |
 | seven evaluation sets | Grok and non-Grok screens, 299 frames | 100% every set |
-| **a second agent CLI** | **11 recordings, 591 frames, never trained on** | **100%, every component** |
+| **a second agent CLI** | **12 recordings, 596 frames, never trained on** | **100%, every component** |
 | fresh batches | recorded **after** training, 8 batches | 100% every batch, every kind it held |
 
 **The floor matters as much as the score.** `score` also reports a text-only converter that splits
@@ -79,7 +79,7 @@ And the disagreements are not spread evenly — they have one shape, measured by
 ## What it can do that it was not trained for
 
 **A second agent CLI, read without ever seeing it.** Freebuff (`freebuff`, an npm package that draws its own
-TUI) was recorded eleven times, 591 frames, across the whole shape of agent work: reading a file, creating one,
+TUI) was recorded twelve times, 596 frames, across the whole shape of agent work: reading a file, creating one,
 showing a `git diff`, showing a *rename* in a diff, searching several files, a full fix cycle, two refusals where
 the task could not succeed, a repository it had never seen, and one session cut short by a quota. Every component
 in every frame is reproduced.
