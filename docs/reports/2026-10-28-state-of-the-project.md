@@ -52,8 +52,10 @@ the code constructs.
 - **A perfect page score is partly the assembly's work.** The model's raw labels disagree with the
   reader on 2–12% of rows, and structural guards are what keep pages exact. That's by design, and it
   took a diagnostic to see it.
-- **Some shapes are not representable.** A floating
-  window with a border is a panel, one without is a line of words; a tab strip only when numbered.
+- **Some shapes are not representable — and the cost is measured.** A floating window is read as
+  a block of text: vim's help window over a buffer round tripped at **74/74 lines (100%)**, so a
+  consumer loses the *structure* of the overlay and none of its content. A tab strip is recognised
+  only when numbered.
 - **Live is not continuous.** A frame exists when the screen settles, so a fast program yields fewer
   moments than it drew.
 
