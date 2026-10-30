@@ -939,11 +939,19 @@ fn page_from_lines(
             children.push(id.clone());
             // `insert` is the whole provenance rule: the first frame to show this
             // content read it from the cells, every later one carried it forward.
-            let source = if appeared.insert(base) {
+            let first_time = appeared.insert(base.clone());
+            let source = if first_time {
                 Provenance::Seen
             } else {
                 Provenance::Carried
             };
+            // Why a component is `carried` is a question the caller cannot answer from the page: the answer is this
+            // set, and what it remembered. Printed only when asked, because the checker spent two rounds guessing at
+            // the observer instead of looking here (rounds 181 and 182).
+            if std::env::var("UI_LM_DEBUG_CARRIED").is_ok() && !first_time {
+                let head: String = text.join("\n").chars().take(56).collect();
+                eprintln!("carried {base} rows {rows:?}: {:?}", head);
+            }
             let (component, body) = if segment.tool {
                 let calls = tool_calls(text);
                 // A collapsed reasoning line is the catalogue's `Thought`, not a tool
