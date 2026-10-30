@@ -80,6 +80,33 @@ if (-not $frozenFirst -or -not $frozenSecond) {
 }
 if (-not $controlViewer.HasExited) { $controlViewer.Kill() }
 
+# The frozen document has to hold what the recording holds. Size and stability are about the *viewer*; this is about
+# the viewer drawing the page rather than a placeholder that happens to change.
+#
+# The first version of this reported "only 1 word available": the program prints `tick 22`, so `tick` is the only word
+# of four or more characters, and the filter was measuring its own threshold. Lines are the right unit here.
+$screenLines = @(& $capture tui --session $session 2>$null | Where-Object { $_.Trim() })
+$visible = $frozenFirst -replace '<[^>]+>', '' -replace '&#39;', "'" -replace '&quot;', '"' -replace '&lt;', '<' -replace '&gt;', '>' -replace '&amp;', '&'
+$absent = @()
+$checked = 0
+foreach ($line in $screenLines) {
+    foreach ($word in ($line -split '\s+')) {
+        $word = $word.Trim()
+        if ($word.Length -lt 3) { continue }
+        $checked++
+        if ($visible -notmatch [regex]::Escape($word)) { $absent += $word }
+    }
+}
+if ($screenLines.Count -eq 0) {
+    $failures += "the recording held no screen to compare the document against"
+} elseif ($checked -lt 5) {
+    $failures += ("only " + $checked + " word(s) were available to compare, so the document was not really checked")
+} elseif ($absent.Count -gt 0) {
+    $failures += ("the served document is missing " + $absent.Count + " word(s), such as " + (($absent | Select-Object -Unique | Select-Object -First 3) -join ", "))
+} else {
+    Write-Host ("the served document holds the recording's own text: {0} word(s) checked across {1} line(s)" -f $checked, $screenLines.Count)
+}
+
 Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 if ($failures.Count -gt 0) {
     $failures | ForEach-Object { Write-Host "  $_" }
