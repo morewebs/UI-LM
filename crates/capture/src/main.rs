@@ -297,6 +297,14 @@ struct CompareArgs {
     /// The session scored against it.
     #[arg(long, value_name = "DIR")]
     right: PathBuf,
+
+    /// Compare the pages a model builds instead of the reader's.
+    ///
+    /// The use this exists for: two recordings of the same scenario must produce the same model pages, and until this
+    /// flag existed that could only be asked of the reader. A model whose pages differ between identical captures
+    /// cannot support a claim about a model — the same reason `compare` exists at all.
+    #[arg(long, value_name = "FILE")]
+    model: Option<PathBuf>,
 }
 
 /// Which frame to describe.
@@ -1309,9 +1317,35 @@ fn render(args: &RenderArgs) -> Result<ExitCode> {
 
 /// Scores one session's pages against another's, reporting both kinds of agreement.
 fn compare(args: &CompareArgs) -> Result<ExitCode> {
-    let left = ui_lm_capture::summary::session_pages(&args.left)
+    let pages_of = |path: &std::path::Path| -> Result<Vec<ui_lm_pages::Envelope>> {
+        match &args.model {
+            Some(model_path) => {
+                let model = ui_lm_model::Model::load(model_path)?;
+                let frames = match ui_lm_frames::read_frames(path) {
+                    Ok((_, frames)) => frames,
+                    Err(_) => {
+                        ui_lm_frames::read_orphaned_frames(path).map_err(anyhow::Error::from)?
+                    }
+                };
+                let surface = path
+                    .file_name()
+                    .map(|name| name.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "session".to_owned());
+                Ok::<_, anyhow::Error>(
+                    frames
+                        .iter()
+                        .map(|frame| {
+                            model.page(&ui_lm_capture::summary::frame_text(frame), &surface)
+                        })
+                        .collect(),
+                )
+            }
+            None => ui_lm_capture::summary::session_pages(path).map_err(anyhow::Error::from),
+        }
+    };
+    let left = pages_of(&args.left)
         .with_context(|| format!("failed to read the session {}", args.left.display()))?;
-    let right = ui_lm_capture::summary::session_pages(&args.right)
+    let right = pages_of(&args.right)
         .with_context(|| format!("failed to read the session {}", args.right.display()))?;
     if left.is_empty() || right.is_empty() {
         bail!("both sessions need at least one frame to be compared");
