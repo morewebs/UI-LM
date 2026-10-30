@@ -35,7 +35,12 @@ New-Item -ItemType Directory -Force -Path $work | Out-Null
 $isWindows = $PSVersionTable.Platform -eq "Win32NT" -or $env:OS -eq "Windows_NT"
 $scenarios = @(
     @{ Name = "a directory listing"; Command = "ls -l /usr/bin | head -40; sleep 1"; Forbidden = @("Meter", "Thought", "ToolCall", "Diff", "Frame"); Panes = 0 },
-    @{ Name = "a process monitor";   Command = "top -bn1 | head -25; sleep 1";     Forbidden = @("Meter", "Thought", "ToolCall", "Diff", "Frame"); Panes = 0 }
+    @{ Name = "a process monitor";   Command = "top -bn1 | head -25; sleep 1";     Forbidden = @("Meter", "Thought", "ToolCall", "Diff", "Frame"); Panes = 0 },
+    # `Frame` was the kind with one producer and three examples on this machine, so the question worth asking of a
+    # runner is not whether it reads text but whether the *predicate travels*: a whiptail dialog is a titled box
+    # floating inside the screen, and it must be a `Frame` here as it is at home. If whiptail is not installed the
+    # scenario is skipped and says so, rather than passing on an empty recording.
+    @{ Name = "a dialog box";        Command = "whiptail --title 'Pick a file' --menu 'Choose one:' 20 60 5 alpha 'the first' beta 'the second' 2>/dev/null; sleep 1"; Forbidden = @(); Panes = 0; Requires = "whiptail"; Expects = "Frame" }
 )
 
 $failures = @()
@@ -46,6 +51,14 @@ foreach ($scenario in $scenarios) {
     } else {
         $command = "sh"
         $arguments = @("-c", $scenario.Command)
+    }
+
+    if ($scenario.ContainsKey("Requires")) {
+        $present = & $command -e sh -c ("command -v " + $scenario.Requires + " > /dev/null 2>&1 && echo yes") 2>$null
+        if (-not ($present -match "yes")) {
+            Write-Host ("  {0,-22} skipped: {1} is not installed on this machine" -f $scenario.Name, $scenario.Requires)
+            continue
+        }
     }
 
     $session = Join-Path $work ("s-" + ($scenario.Name -replace ' ', '-'))
@@ -90,7 +103,11 @@ foreach ($scenario in $scenarios) {
     $shape = ($kinds.GetEnumerator() | Sort-Object Key | ForEach-Object { $_.Key + "=" + $_.Value }) -join ", "
     Write-Host ("  {0,-22} {1,2} frame(s)  kinds: {2}  ({3})" -f $scenario.Name, $frames, $shape, $roundTrip.Trim())
 
-    if (-not $kinds.ContainsKey("Block")) {
+    if ($scenario.ContainsKey("Expects") -and -not $kinds.ContainsKey($scenario.Expects)) {
+        $failures += ("  " + $scenario.Name + " -> was read as " + $shape + ", and this screen is a " + $scenario.Expects)
+        continue
+    }
+    if (-not $scenario.ContainsKey("Expects") -and -not $kinds.ContainsKey("Block")) {
         $failures += ("  " + $scenario.Name + " -> was not read as a block, so the shape is not what it is")
         continue
     }
