@@ -68,6 +68,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@d124f86f28ff42855784ff3319f48ac182c248f8 # 1.99.1
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: cargo build --locked -p ui-lm-capture
+      # `whiptail` is the only program on these runners that draws a floating dialog, and the check records one to
+      # ask whether the `Frame` predicate travels. Without it the scenario skips — which it did, honestly, on the
+      # first run — and the thinnest kind in the corpus stays untested on a second machine.
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq whiptail
       - run: pwsh -NoProfile -File scripts/check-second-machine.ps1
 # The declared MSRV must hold against the real lockfile: transitive
   # dependencies can silently raise the floor. It is tight here already,
