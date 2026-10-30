@@ -394,4 +394,23 @@ if (Test-Path $ledger) {
     if ($quotesNotNeeded.Count -eq 0) { Write-Host "every ledger row quotes the failure it printed" } else { Write-Host ("every ledger row quotes the failure it printed, except: " + (($quotesNotNeeded.Keys | Sort-Object) -join ", ")) }
 }
 
+# The handoff names the release too, and it went three releases stale without anything noticing: it said v0.19.0 while
+# v0.22.0 was shipping. The front pages are checked; this makes the third document subject to the same rule — the
+# newest version it names may be one release ahead of the newest tag, and must never be behind.
+$handoffPath = Join-Path $repo "HANDOFF.md"
+if (Test-Path $handoffPath) {
+    $handoffText = Get-Content -LiteralPath $handoffPath -Raw -Encoding UTF8
+    $named = @([regex]::Matches($handoffText, 'v0\.\d+\.\d+') | ForEach-Object { $_.Value } | Sort-Object { [version]($_ -replace '^v', '') })
+    if ($named.Count -eq 0) {
+        Write-Host "the handoff no longer names a release"
+        exit 1
+    }
+    if ([version]($named[-1] -replace '^v', '') -lt [version]($latest -replace '^v', '')) {
+        Write-Host ("  the handoff names {0}; the newest tag is {1}" -f $named[-1], $latest)
+        Write-Host "the handoff names an older release than the newest tag"
+        exit 1
+    }
+    Write-Host ("the handoff names the release it describes: " + $named[-1])
+}
+
 Write-Host "every front page opens with a sentence"

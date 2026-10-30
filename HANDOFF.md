@@ -138,13 +138,14 @@ somebody gets round to the documents — which is what happened for twenty-four 
   evidence, or not at all.
 ## Where it stands now
 
-**Nineteen checks, about twelve minutes, every axis green**: six evaluation sets at 100%, 779 frames
-assembled against the reader's own answers, 5,957 components with 0 differences and 0 contradictions,
-**15 hard cases** at 100% on score, round trip and shape, and **v0.19.0** verified by download and by
-asking the binary what it was built from (`version` prints the commit and a digest of the working tree).
+**Twenty-one checks, about fifteen minutes, every axis green**, **15 hard cases** at 100% on score, round trip and
+shape, and **v0.25.0** verified by download and by asking the binary what it was built from (`version` prints the
+commit and a digest of the working tree).
 
-The corpus is **88 recordings, 1,019 frames** per path, from three applications: Grok (the training one),
-Freebuff (a second agent CLI), and `man`, `less`, `df` and `git` (programs that are not agents at all).
+The corpus is **97 recordings, 1,353 frames** per path, from four applications and two machines: Grok (the training
+one), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and `man`,
+`less`, `df`, `vim`, `top` and `git` — programs that are not agents at all. Three of those shapes are also recorded
+on a GitHub runner, so the reader is measured away from this host.
 
 ### Attempts that were made and abandoned, so they are not repeated
 
