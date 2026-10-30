@@ -26,7 +26,7 @@ stated here rather than in a footnote.
 | set | what it is | result |
 |---|---|---|
 | curated corpus | 60 recordings, 343 frames, both builders | 100% agreement, no audit violations |
-| seven evaluation sets | Grok and non-Grok screens, 319 frames | 100% every set |
+| seven evaluation sets | Grok and non-Grok screens, 320 frames | 100% every set |
 | **a second agent CLI** | **18 recordings, 857 frames, never trained on** | **100%, every component** |
 | fresh batches | recorded **after** training, 8 batches | 100% every batch, every kind it held |
 

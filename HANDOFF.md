@@ -142,7 +142,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
 shape, and **v0.28.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
-The corpus is **102 recordings, 1373 frames** per path, from nine applications and two machines: Grok (the training
+The corpus is **103 recordings, 1374 frames** per path, from nine applications and two machines: Grok (the training
 one), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and `man`,
 `less`, `df`, `vim`, `top` and `git` — programs that are not agents at all. Three of those shapes are also recorded
 on a GitHub runner, so the reader is measured away from this host.
