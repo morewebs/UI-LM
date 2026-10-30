@@ -25,7 +25,10 @@ $control = Join-Path $work "keys.txt"
 Set-Content -LiteralPath $control -Value "" -Encoding ASCII
 $failures = @()
 
-# A program that redraws every 150 ms, so frames are appended while the viewer is read.
+# A program that redraws every 400 ms, so frames are appended while the viewer is read. The gap has to be wider
+# than the recorder's quiesce window (150 ms): at 150 ms the screen never settled, and on a loaded machine the suite
+# produced a session with one frame — which is not a race, it is a recording that never considered itself quiet
+# (round 202).
 $recorder = Start-Process -FilePath $capture -PassThru -NoNewWindow -ArgumentList @(
     "record", "--rows", "20", "--cols", "80", "--out", $session, "--control", $control,
     "--stop-after", "28000", "--", "powershell", "-NoProfile", "-Command",
