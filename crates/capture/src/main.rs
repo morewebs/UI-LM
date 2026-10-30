@@ -619,6 +619,11 @@ fn provenance(args: &ProvenanceArgs) -> Result<ExitCode> {
             None => ui_lm_pages::pages(&loaded, &surface),
         };
         for page in built {
+            // "Appeared in an earlier **frame**" is what the builder means by carried, and a running set does not say
+            // that: two panes holding the same words in one frame make the second look like a repeat of the first.
+            // Sixty-three frames of this corpus have identical panes, and treating them as repeats is where the
+            // forty-seven contradictions came from (round 190).
+            let mut this_frame: std::collections::HashSet<String> = Default::default();
             for component in &page.create_surface.components {
                 let text = match &component.body {
                     ui_lm_pages::Body::Column { .. } => continue,
@@ -661,8 +666,10 @@ fn provenance(args: &ProvenanceArgs) -> Result<ExitCode> {
                         );
                     }
                 }
-                earlier.insert(text);
+                this_frame.insert(text);
             }
+            // Only now does this frame's text count as "appeared earlier" for the frames that follow.
+            earlier.extend(this_frame.drain());
         }
     }
     println!("provenance: {checked} component(s), {carried} carried, {errors} contradiction(s)");
