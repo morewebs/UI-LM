@@ -82,6 +82,30 @@ PowerShell, across all 81 recordings:
 | 2+ shared column boundaries | **28 of 81** | `freebuff/second-agent-8`, 33 runs |
 | 3+ shared column boundaries | **20 of 81** | `freebuff/second-agent-8`, 33 runs |
 
+### The predicate, stated first, then measured
+
+Round 193 re-opened this with the rule written down **before** the measurement, because the round-192 finding was that
+the original numbers had no stated method. The predicate:
+
+> A table is **three or more consecutive rows** with **the same number of cells**, cells separated by two or more
+> spaces, **at the same character offsets** in every row, and at least one cell numeric.
+
+Measured over all 97 recordings:
+
+| recording | longest run | is it a table? |
+|---|---|---|
+| `tui/wsl-vim` | **34 rows** | no — vim's help and status rows |
+| `apps/pip-list` | 31 rows | no — a package listing |
+| `tui/linux-top` | 18 rows | no — a process monitor |
+| `freebuff/second-agent-17` | 5 rows | no — the survey's answer options |
+| **`tui/df-table`** | **0 rows** | **yes — and the rule misses it** |
+
+**43 of 97 recordings match, the largest matches are not tables, and the canonical table does not match at all.** `df`'s
+columns are separated by single spaces because the widths are fixed, not by runs of two.
+
+So the rule is not merely noisy — it is inverted with respect to the thing it was supposed to detect. That is a stronger
+rejection than this ADR had, and it rests on a predicate a reader can run.
+
 **These numbers cannot be reproduced from this document**, and that is a defect in the ADR rather than in the
 measurement. The rule was written down as "2+ shared column boundaries" without saying what a boundary is, which rows
 count, or how a run is measured; a careful reconstruction in round 192 — gaps of two or more spaces shared by every
