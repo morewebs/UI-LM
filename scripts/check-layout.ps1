@@ -49,12 +49,17 @@ New-Item -ItemType Directory -Force -Path $work | Out-Null
 $panedFinder = [regex]'^\s*frame\s+(\d+)\s+.*?\d+\s+panes'
 $singleFinder = [regex]'^\s*frame\s+(\d+)\s+.*?one pane'
 
+$model = Join-Path $repo "models\page.json"
 $problems = @()
 $panedRecordings = 0
 $rendered = 0
+# Both builders. The reader's pages have been checked here since the check existed; the model's are what a renderer
+# actually receives, and they diverged once before — which is why `frames` learned `--model` this round.
+foreach ($flavour in @("reader", "model")) {
+$modelArgs = if ($flavour -eq "model") { @("--model", $model) } else { @() }
 foreach ($session in $sessions) {
     $panedFrame = $null
-    foreach ($line in (& $capture frames --session $session.FullName 2>$null)) {
+    foreach ($line in (& $capture frames --session $session.FullName @modelArgs 2>$null)) {
         if ($panedFinder.IsMatch($line)) {
             $panedFrame = [int]$panedFinder.Match($line).Groups[1].Value
             break
@@ -62,10 +67,10 @@ foreach ($session in $sessions) {
     }
     if ($null -eq $panedFrame) { continue }
     $panedRecordings++
-    $label = "  " + $session.Name + " (frame " + $panedFrame + ")"
+    $label = "  " + $session.Name + " (" + $flavour + ", frame " + $panedFrame + ")"
 
     $document = Join-Path $work ("paned-" + $rendered + ".html")
-    & $capture render --session $session.FullName --seq $panedFrame --out $document 2>&1 | Out-Null
+    & $capture render --session $session.FullName --seq $panedFrame --out $document @modelArgs 2>&1 | Out-Null
     if (-not (Test-Path $document)) {
         $problems += ($label + ": the paned frame produced no document")
         continue
@@ -90,7 +95,7 @@ foreach ($session in $sessions) {
 
     # The other direction: a frame of the same recording with no split must carry no container.
     $singleFrame = $null
-    foreach ($line in (& $capture frames --session $session.FullName 2>$null)) {
+    foreach ($line in (& $capture frames --session $session.FullName @modelArgs 2>$null)) {
         if ($singleFinder.IsMatch($line)) {
             $singleFrame = [int]$singleFinder.Match($line).Groups[1].Value
             break
@@ -98,7 +103,7 @@ foreach ($session in $sessions) {
     }
     if ($null -ne $singleFrame) {
         $singleDoc = Join-Path $work ("single-" + $rendered + ".html")
-        & $capture render --session $session.FullName --seq $singleFrame --out $singleDoc 2>&1 | Out-Null
+        & $capture render --session $session.FullName --seq $singleFrame --out $singleDoc @modelArgs 2>&1 | Out-Null
         if (Test-Path $singleDoc) {
             $singleHtml = Get-Content -LiteralPath $singleDoc -Raw -Encoding UTF8
             if ($singleHtml -match '<div class="panes"') {
@@ -106,6 +111,7 @@ foreach ($session in $sessions) {
             }
         }
     }
+}
 }
 
 Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue

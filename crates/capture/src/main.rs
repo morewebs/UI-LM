@@ -258,6 +258,10 @@ struct FramesArgs {
     /// Show the kinds each page holds without the panes column.
     #[arg(long)]
     kinds_only: bool,
+
+    /// List the pages a model builds instead of the reader's.
+    #[arg(long, value_name = "FILE")]
+    model: Option<PathBuf>,
 }
 
 #[derive(Debug, Args)]
@@ -1121,12 +1125,44 @@ fn dataset(args: &DatasetArgs) -> Result<ExitCode> {
 /// about which frame held the split — which cost three attempts in round 133 and produced the `render` hint in
 /// round 134. This prints the whole session's shape at once, so the answer is a lookup.
 fn frames(args: &FramesArgs) {
-    let pages = match ui_lm_capture::summary::session_pages(&args.session) {
-        Ok(pages) => pages,
-        Err(error) => {
-            eprintln!("{error:?}");
-            std::process::exit(1);
+    // The model path is listed too: `check-layout` walks recordings looking for a split, and until this flag existed
+    // it could only see the reader's pages — the builder whose panes diverged before was invisible to it.
+    let pages = match &args.model {
+        Some(path) => {
+            let model = match ui_lm_model::Model::load(path) {
+                Ok(model) => model,
+                Err(error) => {
+                    eprintln!("{error:?}");
+                    std::process::exit(1);
+                }
+            };
+            let frames = match ui_lm_frames::read_frames(&args.session) {
+                Ok((_, frames)) => frames,
+                Err(_) => match ui_lm_frames::read_orphaned_frames(&args.session) {
+                    Ok(frames) => frames,
+                    Err(error) => {
+                        eprintln!("{error:?}");
+                        std::process::exit(1);
+                    }
+                },
+            };
+            let surface = args
+                .session
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "session".to_owned());
+            frames
+                .iter()
+                .map(|frame| model.page(&ui_lm_capture::summary::frame_text(frame), &surface))
+                .collect::<Vec<_>>()
         }
+        None => match ui_lm_capture::summary::session_pages(&args.session) {
+            Ok(pages) => pages,
+            Err(error) => {
+                eprintln!("{error:?}");
+                std::process::exit(1);
+            }
+        },
     };
     if pages.is_empty() {
         eprintln!("this session holds no frame, so there is nothing to list");
