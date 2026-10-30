@@ -104,6 +104,11 @@ $ceiling = @{
     "pane-conversation"        = 9
     "two-agents-one-screen"    = 15
     "pane-resize"              = 2
+    # Both of these hold one component and that is the judgement being protected: a popup or a menu read as one
+    # component per row would still score 100% and would be wrong. They were added without ceilings, which meant the
+    # only thing checking them was the score (round 214).
+    "whiptail-menu"            = 1
+    "vim-completion-popup"     = 1
 }
 $regressed = 0
 foreach ($case in (Get-ChildItem -LiteralPath $cases -Directory)) {
