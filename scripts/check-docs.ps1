@@ -445,4 +445,32 @@ if (Test-Path $cardPath2) {
     Write-Host ("the card's evidence table names the corpus: {0} recordings, {1} frames" -f $recordings, $frames)
 }
 
+# The handoff says how many distinct commands the corpus was recorded from. "Nine applications" was a hand count that
+# nothing could check — and it was three rounds stale by the time anyone looked. The command field is the only
+# definition that admits checking, so the sentence states that number and this derives it.
+$commandHeads = @()
+foreach ($root in @("eval", "cases")) {
+    $dir = Join-Path $repo $root
+    if (-not (Test-Path $dir)) { continue }
+    foreach ($session in (Get-ChildItem -LiteralPath $dir -Recurse -Directory | Where-Object { Test-Path (Join-Path $_.FullName "session.json") })) {
+        $record = Get-Content -LiteralPath (Join-Path $session.FullName "session.json") -Raw | ConvertFrom-Json
+        $head = (@($record.command) -join " ")
+        if ($head) { $commandHeads += $head }
+    }
+}
+$distinct = @($commandHeads | Select-Object -Unique).Count
+$handoff = Join-Path $repo "HANDOFF.md"
+if (Test-Path $handoff) {
+    $handoffText = Get-Content -LiteralPath $handoff -Raw -Encoding UTF8
+    if ($handoffText -match '\*\*(\d+) distinct commands\*\*') {
+        $claimed = [int]$Matches[1]
+        if ($claimed -ne $distinct) {
+            Write-Host ("  the handoff says {0} distinct commands; the recordings name {1}" -f $claimed, $distinct)
+            Write-Host "the handoff counts the corpus's commands wrongly"
+            exit 1
+        }
+        Write-Host ("the handoff's command count matches the recordings: {0}" -f $distinct)
+    }
+}
+
 Write-Host "every front page opens with a sentence"
