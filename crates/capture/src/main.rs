@@ -645,6 +645,21 @@ fn provenance(args: &ProvenanceArgs) -> Result<ExitCode> {
                 }
                 if repeated != says_carried {
                     errors += 1;
+                    // Print what was counted, not only how many. A count without a subject is what left round 180
+                    // guessing at which frames contradicted themselves.
+                    if errors <= 12 {
+                        let claim = if says_carried { "carried" } else { "seen" };
+                        let truth = if repeated {
+                            "appeared earlier"
+                        } else {
+                            "is new"
+                        };
+                        let head: String = text.chars().take(48).collect();
+                        println!(
+                            "  {} -> {claim}, but its text {truth}: {:?}",
+                            component.id, head
+                        );
+                    }
                 }
                 earlier.insert(text);
             }
