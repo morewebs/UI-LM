@@ -127,7 +127,7 @@ catch it:
 
 | boundary | the rule | the counterexample | the guard |
 |---|---|---|---|
-| `Frame` | a **titled box with corners**, not touching the screen's edge | vim's completion popup (borderless) and Freebuff's composer (a box touching the edge), both read as `Block` | `check-hard` forbids `Frame` on `vim-completion-popup` |
+| `Frame` | a **titled box with corners**, not touching the screen's edge | vim's completion popup (borderless) and Freebuff's composer (a box touching the edge), both read as `Block` | `check-hard` forbids `Frame` on `vim-completion-popup`, and forbids `Meter`/`Thought`/`ToolCall`/`Diff`/`Frame` on the two shell-only cases `pane-resize` and `agent-beside-shell` |
 | a **divider** | a column of bars **not matched** by a bar on the same rows | a centred `whiptail` dialog, whose border looked like a divider | the `tmux-two-panes` and `grok-help-frame6` fixtures, plus `whiptail-menu` |
 | `Meter` | a count against a drawn limit; a percentage is not one | `top`'s `%Cpu(s)` header | the `second machine` job forbids `Meter` on a monitor |
 | a **listing** | one `Block`, never a meter, thought or tool call | a directory listing, on any machine | the same job forbids all four on a listing |

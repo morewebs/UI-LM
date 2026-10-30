@@ -67,6 +67,11 @@ $expected = @{
 # borderless completion popup, and a rule that starts accepting it should fail here rather than look like progress.
 $forbidden = @{
     "vim-completion-popup" = @("Frame")
+    # Two screens of shell output and nothing else. `Meter`, `Thought`, `ToolCall`, `Diff` and `Frame` are things agents
+    # draw; a reader that invents one of them here has stopped reading the screen (round 216). Its score and ceiling
+    # would both survive that: two blocks of made-up kinds agree with themselves perfectly.
+    "pane-resize"          = @("Meter", "Thought", "ToolCall", "Diff", "Frame")
+    "agent-beside-shell"   = @("Diff", "Frame")
 }
 
 $required = @{
