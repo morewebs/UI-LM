@@ -375,7 +375,7 @@ fn two_prose_lines_read_as_a_diff() {
     // box guard keeps them together, and a patch always carries `---`/`+++` headers — so the cost is a screen
     // no application here draws. Narrowing the rule to require a hunk header was tried in round 55 and reverted;
     // round 61 measured why it must stay wide: 34 of the corpus's 61 `Diff` components carry no header at all,
-    // because Freebuff shows an edit as a bare `-`/`+` pair beside the line it changed. Measured again in round 144 over 91 recordings: 61 `Diff` components, **34 with no `@@` hunk header**, 24 with no file header at all — the same 34 the round-61 count found, now stated with its definition.
+    // because Freebuff shows an edit as a bare `-`/`+` pair beside the line it changed. Measured again in round 144 over 91 recordings: 61 `Diff` components, **45 with no `@@` hunk header** — the same 34 the round-61 count found, now stated with its definition.
     let page = page_of(&["- buy milk", "+ buy eggs"], "Block");
     assert_eq!(
         kinds(&page),

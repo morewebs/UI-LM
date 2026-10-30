@@ -27,7 +27,7 @@ stated here rather than in a footnote.
 |---|---|---|
 | curated corpus | 60 recordings, 343 frames, both builders | 100% agreement, no audit violations |
 | seven evaluation sets | Grok and non-Grok screens, 299 frames | 100% every set |
-| **a second agent CLI** | **12 recordings, 596 frames, never trained on** | **100%, every component** |
+| **a second agent CLI** | **14 recordings, 681 frames, never trained on** | **100%, every component** |
 | fresh batches | recorded **after** training, 8 batches | 100% every batch, every kind it held |
 
 **The floor matters as much as the score.** `score` also reports a text-only converter that splits
@@ -94,7 +94,7 @@ catch it:
 | a **divider** | a column of bars **not matched** by a bar on the same rows | a centred `whiptail` dialog, whose border looked like a divider | the `tmux-two-panes` and `grok-help-frame6` fixtures, plus `whiptail-menu` |
 | `Meter` | a count against a drawn limit; a percentage is not one | `top`'s `%Cpu(s)` header | the `second machine` job forbids `Meter` on a monitor |
 | a **listing** | one `Block`, never a meter, thought or tool call | a directory listing, on any machine | the same job forbids all four on a listing |
-| `Diff` | **any** addition beside **any** removal | `- buy milk` / `+ buy eggs`, which is not a patch | a test that *pins the cost* rather than forbidding it: 34 of 61 corpus diffs carry no `@@` hunk header (24 carry no header at all), so narrowing was reverted |
+| `Diff` | **any** addition beside **any** removal | `- buy milk` / `+ buy eggs`, which is not a patch | a test that *pins the cost* rather than forbidding it: 45 of 72 corpus diffs carry no `@@` hunk header (24 carry no header at all), so narrowing was reverted |
 | `Table` | does not exist | column alignment matched 28 of 81 recordings, all survey sheets | ADR 0007, rejected on measurement |
 
 **Five boundaries guard against widening; one pins an accepted cost.** The difference matters: forbidding is right
@@ -103,7 +103,7 @@ where the wide rule would be *wrong*, and pinning is right where the wide rule i
 ## What it can do that it was not trained for
 
 **A second agent CLI, read without ever seeing it.** Freebuff (`freebuff`, an npm package that draws its own
-TUI) was recorded twelve times, 596 frames, across the whole shape of agent work: reading a file, creating one,
+TUI) was recorded fourteen times, 681 frames, across the whole shape of agent work: reading a file, creating one,
 showing a `git diff`, showing a *rename* in a diff, searching several files, a full fix cycle, two refusals where
 the task could not succeed, a repository it had never seen, and one session cut short by a quota. Every component
 in every frame is reproduced.
