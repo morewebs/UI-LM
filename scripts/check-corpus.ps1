@@ -199,8 +199,15 @@ foreach ($session in $sessions) {
     if ($null -eq $record.exit) { continue }
     $withStatus++
     $frames = @(Get-Content -LiteralPath (Join-Path $session.FullName "frames.jsonl") | Where-Object { $_.Trim() }).Count
+    # A failing program that drew a **complete screen** is material, not a broken capture: `cmd /c "dir … & type
+    # missing"` exits 1 and still shows a full directory listing, which is exactly the dialect this corpus wants
+    # (round 199). What this rule is for is a program that failed and left almost nothing, so it asks about content
+    # rather than about the frame count.
     if ($record.exit -ne 0 -and $frames -le 1) {
-        $broken += ("{0}: the program exited {1} and drew {2} frame(s)" -f $session.Name, $record.exit, $frames)
+        $drawn = @(& $capture tui --session $session.FullName --seq 0 2>$null | Where-Object { $_.Trim() }).Count
+        if ($drawn -lt 5) {
+            $broken += ("{0}: the program exited {1} and drew {2} line(s)" -f $session.Name, $record.exit, $drawn)
+        }
     }
 }
 if ($withStatus -eq 0) {
