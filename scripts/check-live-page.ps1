@@ -107,6 +107,36 @@ if ($screenLines.Count -eq 0) {
     Write-Host ("the served document holds the recording's own text: {0} word(s) checked across {1} line(s)" -f $checked, $screenLines.Count)
 }
 
+# The viewer can serve the **model's** pages (`--model`), and nothing tested that path: `check-html` draws model pages
+# to a file and compares them, but the live viewer had only ever been asked for the reader's. The recording is already
+# finished, so this costs one more viewer rather than one more capture.
+$modelPath = Join-Path $repo "models\page.json"
+if ((Test-Path $modelPath) -and (Test-Path $serve)) {
+    $modelViewer = Start-Process -FilePath $serve -PassThru -NoNewWindow -ArgumentList @(
+        "--session", $session, "--keys", $control, "--port", "$($port + 2)", "--model", $modelPath)
+    Start-Sleep -Seconds 3
+    $modelPage = Fetch "http://127.0.0.1:$($port + 2)/"
+    if (-not $modelViewer.HasExited) { $modelViewer.Kill() }
+    if (-not $modelPage) {
+        $failures += "the viewer serving the model's pages came back empty"
+    } else {
+        $modelVisible = $modelPage -replace '<[^>]+>', ''
+        $modelAbsent = @()
+        foreach ($line in $screenLines) {
+            foreach ($word in ($line -split '\s+')) {
+                $word = $word.Trim()
+                if ($word.Length -lt 3) { continue }
+                if ($modelVisible -notmatch [regex]::Escape($word)) { $modelAbsent += $word }
+            }
+        }
+        if ($modelAbsent.Count -gt 0) {
+            $failures += ("the model's served document is missing " + $modelAbsent.Count + " word(s), such as " + (($modelAbsent | Select-Object -Unique | Select-Object -First 3) -join ", "))
+        } else {
+            Write-Host ("the model's page is served live too: {0} bytes, every word present" -f $modelPage.Length)
+        }
+    }
+}
+
 Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 if ($failures.Count -gt 0) {
     $failures | ForEach-Object { Write-Host "  $_" }
