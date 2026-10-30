@@ -87,6 +87,14 @@ PowerShell, across all 81 recordings:
 Round 193 re-opened this with the rule written down **before** the measurement, because the round-192 finding was that
 the original numbers had no stated method. The predicate:
 
+The predicate lives in `scripts/measure-tables.py` — the code beside the decision — so the numbers below can be
+re-derived by anyone with the corpus on their machine:
+
+```
+$ python scripts/measure-tables.py
+recordings: 97   holding a table run: 43
+```
+
 > A table is **three or more consecutive rows** with **the same number of cells**, cells separated by two or more
 > spaces, **at the same character offsets** in every row, and at least one cell numeric.
 
