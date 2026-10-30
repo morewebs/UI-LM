@@ -142,11 +142,14 @@ somebody gets round to the documents — which is what happened for twenty-four 
 shape, and **v0.29.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
-The corpus is **103 recordings, 1374 frames** per path, from **11 distinct commands** and two machines — the count
-is derived from the `command` field of every recording, which is the only definition that admits checking: Grok (the training
-one), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and `man`,
-`less`, `df`, `vim`, `top` and `git` — programs that are not agents at all. Three of those shapes are also recorded
-on a GitHub runner, so the reader is measured away from this host.
+The corpus is **103 recordings, 1374 frames** per path, recorded from **11 distinct commands** — derived from the
+`command` field of every recording, which is the only definition that admits checking. Among them: Grok (the training
+application), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and
+`man`, `less`, `df`, `vim`, `top`, `git`, `cmd` and PowerShell — programs that are not agents at all.
+
+**Every one of those was recorded on this machine.** A GitHub runner records three shapes of its own — a listing, a
+process monitor and a whiptail dialog — so the reader is measured away from this host, but those recordings live in CI
+rather than here, and the numbers above say nothing about them.
 
 ### Attempts that were made and abandoned, so they are not repeated
 
