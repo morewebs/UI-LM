@@ -59,7 +59,31 @@ foreach ($session in (Get-ChildItem -LiteralPath $evalRoot -Directory |
 }
 if ($selfCheck.Count -gt 1) {
     $line = (& $capture @selfCheck 2>&1 | Select-Object -First 1) -join ""
-    $rows += "  {0,-16} {1}" -f "assembly", $line
+    # `disagree` is the one command no check exercised: it reports the rows where the model's label differs from the
+# reader's kind, and the model card quotes those numbers — 2% to 10% on the application it was trained on, 18% to 26%
+# on the second agent. The two are different populations, so they get different ceilings rather than one mixture
+# number that hides both.
+foreach ($pair in @(@{ Set = "unseen"; Ceiling = 15.0 }, @{ Set = "freebuff"; Ceiling = 30.0 })) {
+    $setDir = Join-Path $repo ("eval\" + $pair.Set)
+    if (-not (Test-Path $setDir)) { continue }
+    $setSessions = @(Get-ChildItem -LiteralPath $setDir -Directory | Where-Object { Test-Path (Join-Path $_.FullName "session.json") })
+    if ($setSessions.Count -eq 0) { continue }
+    $args = @("disagree", "--show", "0", "--model", $model)
+    foreach ($session in $setSessions) { $args += @("--session", $session.FullName) }
+    $disagreeText = (& $capture @args 2>&1 | Where-Object { "$_" -match "row\(s\) differ" } | Select-Object -Last 1) -join ""
+    if ($disagreeText -notmatch "\(([\d.]+)%\)") {
+        $failures += ("disagree ({0}): it printed no rate, so nothing was measured" -f $pair.Set)
+    } else {
+        $rate = [double]$Matches[1]
+        if ($rate -gt $pair.Ceiling) {
+            $failures += ("disagree ({0}): {1:N1}% of rows differ, and the pinned ceiling is {2}%" -f $pair.Set, $rate, $pair.Ceiling)
+        } else {
+            $rows += ("  {0,-16} {1:N1}% of rows differ (ceiling {2}%)" -f ("model vs reader, " + $pair.Set), $rate, $pair.Ceiling)
+        }
+    }
+}
+
+$rows += "  {0,-16} {1}" -f "assembly", $line
     if ($line -notmatch "100\.0%") { $failures += "assembly: $line" }
 }
 
