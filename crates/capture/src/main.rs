@@ -132,6 +132,14 @@ struct ProvenanceArgs {
     /// Session directories holding frames.
     #[arg(long = "session", value_name = "DIR", required = true)]
     sessions: Vec<PathBuf>,
+
+    /// Check the pages a model builds instead of the reader's.
+    ///
+    /// The rule provenance enforces — a component whose text appeared in an earlier frame is `carried`, one whose
+    /// text is new is `seen` — has only ever been asked of the reader's pages. Whether the model's pages obey it is a
+    /// question this flag makes askable, and the answer is not obviously yes.
+    #[arg(long, value_name = "FILE")]
+    model: Option<PathBuf>,
 }
 /// Shows the rows where the model's label differs from the kind the reader built.
 #[derive(Debug, Args)]
@@ -600,7 +608,17 @@ fn provenance(args: &ProvenanceArgs) -> Result<ExitCode> {
         // and one whose text has not is `seen`. Anything else is the page claiming it read
         // something off the screen when it did not, or claiming newness for a repeat.
         let mut earlier: std::collections::HashSet<String> = Default::default();
-        for page in ui_lm_pages::pages(&loaded, &surface) {
+        let built: Vec<ui_lm_pages::Envelope> = match &args.model {
+            Some(model_path) => {
+                let model = ui_lm_model::Model::load(model_path)?;
+                loaded
+                    .iter()
+                    .map(|frame| model.page(&ui_lm_capture::summary::frame_text(frame), &surface))
+                    .collect()
+            }
+            None => ui_lm_pages::pages(&loaded, &surface),
+        };
+        for page in built {
             for component in &page.create_surface.components {
                 let text = match &component.body {
                     ui_lm_pages::Body::Column { .. } => continue,

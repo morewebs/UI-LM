@@ -75,6 +75,19 @@ And the disagreements are not spread evenly — they have one shape, measured by
 - **`Meter` has one observed producer.** Agents print a budget — use against a limit — because that is what
   they manage. Progress bars, monitors and file copies print percentages and counts instead, and `as_meter`
   refuses to invent a limit from a percentage. The kind is real; the applications that draw it are few.
+- **Provenance cannot be carried by the model's pages at all.** A page marks a component `Carried` when its text
+  appeared in an earlier frame; `Model::page` sees **one frame at a time**, so it cannot know. Measured across the
+  corpus with the flag this round added:
+
+  | builder | components | carried | contradictions |
+  |---|---|---|---|
+  | reader | 10,147 | 8,422 | **47** |
+  | model | 10,147 | **0** | **8,375** |
+
+  A page from the model is honest about *what* it read and silent about *whether it had read it before*. That is a
+  property of the per-frame API, not of the weights, and it would be fixed by giving `Model::page` the frames before
+  it — the same threading the reader already does.
+
 - **`Frame` has one producer, and has been confirmed on two machines.** A titled box with corners that floats inside
   the screen: `whiptail` draws one in three modes, and the same dialog recorded on a GitHub runner reads as
   `Frame=1` there too — the check installs `whiptail` to make that question askable. The declines are as tested as
