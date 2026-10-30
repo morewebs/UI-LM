@@ -96,7 +96,13 @@ if (Test-Path $review) {
     Write-Host ("  the review's newest version is " + $named[-1])
 }
 
-$pages = @((Join-Path $repo "docs\reports\2026-10-28-state-of-the-project.md"), (Join-Path $repo "docs\reports\2026-10-29-month-in-review.md"))
+# The three documents that describe the project's present tense. The handoff is in this list because it went three
+# releases stale while the other two were checked — a successor reads it first, so it is the worst one to be wrong.
+$pages = @(
+    (Join-Path $repo "docs\reports\2026-10-28-state-of-the-project.md"),
+    (Join-Path $repo "docs\reports\2026-10-29-month-in-review.md"),
+    (Join-Path $repo "HANDOFF.md")
+)
 $wrong = @()
 foreach ($pagePath in $pages) {
     if (-not (Test-Path $pagePath)) { continue }
@@ -176,13 +182,19 @@ if ((Test-Path $card) -and $recordings -gt 0) {
 
 $corpusPage = Join-Path $repo "docs\reports\2026-10-28-state-of-the-project.md"
 if (Test-Path $corpusPage) {
-    $text = Get-Content -LiteralPath $corpusPage -Raw -Encoding UTF8
+    # Every document that describes the corpus, not just the state page: the handoff quoted "88 recordings" for a
+    # week while the state page was correct, and a reader arrives at whichever one they open first.
     $bad = @()
-    foreach ($match in [regex]::Matches($text, '(\d+)\s+recordings')) {
-        if ([int]$match.Groups[1].Value -ne $recordings) { $bad += ("the page says {0} recordings, the corpus holds {1}" -f $match.Groups[1].Value, $recordings) }
-    }
-    foreach ($match in [regex]::Matches($text, '(\d+)\s+frames audited')) {
-        if ([int]$match.Groups[1].Value -ne $frames) { $bad += ("the page says {0} frames audited, the corpus holds {1}" -f $match.Groups[1].Value, $frames) }
+    foreach ($describing in $pages) {
+        if (-not (Test-Path $describing)) { continue }
+        $text = Get-Content -LiteralPath $describing -Raw -Encoding UTF8
+        $leaf = Split-Path -Leaf $describing
+        foreach ($match in [regex]::Matches($text, '(\d+)\s+recordings')) {
+            if ([int]$match.Groups[1].Value -ne $recordings) { $bad += ("{0} says {1} recordings, the corpus holds {2}" -f $leaf, $match.Groups[1].Value, $recordings) }
+        }
+        foreach ($match in [regex]::Matches($text, '(\d+)\s+frames audited')) {
+            if ([int]$match.Groups[1].Value -ne $frames) { $bad += ("{0} says {1} frames audited, the corpus holds {2}" -f $leaf, $match.Groups[1].Value, $frames) }
+        }
     }
     if ($bad.Count -gt 0) {
         $bad | ForEach-Object { Write-Host ("  " + $_) }
