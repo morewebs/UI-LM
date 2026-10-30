@@ -425,4 +425,22 @@ if (Test-Path $handoffPath) {
     Write-Host ("the handoff names the release it describes: " + $named[-1])
 }
 
+# The model card's first evidence row now names the corpus that exists, and it has to stay that way: an earlier
+# version said "curated corpus | 60 recordings, 343 frames", a phrase defined nowhere and a count nothing derived.
+$cardPath2 = Join-Path $repo "docs\model-card.md"
+if (Test-Path $cardPath2) {
+    $cardLines = Get-Content -LiteralPath $cardPath2
+    $row = $cardLines | Where-Object { $_ -match '^\| every recording here \|' }
+    if (-not $row) {
+        Write-Host "the model card no longer states the size of the corpus it describes"
+        exit 1
+    }
+    if ($row -notmatch ('\*\*{0} recordings, {1} frames\*\*' -f $recordings.ToString('N0'), $frames.ToString('N0'))) {
+        Write-Host ("  the card says {0}; the corpus holds {1} recordings and {2} frames" -f $row.Trim(), $recordings, $frames)
+        Write-Host "the model card's evidence table describes a corpus that is not on this machine"
+        exit 1
+    }
+    Write-Host ("the card's evidence table names the corpus: {0} recordings, {1} frames" -f $recordings, $frames)
+}
+
 Write-Host "every front page opens with a sentence"
