@@ -54,7 +54,15 @@ foreach ($scenario in $scenarios) {
     }
 
     if ($scenario.ContainsKey("Requires")) {
-        $present = & $command -e sh -c ("command -v " + $scenario.Requires + " > /dev/null 2>&1 && echo yes") 2>$null
+        # The probe takes the same shape as the recording below it: on Windows the command is `wsl.exe -e sh -c`,
+        # on Linux it is `sh -c`. Using the WSL form everywhere made this say "not installed" on a runner where the
+        # package had just been installed.
+        $probe = "command -v " + $scenario.Requires + " > /dev/null 2>&1 && echo yes"
+        $present = if ($isWindows) {
+            & $command -e sh -c $probe 2>$null
+        } else {
+            & $command -c $probe 2>$null
+        }
         if (-not ($present -match "yes")) {
             Write-Host ("  {0,-22} skipped: {1} is not installed on this machine" -f $scenario.Name, $scenario.Requires)
             continue
