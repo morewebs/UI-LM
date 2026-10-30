@@ -119,6 +119,25 @@ if (Test-Path $card) {
 }
 Write-Host ("the pinned diff count holds: {0} of {1} carry no @@ header" -f $noHunk, $diffs)
 
+# Provenance contradictions are a known, explained cost, not a zero: the builder decides `carried` by hashing the raw
+# rows, padding included, and a pane whose width changes rewrites every row's trailing spaces — so forty-seven
+# components in four paned recordings are marked carried while the text a checker can see is new (round 183 says the
+# builder carries a different hash from the one the page writes). The number is pinned rather than fixed, so growth is
+# caught and the reason is beside it.
+$provenanceErrors = 0
+$readerProvenance = & $capture provenance --session $sessions[0].FullName 2>$null
+$args = @("provenance")
+foreach ($session in $sessions) { $args += @("--session", $session.FullName) }
+$provenanceLine = (& $capture @args 2>$null | Select-Object -Last 1) -join ""
+if ($provenanceLine -match "(\d+) contradiction\(s\)") { $provenanceErrors = [int]$Matches[1] }
+$provenanceCeiling = 47
+if ($provenanceErrors -gt $provenanceCeiling) {
+    Write-Host ("  the corpus holds {0} provenance contradiction(s); the pinned ceiling is {1}" -f $provenanceErrors, $provenanceCeiling)
+    Write-Host "more pages contradict themselves than this project has accounted for"
+    exit 1
+}
+Write-Host ("provenance contradictions: {0} of a pinned {1} (paned recordings only, explained in round 183)" -f $provenanceErrors, $provenanceCeiling)
+
 # Every kind the catalogue claims must have enough material to be more than an anecdote. `Frame` was found to have
 # two components in the whole corpus (round 136) and a third arrived only when a centred dialog was recorded; a kind
 # that thins out should fail here rather than be described with confidence it has not earned.
