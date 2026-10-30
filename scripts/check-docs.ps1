@@ -370,7 +370,7 @@ if ((Test-Path $weights) -and (Test-Path $cardPath)) {
 # One row is excepted. `check-audit`'s violation is produced by hand-building a page whose span runs past its line,
 # which no command exports, so its row names the mutation instead of quoting the message. That is a weaker claim and
 # it is listed as such rather than glossed.
-$quotesNotNeeded = @{ "check-audit" = "its violation needs a hand-built page, which no command exports" }
+$quotesNotNeeded = @{}
 $ledger = Join-Path $repo "docs\checks.md"
 if (Test-Path $ledger) {
     $silent = @()
@@ -391,7 +391,7 @@ if (Test-Path $ledger) {
         Write-Host "a check's proof is a claim about a message that was never quoted"
         exit 1
     }
-    Write-Host ("every ledger row quotes the failure it printed, except: " + (($quotesNotNeeded.Keys | Sort-Object) -join ", "))
+    if ($quotesNotNeeded.Count -eq 0) { Write-Host "every ledger row quotes the failure it printed" } else { Write-Host ("every ledger row quotes the failure it printed, except: " + (($quotesNotNeeded.Keys | Sort-Object) -join ", ")) }
 }
 
 Write-Host "every front page opens with a sentence"
