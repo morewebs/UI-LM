@@ -75,6 +75,23 @@ And the disagreements are not spread evenly — they have one shape, measured by
 - **`Meter` has one observed producer.** Agents print a budget — use against a limit — because that is what
   they manage. Progress bars, monitors and file copies print percentages and counts instead, and `as_meter`
   refuses to invent a limit from a percentage. The kind is real; the applications that draw it are few.
+- **The model's raw labels are weakest exactly where the pages look easiest.** Measured with `disagree` over every
+  evaluation set (round 211):
+
+  | set | non-blank rows that differ |
+  |---|---|
+  | `unseen` (Grok, untrained tasks) | **3.5%** |
+  | `tui` | 10.6% |
+  | `apps` (PowerShell, cmd, node, git…) | 13.3% |
+  | `freebuff` (second agent) | 21.4% |
+  | `workflow` | **45.5%** |
+  | `structured` | **55.3%** |
+
+  The two worst sets are the ones a text-only converter already reproduces perfectly: plain screens of shell output. On
+  `cargo test` output the model calls `tests::it_adds --- FAILED` a `Diff`, because it learned `---` as a diff marker
+  and nothing in those rows is anything else. **The guards are the only reason those pages are right**, which is the
+  same conclusion the second agent produced from the other direction.
+
 - **Provenance cannot be carried by the model's pages at all.** A page marks a component `Carried` when its text
   appeared in an earlier frame; `Model::page` sees **one frame at a time**, so it cannot know. Measured across the
   corpus with the flag this round added:
