@@ -139,7 +139,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
 ## Where it stands now
 
 **Twenty-one checks, about fifteen minutes, every axis green**, **15 hard cases** at 100% on score, round trip and
-shape, and **v0.27.0** verified by download and by asking the binary what it was built from (`version` prints the
+shape, and **v0.28.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
 The corpus is **97 recordings, 1,353 frames** per path, from four applications and two machines: Grok (the training
