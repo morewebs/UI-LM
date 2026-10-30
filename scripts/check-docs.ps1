@@ -72,7 +72,9 @@ Write-Host "the state page names the release it is describing"
 $scripts = @(Get-ChildItem -LiteralPath (Join-Path $repo "scripts") -Filter "check-*.ps1" |
     Where-Object { $_.Name -ne "check-everything.ps1" }).Count
 $fuzz = @(Get-ChildItem -Path (Join-Path $repo "crates\*\tests\fuzz_*.rs")).Count
-$ledgerRows = @(Select-String -LiteralPath (Join-Path $repo "docs\checks.md") -Pattern '^\| `').Count
+# Only rows naming a check. The older pattern counted every backticked row, and `gate.ps1`'s row stood in for the one
+# check the ledger was missing — so the two numbers matched while the ledger was incomplete (round 204).
+$ledgerRows = @(Select-String -LiteralPath (Join-Path $repo "docs\checks.md") -Pattern '^\| `check-').Count
 
 Write-Host ("  the folder holds {0} checks and {1} fuzz properties; the ledger lists {2} script(s)" -f $scripts, $fuzz, $ledgerRows)
 if ($ledgerRows -ne $scripts) {
