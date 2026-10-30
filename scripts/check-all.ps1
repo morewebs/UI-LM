@@ -63,7 +63,18 @@ if ($selfCheck.Count -gt 1) {
 # reader's kind, and the model card quotes those numbers — 2% to 10% on the application it was trained on, 18% to 26%
 # on the second agent. The two are different populations, so they get different ceilings rather than one mixture
 # number that hides both.
-foreach ($pair in @(@{ Set = "unseen"; Ceiling = 15.0 }, @{ Set = "freebuff"; Ceiling = 30.0 })) {
+# One ceiling per set, each a little above the rate measured in round 211, so the whole gradient is protected rather
+# than its two ends. The two high ones are the sets a text-only converter already reproduces perfectly — the model is
+# visibly wrong there and the guards are what keep the pages right, which is worth watching precisely because it is
+# the worst the model ever looks.
+foreach ($pair in @(
+    @{ Set = "unseen";     Ceiling = 15.0 },
+    @{ Set = "tui";        Ceiling = 20.0 },
+    @{ Set = "apps";       Ceiling = 25.0 },
+    @{ Set = "freebuff";   Ceiling = 30.0 },
+    @{ Set = "workflow";   Ceiling = 60.0 },
+    @{ Set = "structured"; Ceiling = 65.0 }
+)) {
     $setDir = Join-Path $repo ("eval\" + $pair.Set)
     if (-not (Test-Path $setDir)) { continue }
     $setSessions = @(Get-ChildItem -LiteralPath $setDir -Directory | Where-Object { Test-Path (Join-Path $_.FullName "session.json") })
