@@ -82,6 +82,18 @@ PowerShell, across all 81 recordings:
 | 2+ shared column boundaries | **28 of 81** | `freebuff/second-agent-8`, 33 runs |
 | 3+ shared column boundaries | **20 of 81** | `freebuff/second-agent-8`, 33 runs |
 
+**These numbers cannot be reproduced from this document**, and that is a defect in the ADR rather than in the
+measurement. The rule was written down as "2+ shared column boundaries" without saying what a boundary is, which rows
+count, or how a run is measured; a careful reconstruction in round 192 — gaps of two or more spaces shared by every
+non-blank line of a block, over at least three rows — matched **1 of 97** recordings, not 28.
+
+So the rejection still stands on the qualitative argument above (a survey's answer options align, and so does a `df`
+row), but **the number that was used to justify it is not checkable by anyone reading this file**. A measurement
+without its predicate is a memory of a measurement.
+
+The honest state of this decision: rejected for reasons a reader can follow, supported by numbers only their author can
+reproduce.
+
 Every one of the top matches is Freebuff, and the rows are these:
 
 ```
