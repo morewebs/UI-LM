@@ -32,6 +32,7 @@ $all = @(
 @{ name = "corpus";      script = "check-corpus.ps1"; slow = $false },
     @{ name = "audit";       script = "check-audit.ps1"; slow = $false },
     @{ name = "html";        script = "check-html.ps1";  slow = $false },
+    @{ name = "layout";      script = "check-layout.ps1"; slow = $false },
     @{ name = "hard";        script = "check-hard.ps1";  slow = $false },
 @{ name = "agents";      script = "check-agents.ps1"; slow = $true },
 @{ name = "validate";    script = "check-validate.ps1"; slow = $false },
