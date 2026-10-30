@@ -73,6 +73,9 @@ $required = @{
     # Each entry is a kind the case exists for. Breaking the predicate that produces it must fail this check,
     # and `docs/checks.md` records the message each break produced.
     "vim-floating-popup"     = @("Frame")
+    # Added in round 215: this case exists because a centred dialog is a `Frame`, and the table never said so — its
+    # ceiling protects the count and its score protects the agreement, and nothing protected the kind.
+    "whiptail-menu"          = @("Frame")
     "whiptail-dialog"        = @("Frame")
     "every-kind-one-screen"  = @("Block", "ToolCall", "Diff", "Meter")
     "pane-conversation"      = @("Block", "Meter", "ToolCall")
