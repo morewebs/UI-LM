@@ -364,4 +364,34 @@ if ((Test-Path $weights) -and (Test-Path $cardPath)) {
     Write-Host ("the card's model shape matches the weights: {0} features, {1} parameters" -f $featureCount, $parameterCount)
 }
 
+# The ledger's contract is that every check carries the failure it actually printed, and it is trusted rather than
+# checked. This checks it: every row has to contain a quoted message.
+#
+# One row is excepted. `check-audit`'s violation is produced by hand-building a page whose span runs past its line,
+# which no command exports, so its row names the mutation instead of quoting the message. That is a weaker claim and
+# it is listed as such rather than glossed.
+$quotesNotNeeded = @{ "check-audit" = "its violation needs a hand-built page, which no command exports" }
+$ledger = Join-Path $repo "docs\checks.md"
+if (Test-Path $ledger) {
+    $silent = @()
+    $seen = 0
+    foreach ($line in Get-Content -LiteralPath $ledger) {
+        if ($line -notmatch '^\|\s*`(?<name>check-[a-z-]+)`') { continue }
+        $seen++
+        $name = $Matches["name"]
+        if ($quotesNotNeeded.ContainsKey($name)) { continue }
+        if ($line -notmatch 'printed "') { $silent += ("  " + $name + " states what was broken but not what it printed") }
+    }
+    if ($seen -lt 10) {
+        Write-Host ("only {0} ledger rows were read, so the ledger is not the table this checked" -f $seen)
+        exit 1
+    }
+    if ($silent.Count -gt 0) {
+        $silent | ForEach-Object { Write-Host $_ }
+        Write-Host "a check's proof is a claim about a message that was never quoted"
+        exit 1
+    }
+    Write-Host ("every ledger row quotes the failure it printed, except: " + (($quotesNotNeeded.Keys | Sort-Object) -join ", "))
+}
+
 Write-Host "every front page opens with a sentence"
