@@ -5,6 +5,9 @@ language, no jargon, and the gaps stated as plainly as the results.
 
 ## What it does
 
+**It is a model with a runtime around it.** The model looks at a terminal screen and decides what each row is; the
+runtime draws that description as a GUI, or back as text. The rest of this page is what that pipeline can be held to.
+
 You give it a terminal program. It:
 
 1. **records** what the program draws, screen by screen, with colour and position;

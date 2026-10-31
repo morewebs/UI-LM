@@ -1,6 +1,6 @@
 # ui-lm
 
-A page intermediary: one structured description of what is on a terminal screen and what can be done there, produced from the rendered cells, rendered back as a GUI, and patched as the screen changes. This file fixes the words. The design and the decisions behind it live in [the spec](docs/superpowers/specs/2026-10-27-ui-lm-design.md).
+A page intermediary: one structured description of what is on a terminal screen and what can be done there, produced from the rendered cells **by a trained model**, rendered back as a GUI, and patched as the screen changes. The model decides what each row *is*; the code decides how a component is *shaped*. This file fixes the words. The design and the decisions behind it live in [the spec](docs/superpowers/specs/2026-10-27-ui-lm-design.md).
 
 ## Language
 
@@ -75,8 +75,9 @@ _Avoid_: bindings, shortcuts
 ### Building the data
 
 **Rig**:
-The capture apparatus: a process driver, an emulator, and a frame store.
-_Avoid_: harness, scraper, collector
+The recording subsystem, and only that: a process driver, an emulator, and a frame store. It produces the material the model
+learns from; it is not the project and not the model.
+_Avoid_: harness, scraper, collector; also avoid calling the project "the rig"
 
 **Emulator**:
 The part of the rig that turns the bytes a program emits into a frame.
