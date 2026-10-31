@@ -39,6 +39,13 @@ Seven kinds, and nothing invented beyond them:
 - **`Diff`** — rows carrying both a `+` and a `-`, with a per-line kind. Two shapes exist in the corpus: the `+++`/`---`
   kind and a staged rename.
 - **`Frame`** — a floating window drawn over the page rather than beside it: a heavy-rule popup and a centred dialog.
+- **`Table`** — numbers under headings: `df`, `ls -l`, `ps`, `top`, `dir`. Two vertical strips holding digits in most
+  rows, separated by a blank column — read by **values, not padding**, because `df` pads with single spaces and
+  `Format-Table` with many ([ADR 0008](docs/adr/0008-a-table-is-numeric-columns.md)).
+
+**The model labels five of the seven.** `Frame` and `Table` are shaped by the rule layer — a floating window is
+recognised by its border, a table by its numeric columns — which is the split the whole design rests on: what a thing
+*is*, is learned; how it is *shaped*, is written.
 
 Every component says whether it was read from the screen (`seen`) or carried from an earlier page (`carried`), and its id
 comes from its own text rather than its position, so it keeps its id when it scrolls.

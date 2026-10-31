@@ -4,6 +4,10 @@
 `ToolCall`, `Meter`, `Thought`, `Diff` — plus a rule layer that turns contiguous runs of one kind into
 components. It is not a language model and it does not generate anything.
 
+**The catalogue has seven kinds; the model labels five.** `Frame` and `Table` are shaped by the rule layer and never
+by the model - a floating window is recognised by its border and a table by its numeric columns (ADR 0006,
+ADR 0008). That is the split the project runs on: what a thing *is*, is learned; how it is *shaped*, is written.
+
 | | |
 |---|---|
 | weights | `models/page.json`, 19 x 5 matrix and 5 biases, SHA-256 begins `433465EADD618E45` |
