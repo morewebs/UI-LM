@@ -185,7 +185,11 @@ fn settled(label: &str, lines: &[String]) -> String {
 
 /// A page built from `labels`, one per row of `text`.
 pub fn page_from_labels(text: &[String], labels: &[String], surface: &str) -> Envelope {
-    labeled_page(text, labels, surface, true)
+    let mut page = labeled_page(text, labels, surface, true);
+    // ADR 0008's shaping rules apply to every builder, or two of them describe different pages for one screen: without
+    // this, `fields` counted 49 differences and `assembly` fell to 97.6% (round 21).
+    crate::promote_tables(&mut page.create_surface.components);
+    page
 }
 
 /// The body of `page_from_labels`, re-reading a split screen one pane at a time when its panes hold

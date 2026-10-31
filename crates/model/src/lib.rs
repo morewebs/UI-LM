@@ -146,6 +146,9 @@ impl Model {
         let labels = self.labels(&lines);
         let mut page = ui_lm_pages::page_from_labels(&lines, &labels, surface);
         page.create_surface.model = Some(self.digest.clone());
+        // ADR 0008's shaping rules apply to every page, whoever built it: the model decides what each row *is*, and a
+        // table is decided afterwards from the rows. Doing it here means no caller can forget (round 21).
+        ui_lm_pages::promote_tables(&mut page.create_surface.components);
         page
     }
 }

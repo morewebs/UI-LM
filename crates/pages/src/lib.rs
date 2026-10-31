@@ -2367,6 +2367,14 @@ fn block_id(lines: &[String]) -> String {
 /// Keeping it here — rather than in a test — is what makes the comparison repeatable: the
 /// floor moves when the page model moves, and that is a fact worth being able to see.
 pub fn page_from_text(text: &str, surface: &str) -> Envelope {
+    let mut page = page_from_text_raw(text, surface);
+    // ADR 0008's shaping rules apply to the text baseline too, or it describes a different page from the reader's for
+    // the same screen and `fields` counts the difference (round 21).
+    promote_tables(&mut page.create_surface.components);
+    page
+}
+
+fn page_from_text_raw(text: &str, surface: &str) -> Envelope {
     let mut groups: Vec<Vec<String>> = Vec::new();
     let mut current: Vec<String> = Vec::new();
     for line in text.lines() {
