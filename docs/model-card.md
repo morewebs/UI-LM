@@ -63,10 +63,18 @@ all perfect.
 - **It does not generalise on its own — the assembly does.** Measured with `disagree`, which compares the model's
   row labels with the reader's kinds:
 
-  | application | rows where the model disagrees |
+  | set | rows where the model disagrees |
   |---|---|
-  | Grok (trained) | **2.0%** to **10.3%** |
-  | Freebuff (never trained on) | **17.6%** to **26.3%** |
+  | `unseen` (Grok, untrained tasks) | **3.5%** |
+  | `apps` | **21.2%** |
+  | `tui` | **43.6%** |
+  | `freebuff` (never trained on) | **20.7%** |
+  | `workflow` | **56.8%** |
+  | `structured` | **63.1%** |
+
+  **These moved when the seventh kind arrived.** `Table` is decided by a rule from the rows and the model cannot label it,
+  so on a set full of `ls`, `top` and `df` screens every table row is a disagreement no training can remove. The `unseen`
+  set, which holds no tables, did not move at all: **3.5%** before and after.
 
 And the disagreements are not spread evenly — they have one shape, measured by confusion pair:
 
@@ -82,7 +90,7 @@ And the disagreements are not spread evenly — they have one shape, measured by
 
   The pages are still exact on both — because the guards correct what the model gets wrong, not because the model
   learned a second application. **What generalises is the assembly, and the vocabulary it asks the reader for.**
-- **Its raw labels disagree with the reader on 2–12% of rows.** Structural guards are what keep pages
+- **Its raw labels disagree with the reader on 3.5% to 63% of rows, set by set.** Structural guards are what keep pages
   exact; the model is one voice in an assembly, not an oracle.
 - **`Meter` has one observed producer.** Agents print a budget — use against a limit — because that is what
   they manage. Progress bars, monitors and file copies print percentages and counts instead, and `as_meter`
