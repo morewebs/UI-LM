@@ -46,6 +46,10 @@ all perfect.
 
 - **It cannot grow by finding another kind.** The five kinds are the vocabulary; a sixth would be a change
   to the page format, the reader, both renderers and the checks — see `docs/adding-a-component.md`.
+- **A drawn meter cannot be read back out of the page.** Five of six kinds round trip through the GUI and back to
+  text; `Meter` does not, because it is drawn as a bar and its number is not in a line element. `check-kinds` proves the
+  bar reaches the document and `check-html-to-tui` proves the other five rebuild - so the gap is named rather than
+  hidden: a consumer that needs the number must take it from the page, not from the rendered HTML.
 - **It is at its ceiling on this data.** Measured three ways: 60% more corpus gave +0.1% row accuracy; a
   twentieth feature was worse on every screen family; training on plain screens was three times worse.
 - **It does not generalise on its own — the assembly does.** Measured with `disagree`, which compares the model's
