@@ -72,7 +72,7 @@ if ($share -lt 100) {
         $head = ($one | Select-Object -First 1) -join ""
         if ($head -match "model 100\.0%") { continue }
         Write-Host ("  {0}: {1}" -f $session.Name, ($head -replace ".*model ", "model "))
-        $one | Where-Object { "$_" -match "^\s+(Block|Meter|ToolCall|Thought|Diff)\s+\d+/" } |
+        $one | Where-Object { "$_" -match "^\s+(Block|Meter|ToolCall|Thought|Diff|Frame|Table)\s+\d+/" } |
             ForEach-Object { Write-Host ("    " + "$_".Trim()) }
         $one | Where-Object { "$_" -match "^  missed " } |
             Select-Object -First 2 |
