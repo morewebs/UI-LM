@@ -58,6 +58,25 @@ try {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+# A shortcut must arrive as a **button carrying its binding**, which is what the page model promises and what the
+# renderer's own test asserts. `git help`'s list of file formats had been read as shortcuts, so the rule behind them was
+# narrowed before this probe could exist (rounds 30-32).
+$shortcutSession = Join-Path $repo "eval\unseen\unseen-listing"
+if (Test-Path $shortcutSession) {
+    $htmlPath = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-shortcuts-" + [guid]::NewGuid().ToString("N") + ".html")
+    $previous = $ErrorActionPreference
+    $raw = & $capture render --session $shortcutSession --all --out $htmlPath 2>&1
+    $ErrorActionPreference = $previous
+    $html = if (Test-Path $htmlPath) { Get-Content -LiteralPath $htmlPath -Raw -Encoding UTF8 } else { "" }
+    Remove-Item -LiteralPath $htmlPath -Force -ErrorAction SilentlyContinue
+    $buttons = [regex]::Matches($html, '<button class="action" data-binding="[^"]+">[^<]+</button>').Count
+    if ($buttons -lt 1) {
+        $failures += "the document holds no shortcut button, and the page holds shortcuts"
+    } else {
+        Write-Host ("shortcut buttons reach the document: {0}" -f $buttons)
+    }
+}
+
 # The model's pages must carry the kinds too. `page --all --model` served a `Block` where the reader served a `Table`
 # for the same screen, and every check here passed because none of them looked at a model page (round 19).
 $modelFile = Join-Path $repo "models\page.json"
