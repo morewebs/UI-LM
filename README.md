@@ -148,8 +148,9 @@ Against **105 recordings and 1,580 frames** from eleven distinct commands — tw
   training are the strongest claim available, and it is a modest one.
 - **A live view is not continuous.** A frame exists at a settled screen, so a fast program yields fewer moments than it
   drew.
-- **`Table` is rejected.** A column-alignment rule was measured and is inverted: it matches `vim`'s help rows and scores
-  zero on `df` — see [ADR 0007](docs/adr/0007-a-table-is-aligned-rows.md) and `scripts/measure-tables.py`.
+- **A table's rule has two false positives.** The values rule matches nineteen of the corpus's 105 recordings, and
+  two of them are agent screens of three or four rows where prose aligns by accident. The kind requires a block of
+  its own to keep them out, and the boundary is measured in `scripts/measure-tables.py`.
 - **`Meter` has one observed producer.** Every meter in the corpus comes from an agent printing a budget; a drawn
   progress bar is deliberately not one.
 

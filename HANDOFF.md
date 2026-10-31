@@ -187,10 +187,10 @@ refused was refused by counting something.
    pre-frame snapshot and building a second memory beside the loop — both produced 12070 contradictions and were
    reverted. **Next step:** print `appeared.len()` at the *end* of the marking loop as well as its start (the start is
    already printed under `UI_LM_DEBUG_APPEARED=1`), because the flow looks correct and the failures are not explained.
-2. **`Table` is rejected, and the rejection is now evidence rather than memory.** `scripts/measure-tables.py` runs the
-   alignment predicate: it matches `vim`'s help rows (34 lines) and a survey, and scores **0** on `df` — the one screen
-   that is a table — because `df` pads with single spaces. **Next step:** a predicate on *values* (a column whose cells
-   share a type across rows), measured before it is written into the catalogue.
+2. **`Table` shipped as the seventh kind (ADR 0008), and the threads that remain are its edges.** The values rule
+   matches nineteen of 105 recordings; two are agent screens where prose aligns by accident, kept out by requiring a
+   block of its own. **Next step:** measure a table inside a pane, where the run is bounded by a divider rather than
+   by a blank row.
 3. **`Meter` has one producer.** Grok and Freebuff both draw `N/M hours remaining`; a five-minute agent session drew no
    meter at all, so the question of a *changing* limit has no material anywhere. **Next step:** second producer is an
    application that draws a live limit with a spaced slash — no obvious candidate on this machine.

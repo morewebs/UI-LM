@@ -144,7 +144,7 @@ catch it:
 | `Meter` | a count against a drawn limit; a percentage is not one | `top`'s `%Cpu(s)` header | the `second machine` job forbids `Meter` on a monitor |
 | a **listing** | one `Block`, never a meter, thought or tool call | a directory listing, on any machine | the same job forbids all four on a listing |
 | `Diff` | **any** addition beside **any** removal | `- buy milk` / `+ buy eggs`, which is not a patch | a test that *pins the cost* rather than forbidding it: 62 of 102 corpus diffs carry no `@@` hunk header (24 carry no header at all), so narrowing was reverted |
-| `Table` | does not exist | column alignment matched 28 of 81 recordings, all survey sheets | ADR 0007, rejected on measurement |
+| `Table` | two vertical strips of digits in most rows, in a block of its own | the alignment rule matched vim's help rows and scored zero on `df`; the values rule matches nineteen recordings, two of them agent prose | ADR 0008 accepted; `pane-resize` forbids a table |
 
 **Five boundaries guard against widening; one pins an accepted cost.** The difference matters: forbidding is right
 where the wide rule would be *wrong*, and pinning is right where the wide rule is merely *expensive*.
