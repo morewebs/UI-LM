@@ -690,6 +690,7 @@ fn disagree(args: &DisagreeArgs) -> Result<ExitCode> {
     let model = ui_lm_model::Model::load(&args.model)?;
     let mut rows = 0usize;
     let mut differing = 0usize;
+    let mut excluded = 0usize;
     let mut shown = 0usize;
     println!("{:<10} {:<10} row", "reader", "model");
     for session in &args.sessions {
@@ -728,6 +729,13 @@ fn disagree(args: &DisagreeArgs) -> Result<ExitCode> {
                 if line.trim().is_empty() {
                     continue;
                 }
+                // Two kinds are drawn by the reader's rules and never labelled by the model, so a row inside one of
+                // them is not evidence about the model. Counted separately rather than silently dropped: a metric that
+                // hides what it excludes is the defect this file keeps finding (round 24).
+                if kind == "Table" || kind == "Frame" {
+                    excluded += 1;
+                    continue;
+                }
                 rows += 1;
                 if *label != *kind {
                     differing += 1;
@@ -743,6 +751,9 @@ fn disagree(args: &DisagreeArgs) -> Result<ExitCode> {
         "{differing} of {rows} non-blank row(s) differ ({:.1}%)",
         differing as f64 / rows.max(1) as f64 * 100.0
     );
+    if excluded > 0 {
+        println!("{excluded} row(s) sit in a Table or a Frame, which the model does not label, and are not counted");
+    }
     Ok(ExitCode::SUCCESS)
 }
 fn fields(args: &FieldsArgs) -> Result<ExitCode> {

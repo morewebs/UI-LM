@@ -74,12 +74,13 @@ if ($selfCheck.Count -gt 1) {
 # visibly wrong there and the guards are what keep the pages right, which is worth watching precisely because it is
 # the worst the model ever looks.
 foreach ($pair in @(
-    @{ Set = "unseen";     Ceiling = 15.0 },
-        # Raised from 20 in round 21: `Table` is a seventh kind and the model cannot label it, so on a set full of
-    # `ls`, `top` and `df` screens every table row counts as a disagreement that no training can remove.
-    @{ Set = "tui";        Ceiling = 50.0 },
-    @{ Set = "apps";       Ceiling = 25.0 },
-    @{ Set = "freebuff";   Ceiling = 30.0 },
+    @{ Set = "unseen";       Ceiling = 15.0 },
+        # Measured after `disagree` stopped counting rows inside a `Table` or a `Frame`: those kinds are drawn by rules the
+    # model never labels, and counting them made `tui` read 43.6% and `workflow` 56.8% - numbers about the rule, not
+    # about the model (round 24). The ceilings below are a little above today's measurements.
+    @{ Set = "tui";          Ceiling = 10.0 },
+    @{ Set = "apps";         Ceiling = 20.0 },
+    @{ Set = "freebuff";     Ceiling = 30.0 },
     # The last two are reported and not capped. A ceiling that permits being wrong about half the time is a
     # formality, and a formality that fails is worse than a number that is printed: what guards these sets is that
     # their **pages** are 100%, which `score` already measures every run.
