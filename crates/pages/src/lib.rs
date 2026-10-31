@@ -951,6 +951,7 @@ pub fn pages(frames: &[Frame], surface_id: &str) -> Vec<Envelope> {
                 appeared.len()
             );
         }
+        promote_tables(&mut page.create_surface.components);
         described.push(page);
     }
     described
@@ -3435,6 +3436,30 @@ mod tests {
             ],
         };
         assert_eq!(score.weighted_structure(), 1.0);
+    }
+}
+
+/// ADR 0008, applied once for both builders: a `Block` whose rows satisfy the values rule becomes a `Table`.
+///
+/// Doing it here rather than inside each builder is the whole point - the reader and the label path construct
+/// components differently, so two branches produced two different pages and `self-check` fell from 100% to 97.6%.
+/// One pass over the finished components cannot disagree with itself.
+fn promote_tables(components: &mut [Component]) {
+    for component in components.iter_mut() {
+        let (rows, lines) = match &component.body {
+            Body::Block { rows, lines, .. } => (*rows, lines.clone()),
+            _ => continue,
+        };
+        let Some((columns, cells)) = as_table(&lines) else {
+            continue;
+        };
+        component.component = "Table".to_owned();
+        component.body = Body::Table {
+            rows,
+            columns,
+            cells,
+            lines,
+        };
     }
 }
 

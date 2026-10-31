@@ -34,8 +34,10 @@ New-Item -ItemType Directory -Force -Path $work | Out-Null
 # so what is compared is the **shape**: which kinds the page claims and how many panes it splits into.
 $isWindows = $PSVersionTable.Platform -eq "Win32NT" -or $env:OS -eq "Windows_NT"
 $scenarios = @(
-    @{ Name = "a directory listing"; Command = "ls -l /usr/bin | head -40; sleep 1"; Forbidden = @("Meter", "Thought", "ToolCall", "Diff", "Frame"); Panes = 0 },
-    @{ Name = "a process monitor";   Command = "top -bn1 | head -25; sleep 1";     Forbidden = @("Meter", "Thought", "ToolCall", "Diff", "Frame"); Panes = 0 },
+    # ADR 0008: `ls -l` is a **Table** - two numeric strips (size and date) in most rows. Asking for the kind here
+# rather than for "a block" is what makes the second machine prove that the rule travels.
+@{ Name = "a directory listing"; Command = "ls -l /usr/bin | head -40; sleep 1"; Forbidden = @("Meter", "Thought", "ToolCall", "Diff", "Frame"); Panes = 0; Expects = "Table" },
+    @{ Name = "a process monitor";   Command = "top -bn1 | head -25; sleep 1";     Forbidden = @("Meter", "Thought", "ToolCall", "Diff", "Frame"); Panes = 0; Expects = "Table" },
     # `Frame` was the kind with one producer and three examples on this machine, so the question worth asking of a
     # runner is not whether it reads text but whether the *predicate travels*: a whiptail dialog is a titled box
     # floating inside the screen, and it must be a `Frame` here as it is at home. If whiptail is not installed the
