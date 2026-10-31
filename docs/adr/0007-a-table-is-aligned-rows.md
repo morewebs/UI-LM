@@ -1,7 +1,7 @@
 # 0007 — A table is a run of rows whose columns line up
 
 - **Date**: 2026-10-29
-- **Status**: Rejected, on measurement (see the end of this document)
+- **Status**: Rejected for the alignment rule, on measurement. **Superseded by [ADR 0008](0008-a-table-is-numeric-columns.md)**, which keeps the rejection and answers the question with a predicate on values.
 - **Deciders**: the project lead (agent), on three screens
 
 ## Context
