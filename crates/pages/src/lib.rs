@@ -898,7 +898,11 @@ const ROOT_ID: &str = "root";
 /// get the provenance the vocabulary exists for.
 pub fn page_from_frame(frame: &Frame, surface_id: &str) -> Envelope {
     let mut appeared = HashSet::new();
-    page_with(frame, surface_id, &mut appeared)
+    let mut page = page_with(frame, surface_id, &mut appeared);
+    // The shaping rules apply to a single frame too: without this, `page --seq 0` served a table as prose while
+    // `page --all` served a `Table` for the same screen (round 20, found by a test rather than by a check).
+    promote_tables(&mut page.create_surface.components);
+    page
 }
 
 /// Builds one page per frame, in order, carrying provenance across them.
@@ -2552,6 +2556,54 @@ mod tests {
     fn frame_of(rows: &[&str], cols: u16) -> Frame {
         let chars: Vec<Vec<char>> = rows.iter().map(|line| line.chars().collect()).collect();
         frame_from_chars(0, u16::try_from(rows.len()).unwrap(), cols, &chars)
+    }
+
+    #[test]
+    fn a_table_is_numeric_columns() {
+        // ADR 0008: `df`-like rows, columns separated by single spaces, which the alignment rule could not see.
+        let frame = frame_of(
+            &[
+                "/dev/sda1  100G  40G  60G  40% /",
+                "/dev/sdb    16G   1G  15G   6% /mnt",
+                "tmpfs       16G     0  16G   0% /dev/shm",
+            ],
+            60,
+        );
+        let page = page_from_frame(&frame, "s");
+        let tables = page
+            .create_surface
+            .components
+            .iter()
+            .filter(|component| component.component == "Table")
+            .count();
+        assert_eq!(tables, 1, "three rows of numeric columns are a table");
+    }
+
+    #[test]
+    fn a_listing_under_a_prompt_is_not_a_table() {
+        // The rule the ADR states: a streak inside prose is not a table. The first row here holds no digits, and a
+        // majority of rows must hold each strip, so this block is not one - which is what stopped the cross-check
+        // calling `$ ls -la` plus its listing a table (rounds 13 and 14).
+        let frame = frame_of(
+            &[
+                "$ ls -la",
+                "total 1",
+                "drwxr-xr-x 1 moreweb 197121  0 Oct 29 09:38 .",
+                "drwxr-xr-x 1 moreweb 197121  0 Oct 29 09:38 ..",
+                "-rw-r--r-- 1 moreweb 197121 54 Oct 29 09:38 app.py",
+            ],
+            80,
+        );
+        let page = page_from_frame(&frame, "s");
+        let tables = page
+            .create_surface
+            .components
+            .iter()
+            .filter(|component| component.component == "Table")
+            .count();
+        // Nine columns of minimum width - the `total 1` row bounds them - and only that row holds a digit there, so
+        // no strip has a majority. The block is a listing under a prompt, not a table.
+        assert_eq!(tables, 0, "a listing under a prompt is not a table");
     }
 
     #[test]
