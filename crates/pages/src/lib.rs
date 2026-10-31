@@ -2091,6 +2091,54 @@ fn split_property(line: &str) -> Option<(String, String)> {
     Some((label.to_owned(), line[colon + 1..].trim().to_owned()))
 }
 
+/// Whether the right-hand column of a wide-gap row is a **key binding** rather than a description.
+///
+/// Stated before measuring (round 31): a binding is at most twelve characters and is one of a single character, a named
+/// key (`esc`, `tab`, `enter`) or a `+`-joined combination of modifiers and one character. `git help`'s list of file
+/// formats - `format-chunk    Chunk-based file formats` - fails that test and had been read as two shortcuts; the
+/// corpus held **2,698** of them before this rule.
+fn looks_like_binding(key: &str) -> bool {
+    let key = key.trim().to_lowercase();
+    if key.is_empty() || key.chars().count() > 12 || key.contains(' ') {
+        return false;
+    }
+    let named = [
+        "esc",
+        "enter",
+        "tab",
+        "space",
+        "backspace",
+        "delete",
+        "up",
+        "down",
+        "left",
+        "right",
+        "home",
+        "end",
+    ];
+    if named.contains(&key.as_str()) {
+        return true;
+    }
+    if key.chars().count() == 1 && key.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return true;
+    }
+    // A slash command is a binding too: `Agent Dashboard    /dashboard` is a command the runtime can offer.
+    if key.starts_with('/') && key.chars().count() > 1 {
+        return true;
+    }
+    let parts: Vec<&str> = key.split('+').collect();
+    if parts.len() < 2 {
+        return false;
+    }
+    let modifiers = ["ctrl", "cmd", "alt", "shift", "meta", "super"];
+    let last = parts[parts.len() - 1];
+    parts[..parts.len() - 1]
+        .iter()
+        .all(|part| modifiers.contains(part))
+        && last.chars().count() == 1
+        && last.chars().all(|c| c.is_ascii_alphanumeric())
+}
+
 /// The shortcut rows a block holds.
 ///
 /// A row is two fields separated by a wide gap where the right field ends at the same
@@ -2104,7 +2152,7 @@ fn shortcuts_of(lines: &[String]) -> Vec<Shortcut> {
             let (gap, width) = wide_gap(&stripped)?;
             let label = stripped[..gap].trim();
             let key = stripped[gap + width..].trim();
-            if label.is_empty() || key.is_empty() || key.chars().count() > 24 {
+            if label.is_empty() || !looks_like_binding(key) {
                 return None;
             }
             Some((

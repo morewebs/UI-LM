@@ -211,6 +211,21 @@ fn render_component(out: &mut String, component: &Component) {
                     .collect();
                 let _ = writeln!(out, "<div class=\"tabs\">{}</div>", names.join("  ·  "));
             }
+            // The page says a shortcut is a command a runtime can offer as a button, and the renderer's own test says the
+            // same. It had been drawing them as ordinary lines, which is why `a_shortcut_is_drawn_as_a_button_carrying_its_binding`
+            // failed once `looks_like_binding` gave it real bindings to draw (round 32).
+            if !shortcuts.is_empty() {
+                out.push_str("<div class=\"shortcuts\">");
+                for shortcut in shortcuts {
+                    let _ = write!(
+                        out,
+                        "<button class=\"action\" data-binding=\"{}\">{}</button>",
+                        escape(&shortcut.key),
+                        escape(&shortcut.label)
+                    );
+                }
+                out.push_str("</div>");
+            }
             for (index, line) in lines.iter().enumerate() {
                 let line_spans = spans.get(index).map(Vec::as_slice).unwrap_or_default();
                 let _ = writeln!(
