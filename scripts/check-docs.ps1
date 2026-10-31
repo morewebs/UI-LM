@@ -490,4 +490,29 @@ if (Test-Path $handoff) {
     }
 }
 
+# A check can exist, be listed in the ledger, and still never run: `check-kinds` was written, proven failable and given a
+# ledger row before `check-everything` knew about it (round 237). The ledger and the runner are therefore compared, with
+# the two checks that cannot run here named and explained.
+$ledgerChecks = @(Get-Content -LiteralPath (Join-Path $repo "docs\checks.md") -Encoding UTF8 |
+    Where-Object { $_ -match '^\|\s*`(check-[a-z0-9-]+)`' } |
+    ForEach-Object { if ($_ -match '`(check-[a-z0-9-]+)`') { $Matches[1] } })
+$runnerChecks = @(Get-Content -LiteralPath (Join-Path $repo "scripts\check-everything.ps1") -Encoding UTF8 |
+    Where-Object { $_ -match 'script = "(check-[a-z0-9-]+)\.ps1"' } |
+    ForEach-Object { if ($_ -match '"(check-[a-z0-9-]+)\.ps1"') { $Matches[1] } })
+if ($ledgerChecks.Count -eq 0 -or $runnerChecks.Count -eq 0) {
+    Write-Host "the ledger or the runner listed no checks, so nothing was compared"
+    exit 1
+}
+# Named, with reasons: one needs a published tag to exist, the other needs the CI runner's whiptail.
+$runsElsewhere = @("check-release", "check-second-machine")
+$notRun = @($ledgerChecks | Where-Object { $runnerChecks -notcontains $_ -and $runsElsewhere -notcontains $_ })
+$notListed = @($runnerChecks | Where-Object { $ledgerChecks -notcontains $_ })
+if ($notRun.Count -gt 0 -or $notListed.Count -gt 0) {
+    if ($notRun.Count -gt 0) { Write-Host ("  listed in the ledger, never run: " + ($notRun -join ", ")) }
+    if ($notListed.Count -gt 0) { Write-Host ("  run by the suite, absent from the ledger: " + ($notListed -join ", ")) }
+    Write-Host "a check is promised in one place and performed in another"
+    exit 1
+}
+Write-Host ("the ledger and the runner agree: {0} check(s) listed, {1} run here, {2} run elsewhere" -f $ledgerChecks.Count, $runnerChecks.Count, $runsElsewhere.Count)
+
 Write-Host "every front page opens with a sentence"
