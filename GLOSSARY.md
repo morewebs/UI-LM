@@ -121,9 +121,9 @@ _Avoid_: equivalence, fidelity
 A terminal application whose interface is a conversation with an agent and the tool calls it makes.
 _Avoid_: coding agent, chat CLI
 
-## The five kinds
+## The seven kinds
 
-The catalogue holds five kinds. They are the project's whole vocabulary for what a screen is made of, and each
+The catalogue holds seven kinds. They are the project's whole vocabulary for what a screen is made of, and each
 one carries a narrowing learned from a real screen — the narrowings are the definitions, not footnotes to them.
 
 **Block**:

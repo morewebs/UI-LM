@@ -48,7 +48,7 @@ all perfect.
 
 ## What it cannot do
 
-- **It cannot grow by finding another kind.** The five kinds are the vocabulary; a sixth would be a change
+- **It cannot grow by finding another kind.** It labels five; the seventh kind, `Table`, was added by a rule the model never touches (ADR 0008), and a sixth *label* would be a change
   to the page format, the reader, both renderers and the checks — see `docs/adding-a-component.md`.
 - **A table is a run of numbers, and it is read by values.** `Table` is the seventh kind (ADR 0008): two vertical strips
   holding digits in a majority of rows, in a block of its own. It is right about `ls`, `ps`, `df`, `top`, `dir` and
