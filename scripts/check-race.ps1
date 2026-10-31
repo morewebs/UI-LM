@@ -32,7 +32,7 @@ $failures = @()
 $recorder = Start-Process -FilePath $capture -PassThru -NoNewWindow -ArgumentList @(
     "record", "--rows", "20", "--cols", "80", "--out", $session, "--control", $control,
     "--stop-after", "28000", "--", "powershell", "-NoProfile", "-Command",
-    "1..60 | ForEach-Object { 'tick ' + `$_ ; Start-Sleep -Milliseconds 150 }")
+    "1..30 | ForEach-Object { 'tick ' + `$_ ; Start-Sleep -Milliseconds 400 }")
 Start-Sleep -Seconds 5
 $viewer = Start-Process -FilePath $serve -PassThru -NoNewWindow -ArgumentList @(
     "--session", $session, "--keys", $control, "--port", "$port")
