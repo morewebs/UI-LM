@@ -22,7 +22,11 @@ $probes = @(
     @{ Session = "eval\structured\diff-f1";          Class = "block diff";  Why = "a diff must not read as a block of text" },
     @{ Session = "eval\freebuff\multi-file-task";    Class = "thought";     Why = "an agent's reasoning must not read as a block" },
     @{ Session = "eval\freebuff\multi-file-task";    Class = "tool";        Why = "a tool call must not read as a block" },
-    @{ Session = "cases\hard\whiptail-dialog";       Class = "component frame"; Why = "a floating window must not read as a block" }
+    @{ Session = "cases\hard\whiptail-dialog";       Class = "component frame"; Why = "a floating window must not read as a block" },
+    # A meter must arrive as a drawn bar, not as the words `3/5`: the kind exists so a GUI can show a limit, and a page
+    # that only carries the text has thrown away the only thing the kind was for.
+    @{ Session = "eval\nongrok\banner";              Class = "meter";         Why = "a budget must not read as a block of text" },
+    @{ Session = "eval\nongrok\banner";              Class = "fill";          Why = "a meter must be drawn, not described" }
 )
 
 $failures = @()
