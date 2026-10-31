@@ -442,6 +442,23 @@ if (Test-Path $cardPath2) {
         Write-Host "the model card's evidence table describes a corpus that is not on this machine"
         exit 1
     }
+    if ($row -match 'from \*\*(\d+) distinct commands\*\*') {
+        $heads = @()
+        foreach ($root in @("eval", "cases")) {
+            $dir = Join-Path $repo $root
+            if (-not (Test-Path $dir)) { continue }
+            foreach ($s in (Get-ChildItem -LiteralPath $dir -Recurse -Directory | Where-Object { Test-Path (Join-Path $_.FullName "session.json") })) {
+                $rec = Get-Content -LiteralPath (Join-Path $s.FullName "session.json") -Raw | ConvertFrom-Json
+                $heads += (@($rec.command) -join " ")
+            }
+        }
+        $distinctCommands = @($heads | Select-Object -Unique).Count
+        if ([int]$Matches[1] -ne $distinctCommands) {
+            Write-Host ("  the card says {0} distinct commands; the recordings name {1}" -f $Matches[1], $distinctCommands)
+            Write-Host "the model card's corpus row counts commands the corpus does not hold"
+            exit 1
+        }
+    }
     Write-Host ("the card's evidence table names the corpus: {0} recordings, {1} frames" -f $recordings, $frames)
 }
 
