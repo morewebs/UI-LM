@@ -34,6 +34,7 @@ $all = @(
     @{ name = "html";        script = "check-html.ps1";  slow = $false },
     @{ name = "kinds";       script = "check-kinds.ps1"; slow = $false },
     @{ name = "html-to-tui"; script = "check-html-to-tui.ps1"; slow = $false },
+    @{ name = "loop";      script = "check-loop.ps1"; slow = $true },
     @{ name = "layout";      script = "check-layout.ps1"; slow = $false },
     @{ name = "hard";        script = "check-hard.ps1";  slow = $false },
 @{ name = "agents";      script = "check-agents.ps1"; slow = $true },
