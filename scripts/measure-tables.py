@@ -122,6 +122,33 @@ def numeric_strips(lines, min_rows=3):
     return best
 
 
+def whole_block_strips(rows):
+    """The question the ADR asks: does **the whole component** satisfy the rule.
+
+    `longest_strip_run` slides a window, which finds a table in the last three rows of a block whose first rows are prose
+    - exactly the "streak inside a block" ADR 0008 forbids. The reader judges the whole block, so the check must too.
+    """
+    if len(rows) < 3:
+        return 0
+    width = min(len(r) for r in rows)
+    if width < 8:
+        return 0
+    strips = 0
+    col = 0
+    while col < width:
+        holds = sum(1 for r in rows if r[col] in NUMERIC_CHARS)
+        if holds * 2 > len(rows):
+            end = col
+            while end < width and sum(1 for r in rows if r[end] in NUMERIC_CHARS) * 2 > len(rows):
+                end += 1
+            if end - col >= 2:
+                strips += 1
+            col = end
+        else:
+            col += 1
+    return strips
+
+
 def longest_strip_run(rows):
     """How many rows in this block share two numeric strips."""
     best = 0
@@ -209,7 +236,7 @@ def disagreements():
                         for line in (component.get("lines") or [])]
                 # The ADR says a table is a *block of its own*, so the whole component is one run - not the
                 # longest blank-line separated stretch inside it, which is what `numeric_strips` reports.
-                matches = longest_strip_run(rows) >= 3
+                matches = whole_block_strips(rows) >= 2
                 is_table = component["component"] == "Table"
                 if matches and not is_table:
                     missed.append((session, component["id"]))

@@ -44,6 +44,7 @@ $all = @(
 @{ name = "readme";      script = "check-readme.ps1"; slow = $false },
     @{ name = "docs";        script = "check-docs.ps1"; slow = $false },
     @{ name = "claims";      script = "check-claims.ps1"; slow = $false },
+    @{ name = "tables";      script = "check-tables.ps1"; slow = $false },
     @{ name = "race";        script = "check-race.ps1";  slow = $true },
     @{ name = "interaction"; script = "check-interaction.ps1"; slow = $true },
     @{ name = "live-page";   script = "check-live-page.ps1"; slow = $true },
