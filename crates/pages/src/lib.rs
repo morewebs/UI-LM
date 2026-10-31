@@ -2060,7 +2060,10 @@ fn properties_of(lines: &[String]) -> Vec<Property> {
             // reads as a value rather than as another label.
             if let Some(next) = lines.get(index + 1).map(|next| strip_borders(next)) {
                 let next = next.trim();
-                if !next.is_empty() && split_property(next).is_none() {
+                // A heading is followed by a list, not by a value: `Commands:` then `build, b    Compile the current package`
+                // is two columns of a table. A value is short and has no wide gap of its own (round 35).
+                let single_column = !next.contains("   ") && next.chars().count() <= 60;
+                if !next.is_empty() && single_column && split_property(next).is_none() {
                     found.push(Property {
                         label,
                         value: next.to_owned(),
@@ -2088,7 +2091,25 @@ fn split_property(line: &str) -> Option<(String, String)> {
     if label.split_whitespace().count() > 4 {
         return None;
     }
-    Some((label.to_owned(), line[colon + 1..].trim().to_owned()))
+    // A name does not carry a parenthesis: `ui-lm-frames v0.1.0 (C:\Users\...` is a `cargo tree` row whose drive
+    // letter looked like a separator, and rows like it made 1,916 properties out of directory listings (round 35).
+    if label.contains('(') {
+        return None;
+    }
+    // A run of three spaces is column alignment: `✓       test` is a status cell from `gh run list`, not a name.
+    if label.contains("   ") {
+        return None;
+    }
+    // A name begins with a letter or a digit. `* b35c678 fix` is a `git log` row whose subject contains a colon.
+    if !label.chars().next().is_some_and(|c| c.is_alphanumeric()) {
+        return None;
+    }
+    let value = line[colon + 1..].trim();
+    // A value that begins with a path separator is the rest of a path, not a field value.
+    if value.starts_with('\\') || value.starts_with('/') {
+        return None;
+    }
+    Some((label.to_owned(), value.to_owned()))
 }
 
 /// Whether the right-hand column of a wide-gap row is a **key binding** rather than a description.
