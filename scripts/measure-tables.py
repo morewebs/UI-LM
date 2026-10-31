@@ -1,8 +1,8 @@
-"""Measures the column-alignment predicate ADR 0007 rejects, over every recording on this machine.
+﻿"""Measures the column-alignment predicate ADR 0007 rejects, over every recording on this machine.
 
 The ADR quoted numbers for two rounds that nobody could reproduce: the rule was written down as "2+ shared column
 boundaries" and nothing said what a boundary was, which rows counted, or how a run was measured. This file is the
-missing half — the predicate in code, next to the decision it supports.
+missing half â€” the predicate in code, next to the decision it supports.
 
 Two predicates are measured here, and they disagree completely:
 
@@ -31,8 +31,8 @@ Run from the repository root:
 
     python scripts/measure-tables.py
 
-It prints the recordings whose pages hold the longest runs and the named acceptance cases — `df`, `top`, a survey sheet
-and a `vim` help screen — because a predicate that cannot separate those has not earned the right to name a kind.
+It prints the recordings whose pages hold the longest runs and the named acceptance cases â€” `df`, `top`, a survey sheet
+and a `vim` help screen â€” because a predicate that cannot separate those has not earned the right to name a kind.
 """
 
 import json
@@ -214,6 +214,31 @@ def main():
     for session, run in sorted(((s, measures(s)[1]) for s in measured_names), key=lambda m: -m[1])[:6]:
         print(f"  {run:3} row(s)  {session}")
 
+    print("the same rule at a five-row minimum:")
+    five = [(s, numeric_strips([(l.get("text", "") if isinstance(l, dict) else str(l)) for l in (c.get("lines") or [])], min_rows=5))
+            for s in measured_names for c in [None] if False]
+    five = []
+    for session in measured_names:
+        best = 0
+        out = subprocess.run([CAPTURE, "page", "--session", session, "--all"],
+                             capture_output=True, text=True, errors="ignore").stdout
+        for raw in (l for l in out.splitlines() if l.startswith("{")):
+            page = json.loads(raw)
+            for component in page["createSurface"]["components"]:
+                rows = [l.get("text", "") if isinstance(l, dict) else str(l) for l in (component.get("lines") or [])]
+                best = max(best, numeric_strips(rows, min_rows=5))
+        if best >= 5:
+            five.append((session, best))
+    print(f"  recordings at a five-row minimum: {len(five)} of {len(measured_names)}")
+    for session, run in sorted(five, key=lambda m: -m[1])[:6]:
+        print(f"    {run:3}  {session}")
+    dropped = [s for s in matched_values if s not in [f[0] for f in five]]
+    print("  dropped by the higher minimum: " + (", ".join(dropped) if dropped else "none"))
+
+    print("every recording the values rule matches:")
+    for session in matched_values:
+        print(f"  MATCH {measures(session)[1]:3} row(s)  {session}")
+
     print("the two predicates on the screens that decide the question:")
     print(f"  {'session':32} {'alignment':>9} {'values':>7}   is it a table?")
     for name, truth in (("df-table", "yes"), ("linux-top", "yes"), ("cmd-dir", "yes"), ("pwsh-table", "yes"),
@@ -236,3 +261,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
