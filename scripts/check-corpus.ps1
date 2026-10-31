@@ -164,7 +164,6 @@ $kindFloor = @{
     "Meter"    = 100
     "Diff"     = 40
     "Frame"    = 3
-    "Table"    = 20
 }
 $kindCounts = @{}
 foreach ($session in $sessions) {

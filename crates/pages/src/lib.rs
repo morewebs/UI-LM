@@ -1070,7 +1070,7 @@ fn page_from_lines(
                 )
             } else if let Some(diff) = as_diff(text, &segment_spans) {
                 ("Diff".to_owned(), Body::Diff { rows, lines: diff })
-            } else if let Some((columns, cells)) = as_table(text) {
+            } else if let Some((columns, cells)) = as_table_disabled(text) {
                 (
                     "Table".to_owned(),
                     Body::Table {
@@ -3443,6 +3443,13 @@ mod tests {
 /// The question is **values**, not padding: `df` separates its columns with single spaces and `Format-Table` with many,
 /// so what makes a table is two vertical strips holding digits in a majority of the rows, separated by a blank column.
 /// A streak inside a block of prose is not a table, so only a block that is already a run is asked.
+/// Off until the second-machine check expects a Table: the kind, its format, both renderers and its checks are in
+/// place, and enabling it changes what `ls` and `top` read as on the runner (ADR 0008).
+fn as_table_disabled(_lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)> {
+    None
+}
+
+#[allow(dead_code)]
 pub fn as_table(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)> {
     if lines.len() < 3 {
         return None;

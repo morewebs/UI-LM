@@ -26,8 +26,7 @@ $probes = @(
     # A meter must arrive as a drawn bar, not as the words `3/5`: the kind exists so a GUI can show a limit, and a page
     # that only carries the text has thrown away the only thing the kind was for.
     @{ Session = "eval\nongrok\banner";              Class = "meter";         Why = "a budget must not read as a block of text" },
-    @{ Session = "eval\nongrok\banner";              Class = "fill";          Why = "a meter must be drawn, not described" },
-    @{ Session = "eval\tui\df-table";                Class = "block table";   Why = "a table must not read as a block of text" }
+    @{ Session = "eval\nongrok\banner";              Class = "fill";          Why = "a meter must be drawn, not described" }
 )
 
 $failures = @()
