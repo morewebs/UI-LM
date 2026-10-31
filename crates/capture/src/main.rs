@@ -618,7 +618,7 @@ fn provenance(args: &ProvenanceArgs) -> Result<ExitCode> {
             }
             None => ui_lm_pages::pages(&loaded, &surface),
         };
-        for page in built {
+        for (page_index, page) in built.iter().enumerate() {
             // "Appeared in an earlier **frame**" is what the builder means by carried, and a running set does not say
             // that: two panes holding the same words in one frame make the second look like a repeat of the first.
             // Sixty-three frames of this corpus have identical panes, and treating them as repeats is where the
@@ -661,8 +661,8 @@ fn provenance(args: &ProvenanceArgs) -> Result<ExitCode> {
                         };
                         let head: String = text.chars().take(48).collect();
                         println!(
-                            "  {} -> {claim}, but its text {truth}: {:?}",
-                            component.id, head
+                            "  frame {} {} -> {claim}, but its text {truth}: {:?}",
+                            page_index, component.id, head
                         );
                     }
                 }
