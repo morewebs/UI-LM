@@ -70,7 +70,7 @@ $forbidden = @{
     # Two screens of shell output and nothing else. `Meter`, `Thought`, `ToolCall`, `Diff` and `Frame` are things agents
     # draw; a reader that invents one of them here has stopped reading the screen (round 216). Its score and ceiling
     # would both survive that: two blocks of made-up kinds agree with themselves perfectly.
-    "pane-resize"          = @("Meter", "Thought", "ToolCall", "Diff", "Frame")
+    "pane-resize"          = @("Meter", "Thought", "ToolCall", "Diff", "Frame", "Table")
     "agent-beside-shell"   = @("Diff", "Frame")
 }
 

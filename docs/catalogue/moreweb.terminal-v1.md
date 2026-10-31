@@ -107,6 +107,37 @@ surveyed standard has and the thing a `Diff` is built from.
 is `done` for every call this slice can see, because the glyph marks a call the application
 has finished drawing.
 
+### `Table` — numbers under headings
+
+```json
+{
+  "id": "table-1a2b3c4d5e6f7788",
+  "component": "Table",
+  "source": "seen",
+  "rows": [0, 12],
+  "columns": [0, 18, 22, 27],
+  "cells": [["/dev/sdb", "97M", "97M", "0"]],
+  "lines": ["/dev/sdb         97M   97M     0 100% /usr/lib"]
+}
+```
+
+| field | meaning |
+|---|---|
+| `rows` | half-open `[first, end)` row range on the screen |
+| `columns` | where each column starts, in characters |
+| `cells` | one entry per row, one cell per column, trimmed |
+| `lines` | the rows as drawn, parallel to `cells` |
+
+**The rule (ADR 0008): values, not padding.** `df` separates its columns with single spaces and PowerShell's
+`Format-Table` with many, so what makes a table is **two vertical strips of two or more characters holding a digit in a
+majority of the rows**, separated by a blank column - and the run must be a block of its own, not a streak inside prose.
+
+Measured on this corpus: **49 components in 105 recordings**, headed by `ls`, `ps`, `df`, `top`, `dir` and formatted
+listings. The alignment rule it replaced scored zero on `df` and matched `vim`'s help rows - see ADR 0007 for the
+rejection and ADR 0008 for the decision.
+
+A renderer that cannot use the columns can always draw `lines`: a table never loses text.
+
 ### `Meter` — a quantity against a limit
 
 ```json

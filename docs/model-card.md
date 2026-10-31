@@ -46,6 +46,10 @@ all perfect.
 
 - **It cannot grow by finding another kind.** The five kinds are the vocabulary; a sixth would be a change
   to the page format, the reader, both renderers and the checks — see `docs/adding-a-component.md`.
+- **A table is a run of numbers, and it is read by values.** `Table` is the seventh kind (ADR 0008): two vertical strips
+  holding digits in a majority of rows, in a block of its own. It is right about `ls`, `ps`, `df`, `top`, `dir` and
+  formatted listings, and it admits two agent screens of three or four rows where prose aligns by accident - a boundary
+  measured at three thresholds and written into `scripts/measure-tables.py`.
 - **A drawn meter cannot be read back out of the page.** Five of seven kinds round trip through the GUI and back to
   text; `Meter` does not, because it is drawn as a bar and its number is not in a line element. `check-kinds` proves the
   bar reaches the document and `check-html-to-tui` proves the other five rebuild - so the gap is named rather than
