@@ -3542,6 +3542,18 @@ pub fn as_table(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)> {
         return None;
     }
     let numeric = |c: char| c.is_ascii_digit() || matches!(c, '.' | ',' | '%' | '-' | '+');
+    // Cheap pre-filter: a table needs at least three rows holding a digit, and prose blocks almost never do. Checking
+    // that before building a `Vec<char>` per row is what keeps a page under the render budget - the allocation cost
+    // made `check-render-scale` fail at 13.8 ms against an 11.0 ms limit (round 25).
+    let with_digit = lines
+        .iter()
+        .filter(|line| line.chars().any(|c| c.is_ascii_digit()))
+        .count();
+    // A majority of rows must hold a digit, which is the same condition the strips need - asking for all three dropped
+    // two real tables whose first row is a heading with no digits (round 25).
+    if with_digit * 2 <= lines.len() {
+        return None;
+    }
     let width = lines.iter().map(|line| line.chars().count()).min()?;
     if width < 8 {
         return None;

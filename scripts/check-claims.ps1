@@ -45,7 +45,10 @@ foreach ($relative in $documents) {
     # 1. a stated count of kinds. A sentence about what the **model labels** is a different claim: the model labels
     # five of the seven, and that number is checked by the model card's own consistency, not here.
     foreach ($line in ($text -split "`n")) {
+        # Only sentences about the catalogue's **whole** vocabulary are counted. "Those two kinds are drawn by
+        # rules" is true and says nothing about how many exist (round 25).
         if ($line -match 'label') { continue }
+        if ($line -notmatch 'catalogue|vocabulary|holds \w+ kinds|^(#|\s*[-*]\s)') { continue }
         foreach ($m in [regex]::Matches($line, '(\w+)\s+kinds\b')) {
             $word = $m.Groups[1].Value.ToLower()
             $digits = @{ "one"=1; "two"=2; "three"=3; "four"=4; "five"=5; "six"=6; "seven"=7; "eight"=8; "nine"=9 }
