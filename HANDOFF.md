@@ -138,7 +138,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
   evidence, or not at all.
 ## Where it stands now
 
-**Twenty-one checks, about fifteen minutes, every axis green**, **15 hard cases** at 100% on score, round trip and
+**22 checks, about 20 minutes, every axis green**, **15 hard cases** at 100% on score, round trip and
 shape, and **v0.33.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
@@ -162,7 +162,7 @@ Each of these was tried, measured, and reverted. The reason matters more than th
 | drive `tmux` with keystrokes to build a layout | `tmux send-keys` never reaches an agent under it; the recorder's own key script does |
 | add the pane field to `Column` | 11 construction sites; moved to `Surface` (5), which landed |
 | narrow `Diff` to require a hunk header | **34 of the corpus's 61 diffs have no header** — Freebuff shows edits as bare `-`/`+` |
-| read a table from column alignment | matched **28 of 81** recordings, every one a Freebuff survey; ADR 0007 is Rejected |
+| read a table from column alignment | re-measured in round 193: the rule matches vim's help rows and scores **0 on `df`** — ADR 0007 is Rejected, and `scripts/measure-tables.py` reproduces it |
 | move the wait above the record write | five attempts; the status is one `if let` away, and `record_exit` stamps it afterwards |
 
 **The pattern in the failures is symmetry and evidence:** every change that made one side of a mapping richer
@@ -172,6 +172,9 @@ refused was refused by counting something.
 ### The two things worth doing next
 
 1. **A `Table`, by semantics rather than alignment** — a column whose values share a type across rows, with
-   `df`, `top` and `cargo tree` as the positives and Freebuff's survey rows as the counterweight.
+   `df`, `top` and `cargo tree` as the positives and Freebuff's survey rows as the counterweight. The alignment
+   predicate was re-measured in round 193 and is **inverted**: it matches `vim`'s help rows (34 lines) and a survey,
+   and scores **0** on `df`, the one screen that is a table — because `df` pads with single spaces.
+   `scripts/measure-tables.py` reproduces that in one command.
 2. **A meter inside a panel** — measured and **declined**: accepting a glued budget costs nineteen lines of round trip on the one recording
    that holds it, so the panel keeps its rows.

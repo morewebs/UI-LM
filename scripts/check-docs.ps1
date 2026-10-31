@@ -515,4 +515,20 @@ if ($notRun.Count -gt 0 -or $notListed.Count -gt 0) {
 }
 Write-Host ("the ledger and the runner agree: {0} check(s) listed, {1} run here, {2} run elsewhere" -f $ledgerChecks.Count, $runnerChecks.Count, $runsElsewhere.Count)
 
+# The handoff opens its summary with how many checks exist. That number was written by hand and said twenty-one for a
+# round after `check-kinds` made it twenty-two, so it is derived here like every other count in the front pages.
+$handoffPath = Join-Path $repo "HANDOFF.md"
+if (Test-Path $handoffPath) {
+    $handoffText = Get-Content -LiteralPath $handoffPath -Raw -Encoding UTF8
+    if ($handoffText -match '\*\*(\d+) checks, about') {
+        $claimedChecks = [int]$Matches[1]
+        if ($claimedChecks -ne $scripts) {
+            Write-Host ("  the handoff says {0} checks; the folder holds {1}" -f $claimedChecks, $scripts)
+            Write-Host "the handoff counts the checks wrongly"
+            exit 1
+        }
+        Write-Host ("the handoff's check count matches the folder: {0}" -f $scripts)
+    }
+}
+
 Write-Host "every front page opens with a sentence"
