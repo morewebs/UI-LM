@@ -107,6 +107,9 @@ section.page > header {{ color: #6f6f76; font-size: 11px; letter-spacing: .08em;
       .tool {{ display: flex; gap: 8px; align-items: baseline; margin: 4px 0; }}
 .tool .name {{ color: #8ab4f8; }}
 .tool .target {{ color: #d6d6d7; }}
+        .property {{ display: flex; gap: 8px; align-items: baseline; margin: 4px 0; }}
+        .property .name {{ color: #8ab4f8; }}
+        .property .value {{ color: #d6d6d7; }}
 .tool .counts {{ color: #6f6f76; }}
 .thought {{ color: #8f8f98; font-style: italic; margin: 4px 0; }}
 .meter {{ display: flex; align-items: center; gap: 10px; margin: 6px 0; }}
@@ -252,8 +255,8 @@ fn render_component(out: &mut String, component: &Component) {
             for property in properties {
                 let _ = writeln!(
                     out,
-                    "<div class=\"tool\"><span class=\"name\">{}</span>\
-                     <span class=\"target\">{}</span></div>",
+                    "<div class=\"property\"><span class=\"name\">{}</span>\
+                     <span class=\"value\">{}</span></div>",
                     escape(&property.label),
                     escape(&property.value)
                 );

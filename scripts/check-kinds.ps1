@@ -77,6 +77,25 @@ if (Test-Path $shortcutSession) {
     }
 }
 
+# A property must arrive as a **field**, not as a tool call: the renderer drew `Author: …` with `class="tool"`, so no
+# consumer could tell a page's metadata from a `Read` action (round 39).
+$propertySession = Join-Path $repo "eval\apps\git-logstat"
+if (Test-Path $propertySession) {
+    $fieldPath = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-props-" + [guid]::NewGuid().ToString("N") + ".html")
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    & $capture render --session $propertySession --all --out $fieldPath 2>&1 | Out-Null
+    $ErrorActionPreference = $previous
+    $fieldHtml = if (Test-Path $fieldPath) { Get-Content -LiteralPath $fieldPath -Raw -Encoding UTF8 } else { "" }
+    Remove-Item -LiteralPath $fieldPath -Force -ErrorAction SilentlyContinue
+    $fields = [regex]::Matches($fieldHtml, '<div class="property"><span class="name">[^<]+</span>').Count
+    if ($fields -lt 1) {
+        $failures += "the document holds no property field, and the page holds properties"
+    } else {
+        Write-Host ("property fields reach the document: {0}" -f $fields)
+    }
+}
+
 # The model's pages must carry the kinds too. `page --all --model` served a `Block` where the reader served a `Table`
 # for the same screen, and every check here passed because none of them looked at a model page (round 19).
 $modelFile = Join-Path $repo "models\page.json"
