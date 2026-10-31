@@ -46,6 +46,12 @@ foreach ($set in (Get-ChildItem -LiteralPath $evalRoot -Directory -ErrorAction S
     # "floor 100%" means the set proved nothing about the vocabulary.
     $floor = if ($line -match "floor ([\d.]+)%") { [double]$Matches[1] } else { -1 }
     $verdict = if ($floor -ge 99.95) { "  (floor 100%, proves nothing about kinds)" } else { "" }
+        # A floor above its ceiling means the set has turned to text: the model can still score 100% and the set has
+        # stopped proving anything about the vocabulary. Two sets carry that claim, so two sets are guarded.
+        $floorCeiling = @{ "freebuff" = 30.0; "structured" = 70.0 }
+        if ($floorCeiling.ContainsKey($set.Name) -and $floor -gt $floorCeiling[$set.Name]) {
+            $failures += ("{0}: floor {1:N1}% is above the pinned ceiling {2}% - the set is mostly text now, and a set of text cannot fail a model" -f $set.Name, $floor, $floorCeiling[$set.Name])
+        }
     $rows += "  {0,-16} {1,6:N1}%  over {2} frame(s), floor {3,5:N1}%{4}" -f $set.Name, $share, $frames, $floor, $verdict
     if ($share -lt 100) { $failures += "$($set.Name): $share%" }
 }
