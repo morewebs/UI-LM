@@ -3,9 +3,9 @@
 # The first direction is checked everywhere; this file checks the second: take only the rendered HTML, pull the text back
 # out of it in document order, and compare with what the terminal rendering gives for the same frame.
 #
-# Only the kinds whose rows reach a line element are probed. A Frame keeps its rows inside its own element and a Meter is
-# drawn as a bar with a track and a fill, so neither can be rebuilt as text from the document alone - both render
-# correctly and check-kinds proves it. Those two are a recorded limitation (round 243), not a silent gap here.
+# Every probed session rebuilds completely. `Meter` is the one kind that cannot: it is drawn as a bar with a track and a
+# fill, and its *text* is not in a line element at all. That is by design and is measured by `check-kinds`, which
+# proves the bar reaches the markup. An earlier round wrongly included `Frame` in this limitation: its rows are line
 
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
@@ -15,7 +15,8 @@ if (-not (Test-Path $capture)) { Write-Host "no capture binary, so nothing was m
 
 $probes = @(
     @{ Session = "eval\structured\diff-f1"; Seq = 0; Why = "a diff page" },
-    @{ Session = "eval\apps\pwsh-table";    Seq = 1; Why = "a table page" }
+    @{ Session = "eval\apps\pwsh-table";    Seq = 1; Why = "a table page" },
+    @{ Session = "cases\hard\whiptail-dialog";   Seq = 0; Why = "a floating window" }
 )
 
 function Get-LinesFromHtml {
@@ -24,7 +25,7 @@ function Get-LinesFromHtml {
     foreach ($match in [regex]::Matches($Html, '<div class="line[^"]*">(.*?)</div>')) {
         $text = [regex]::Replace($match.Groups[1].Value, '<[^>]+>', '')
         $text = $text.Replace('&lt;', '<').Replace('&gt;', '>').Replace('&quot;', '"').Replace('&#39;', "'").Replace('&amp;', '&')
-        $lines += $text
+        $lines += $text.TrimEnd()
     }
     return $lines
 }
@@ -40,7 +41,7 @@ try {
         $out = Join-Path $work (([guid]::NewGuid().ToString("N")) + ".html")
         & $capture render --session $session --all --out $out 2>&1 | Out-Null
         if (-not (Test-Path $out)) { $failures += ("the renderer wrote nothing for " + $probe.Session); continue }
-        $fromHtml = Get-LinesFromHtml (Get-Content -LiteralPath $out -Raw)
+        $fromHtml = Get-LinesFromHtml (Get-Content -LiteralPath $out -Raw -Encoding UTF8)
         $previous = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
         $raw = & $capture tui --session $session --seq $probe.Seq 2>&1
