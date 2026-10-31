@@ -65,8 +65,8 @@ pub const CATALOGUE_ID: &str = "moreweb.terminal/v1";
 /// draw, so it is a fault rather than an extension — an unknown component is what the
 /// degradation rule in the spec handles at *render* time, and a page this crate emits
 /// has no business relying on it.
-pub const COMPONENTS: [&str; 7] = [
-    "Column", "Block", "ToolCall", "Meter", "Diff", "Thought", "Frame",
+pub const COMPONENTS: [&str; 8] = [
+    "Column", "Block", "ToolCall", "Meter", "Diff", "Thought", "Frame", "Table",
 ];
 
 /// What is wrong with a page, in terms of the promises the page model makes.
@@ -172,6 +172,30 @@ pub fn audit(page: &Envelope) -> Vec<String> {
             Body::Frame { rows, .. } => {
                 check_rows(&mut problems, &component.id, rows);
             }
+            Body::Table {
+                rows,
+                columns,
+                cells,
+                lines,
+            } => {
+                check_filled(&mut problems, &component.id, rows, lines.len());
+                check_rows(&mut problems, &component.id, rows);
+                if columns.len() < 2 {
+                    problems.push(format!(
+                        "component {:?} is a table with {} column(s), and a table has at least two",
+                        component.id,
+                        columns.len()
+                    ));
+                }
+                if cells.len() != lines.len() {
+                    problems.push(format!(
+                        "component {:?} has {} row(s) of cells and {} line(s)",
+                        component.id,
+                        cells.len(),
+                        lines.len()
+                    ));
+                }
+            }
         }
     }
 
@@ -192,6 +216,7 @@ pub fn audit(page: &Envelope) -> Vec<String> {
             Body::Block { rows, .. }
             | Body::Diff { rows, .. }
             | Body::ToolCall { rows, .. }
+            | Body::Table { rows, .. }
             | Body::Meter { rows, .. }
             | Body::Thought { rows, .. }
             | Body::Frame { rows, .. } => *rows,
@@ -259,6 +284,14 @@ fn check_rows(problems: &mut Vec<String>, id: &str, rows: &[u16; 2]) {
 fn place<'a>(component: &'a Component, placed: &mut Vec<(u16, &'a str)>) {
     match &component.body {
         Body::Block {
+            rows: span, lines, ..
+        } => {
+            for (offset, line) in lines.iter().enumerate() {
+                let row = span[0].saturating_add(u16::try_from(offset).unwrap_or(u16::MAX));
+                placed.push((row, line.as_str()));
+            }
+        }
+        Body::Table {
             rows: span, lines, ..
         } => {
             for (offset, line) in lines.iter().enumerate() {
@@ -340,6 +373,9 @@ pub fn render_text(page: &Envelope) -> Vec<String> {
                 rows: span, lines, ..
             }
             | Body::Frame {
+                rows: span, lines, ..
+            }
+            | Body::Table {
                 rows: span, lines, ..
             } => {
                 for (offset, line) in lines.iter().enumerate() {
@@ -551,6 +587,7 @@ pub fn component_text(body: &Body) -> Vec<String> {
         Body::Block { lines, .. } => lines.clone(),
         Body::Frame { lines, .. } => lines.clone(),
         Body::Diff { lines, .. } => lines.iter().map(|line| line.text.clone()).collect(),
+        Body::Table { lines, .. } => lines.clone(),
         Body::ToolCall { calls, .. } => calls
             .iter()
             .map(|call| call.text.clone())
@@ -693,6 +730,21 @@ pub enum Body {
         rows: [u16; 2],
         /// The lines of the edit, in order.
         lines: Vec<DiffLine>,
+    },
+    /// Rows of numbers in columns: what a person calls a table.
+    ///
+    /// ADR 0008: a table is **values**, not padding. `df` pads with single spaces and `Format-Table` with many, so the
+    /// question is whether two vertical strips hold digits - not whether the cells line up. The run must also be a block
+    /// of its own: a matching streak inside an agent's prose is not a table.
+    Table {
+        /// The rows it covers, as a half-open `[first, end)`.
+        rows: [u16; 2],
+        /// Where each column starts, in characters.
+        columns: Vec<u16>,
+        /// One entry per row, each holding one cell per column.
+        cells: Vec<Vec<String>>,
+        /// The rows as drawn, for a renderer that wants them verbatim.
+        lines: Vec<String>,
     },
     /// A run of tool lines: what the application read, ran or edited.
     ToolCall {
@@ -1018,6 +1070,16 @@ fn page_from_lines(
                 )
             } else if let Some(diff) = as_diff(text, &segment_spans) {
                 ("Diff".to_owned(), Body::Diff { rows, lines: diff })
+            } else if let Some((columns, cells)) = as_table(text) {
+                (
+                    "Table".to_owned(),
+                    Body::Table {
+                        rows,
+                        columns,
+                        cells,
+                        lines: text.to_vec(),
+                    },
+                )
             } else if let Some(title) = as_frame(text) {
                 // A floating window, ADR 0006. Its lines are the rows as drawn, so the round trip places
                 // them back onto the screen without a renderer of its own.
@@ -2643,7 +2705,8 @@ mod tests {
                 | Body::ToolCall { .. }
                 | Body::Meter { .. }
                 | Body::Thought { .. }
-                | Body::Frame { .. } => None,
+                | Body::Frame { .. }
+                | Body::Table { .. } => None,
             })
             .collect();
         assert_eq!(roles, vec!["text", "prompt"]);
@@ -3373,4 +3436,61 @@ mod tests {
         };
         assert_eq!(score.weighted_structure(), 1.0);
     }
+}
+
+/// A run of rows of numbers in columns, ADR 0008.
+///
+/// The question is **values**, not padding: `df` separates its columns with single spaces and `Format-Table` with many,
+/// so what makes a table is two vertical strips holding digits in a majority of the rows, separated by a blank column.
+/// A streak inside a block of prose is not a table, so only a block that is already a run is asked.
+pub fn as_table(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)> {
+    if lines.len() < 3 {
+        return None;
+    }
+    let numeric = |c: char| c.is_ascii_digit() || matches!(c, '.' | ',' | '%' | '-' | '+');
+    let width = lines.iter().map(|line| line.chars().count()).min()?;
+    if width < 8 {
+        return None;
+    }
+    let rows: Vec<Vec<char>> = lines.iter().map(|line| line.chars().collect()).collect();
+    let mut strips: Vec<(usize, usize)> = Vec::new();
+    let mut col = 0;
+    while col < width {
+        let holds = rows.iter().filter(|row| numeric(row[col])).count();
+        if holds * 2 > rows.len() {
+            let mut end = col;
+            while end < width
+                && rows.iter().filter(|row| numeric(row[end])).count() * 2 > rows.len()
+            {
+                end += 1;
+            }
+            if end - col >= 2 {
+                strips.push((col, end));
+            }
+            col = end;
+        } else {
+            col += 1;
+        }
+    }
+    if strips.len() < 2 {
+        return None;
+    }
+    let columns: Vec<u16> = strips
+        .iter()
+        .map(|(start, _)| u16::try_from(*start).unwrap_or(u16::MAX))
+        .collect();
+    let mut cells: Vec<Vec<String>> = Vec::new();
+    for row in &rows {
+        let mut line_cells: Vec<String> = Vec::new();
+        for (index, (start, _)) in strips.iter().enumerate() {
+            let end = strips
+                .get(index + 1)
+                .map(|(next, _)| *next)
+                .unwrap_or(width);
+            let text: String = row[*start..end.min(width)].iter().collect();
+            line_cells.push(text.trim().to_owned());
+        }
+        cells.push(line_cells);
+    }
+    Some((columns, cells))
 }

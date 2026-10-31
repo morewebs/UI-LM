@@ -18,6 +18,7 @@ fn rows_of(component: &Component) -> Vec<String> {
     match &component.body {
         Body::Column { children } => children.clone(),
         Body::Block { lines, .. } => lines.clone(),
+        Body::Table { lines, .. } => lines.clone(),
         Body::Frame { lines, .. } => lines.clone(),
         Body::Diff { lines, .. } => lines.iter().map(|line| line.text.clone()).collect(),
         Body::ToolCall { calls, .. } => calls.iter().map(|call| call.text.clone()).collect(),

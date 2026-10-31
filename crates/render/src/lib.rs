@@ -137,6 +137,29 @@ button.action .target {{ color: #8ab4f8; margin-left: auto; }}
 fn render_component(out: &mut String, component: &Component) {
     match &component.body {
         Body::Column { .. } => {}
+        // ADR 0008: a table's rows are line elements too, so a document holding one can still be turned back into the
+        // screen it came from - which `check-html-to-tui` requires of every kind that carries text.
+        Body::Table {
+            columns,
+            cells,
+            lines,
+            ..
+        } => {
+            out.push_str("<div class=\"block table\">");
+            out.push_str(&format!(" data-columns=\"{}\"", columns.len()));
+            out.push('>');
+            // The row's **own text** is the line element, so a document holding a table can still be turned back into
+            // the screen (`check-html-to-tui`); the cells ride along as data for a runtime that wants columns.
+            for (row, line) in cells.iter().zip(lines) {
+                out.push_str(&format!(
+                    "<div class=\"line row\" data-cells=\"{}\">",
+                    escape(&row.join("\u{1f}"))
+                ));
+                out.push_str(&escape(line));
+                out.push_str("</div>");
+            }
+            out.push_str("</div>\n");
+        }
         Body::Frame { title, lines, .. } => {
             // ADR 0006: a window drawn over the page. Its rows carry the box art, so the same span renderer
             // that draws a block draws this; the class says what it is and the title is readable without

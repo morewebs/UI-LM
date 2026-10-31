@@ -11,7 +11,7 @@ component is *shaped*. That split is the whole design: what a thing is, is learn
 terminal screen ──▶ page (structured) ──▶ GUI
                         ▲                  │
                         └──────────────────┘
-                          five of six kinds
+                          five of seven kinds
 ```
 
 ## What the model is
@@ -27,7 +27,7 @@ the model — so the assembly is where the work went. The numbers, the ceilings 
 
 ## What a page holds
 
-Six kinds, and nothing invented beyond them:
+Seven kinds, and nothing invented beyond them:
 
 - **`Block`** — a run of rows that reads as one thing, with its role, lines and per-span styling (bold, italic,
   underline, reverse, colours as `indexed:N` or `rgb:R,G,B`).
@@ -48,7 +48,7 @@ comes from its own text rather than its position, so it keeps its id when it scr
 **TUI → GUI** is the ordinary case: record any program, describe its screens, draw the page as HTML.
 
 **GUI → TUI** is checked too: the rendered document is parsed back and compared with the terminal rendering of the same
-frame. Five of the six kinds round trip. `Meter` does not, because it is drawn as a bar and its number is not in a line
+frame. Five of the seven kinds round trip. `Meter` does not, because it is drawn as a bar and its number is not in a line
 element — a consumer that needs the number reads it from the page, not from the HTML.
 
 ## Download
@@ -126,7 +126,7 @@ Against **105 recordings and 1,580 frames** from eleven distinct commands — tw
   evaluation sets, each against a floor — a converter that only splits paragraphs. The floors are printed by
   `scripts/check-all.ps1`, because a floor of 100% means a set cannot fail and proves nothing about the vocabulary.
 - **The page can be drawn back.** Terminal text returns every line of content on every recording measured, split screens
-  included; the rendered HTML can be turned back into the screen for five of six kinds.
+  included; the rendered HTML can be turned back into the screen for five of seven kinds.
 - **Fifteen hard screens** — paned agents, a floating dialog, a completion popup, a blank split — each with a score, a
   ceiling on components, and where it applies the kind it exists for or the kinds it cannot hold.
 - **Provenance is honest, and pinned.** One component in the whole corpus is marked `carried` on its first appearance;

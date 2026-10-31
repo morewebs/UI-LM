@@ -629,6 +629,7 @@ fn provenance(args: &ProvenanceArgs) -> Result<ExitCode> {
                     ui_lm_pages::Body::Column { .. } => continue,
                     ui_lm_pages::Body::Block { lines, .. } => lines.join("\n"),
                     ui_lm_pages::Body::Frame { lines, .. } => lines.join("\n"),
+                    ui_lm_pages::Body::Table { lines, .. } => lines.join("\n"),
                     ui_lm_pages::Body::Diff { lines, .. } => lines
                         .iter()
                         .map(|line| line.text.clone())
@@ -898,6 +899,7 @@ fn rows_of_component(component: &ui_lm_pages::Component) -> Option<(usize, usize
         | Body::ToolCall { rows, .. }
         | Body::Thought { rows, .. }
         | Body::Frame { rows, .. }
+        | Body::Table { rows, .. }
         | Body::Meter { rows, .. } => *rows,
     };
     Some((rows[0] as usize, rows[1] as usize))

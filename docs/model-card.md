@@ -46,7 +46,7 @@ all perfect.
 
 - **It cannot grow by finding another kind.** The five kinds are the vocabulary; a sixth would be a change
   to the page format, the reader, both renderers and the checks — see `docs/adding-a-component.md`.
-- **A drawn meter cannot be read back out of the page.** Five of six kinds round trip through the GUI and back to
+- **A drawn meter cannot be read back out of the page.** Five of seven kinds round trip through the GUI and back to
   text; `Meter` does not, because it is drawn as a bar and its number is not in a line element. `check-kinds` proves the
   bar reaches the document and `check-html-to-tui` proves the other five rebuild - so the gap is named rather than
   hidden: a consumer that needs the number must take it from the page, not from the rendered HTML.

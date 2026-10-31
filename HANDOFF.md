@@ -68,7 +68,7 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 
 | claim | evidence |
 |---|---|
-| a screen's text becomes a page holding blocks, tool calls, meters, thoughts, diffs, frames and panes | **six kinds**, 779 frames assembled at 100% given the reader's own answers |
+| a screen's text becomes a page holding blocks, tool calls, meters, thoughts, diffs, frames and panes | **seven kinds**, 779 frames assembled at 100% given the reader's own answers |
 | a page draws back every line of content | **0 sessions below 100%**, split screens and resized dividers included, on both reader and model pages |
 | the page carries the screen's styling | 5,957 components compared field by field, **0 differing** |
 | provenance is honest | 5,957 components, 5,008 carried, **0 contradictions** |

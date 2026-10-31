@@ -22,7 +22,7 @@ $probes = @(
 function Get-LinesFromHtml {
     param([string]$Html)
     $lines = @()
-    foreach ($match in [regex]::Matches($Html, '<div class="line[^"]*">(.*?)</div>')) {
+    foreach ($match in [regex]::Matches($Html, '<div class="line[^>]*>(.*?)</div>')) {
         $text = [regex]::Replace($match.Groups[1].Value, '<[^>]+>', '')
         $text = $text.Replace('&lt;', '<').Replace('&gt;', '>').Replace('&quot;', '"').Replace('&#39;', "'").Replace('&amp;', '&')
         $lines += $text.TrimEnd()
