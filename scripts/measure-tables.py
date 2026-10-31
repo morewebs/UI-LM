@@ -192,6 +192,32 @@ def measures(session):
     return aligned, values
 
 
+def disagreements():
+    """Every component the predicate would promote but the reader left alone, and the reverse.
+
+    This is the check that the **code implements the documented rule**: the predicate here is the specification, the
+    component list comes from the binary, and a mismatch is one of them being wrong (round 11).
+    """
+    missed, extra = [], []
+    for session in recordings():
+        out = subprocess.run([CAPTURE, "page", "--session", session, "--all"],
+                             capture_output=True, text=True, errors="ignore").stdout
+        for raw in (line for line in out.splitlines() if line.startswith("{")):
+            page = json.loads(raw)
+            for component in page["createSurface"]["components"]:
+                rows = [line.get("text", "") if isinstance(line, dict) else str(line)
+                        for line in (component.get("lines") or [])]
+                # The ADR says a table is a *block of its own*, so the whole component is one run - not the
+                # longest blank-line separated stretch inside it, which is what `numeric_strips` reports.
+                matches = longest_strip_run(rows) >= 3
+                is_table = component["component"] == "Table"
+                if matches and not is_table:
+                    missed.append((session, component["id"]))
+                if is_table and not matches:
+                    extra.append((session, component["id"]))
+    return missed, extra
+
+
 def main():
     if not os.path.exists(CAPTURE):
         sys.exit("build first: cargo build --workspace")
@@ -260,5 +286,15 @@ def main():
 
 
 if __name__ == "__main__":
+    import sys
+    if "--disagreements" in sys.argv:
+        missed, extra = disagreements()
+        print(f"the predicate would promote {len(missed)} component(s) the reader left alone")
+        for session, identifier in missed[:5]:
+            print(f"  missed  {session}  {identifier}")
+        print(f"the reader made {len(extra)} table(s) the predicate does not")
+        for session, identifier in extra[:5]:
+            print(f"  extra   {session}  {identifier}")
+        raise SystemExit(1 if (missed or extra) else 0)
     main()
 
