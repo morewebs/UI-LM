@@ -58,6 +58,27 @@ try {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+# The model's pages must carry the kinds too. `page --all --model` served a `Block` where the reader served a `Table`
+# for the same screen, and every check here passed because none of them looked at a model page (round 19).
+$modelFile = Join-Path $repo "models\page.json"
+if (Test-Path $modelFile) {
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $raw = & $capture page --session (Join-Path $repo "eval\tui\df-table") --all --model $modelFile 2>&1
+    $ErrorActionPreference = $previous
+    $kinds = @()
+    foreach ($line in @($raw | ForEach-Object { "$_" })) {
+        if (-not $line.TrimStart().StartsWith("{")) { continue }
+        $page = $line | ConvertFrom-Json
+        $kinds += @($page.createSurface.components | ForEach-Object { $_.component })
+    }
+    if ($kinds -notcontains "Table") {
+        $failures += "the model's pages hold no Table for a table screen, and the reader's do"
+    } else {
+        Write-Host "the model's pages carry the shaping rules too: a Table for a table screen"
+    }
+}
+
 if ($checked -lt $probes.Count) {
     Write-Host ("only " + $checked + " of " + $probes.Count + " documents were rendered, so the renderer was not really checked")
     exit 1

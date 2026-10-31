@@ -3444,7 +3444,9 @@ mod tests {
 /// Doing it here rather than inside each builder is the whole point - the reader and the label path construct
 /// components differently, so two branches produced two different pages and `self-check` fell from 100% to 97.6%.
 /// One pass over the finished components cannot disagree with itself.
-fn promote_tables(components: &mut [Component]) {
+/// Public so a caller describing a page from a model - which builds it without the sequence - can apply the same
+/// shaping rules. `page --all --model` held a `Block` where the reader held a `Table` (round 19).
+pub fn promote_tables(components: &mut [Component]) {
     for component in components.iter_mut() {
         let (rows, lines) = match &component.body {
             Body::Block { rows, lines, .. } => (*rows, lines.clone()),

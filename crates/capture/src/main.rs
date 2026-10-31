@@ -1471,6 +1471,10 @@ fn page(args: &PageArgs) -> Result<ExitCode> {
                 let text = ui_lm_capture::summary::frame_text(frame);
                 let mut page = model.page(&text, &surface);
                 ui_lm_pages::graft_spans(&mut page, &ui_lm_pages::page_from_frame(frame, &surface));
+                // ADR 0008: the model decides what each row **is**; the shaping rules decide how it looks, and they apply
+                // to the model's pages too. Without this, `page --all --model` served a table as prose while the reader
+                // served a `Table` for the same screen (round 19).
+                ui_lm_pages::promote_tables(&mut page.create_surface.components);
                 for component in &mut page.create_surface.components {
                     let first_time = appeared.insert(component.id.clone());
                     component.source = if first_time {
