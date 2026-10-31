@@ -100,6 +100,40 @@ foreach ($session in $sessions) {
         }
     }
 }
+# A shortcut and a property are **names**, and four conditions decide what a name is (rounds 31-35). The corpus held
+# 1,916 "properties" and 2,698 "shortcuts" before those conditions; it holds 894 and 54 now. A ceiling is the guard that a
+# loosened rule actually breaks - unlike the per-screen assertion tried in round 36, which the remaining rules masked.
+$properties = 0
+$shortcuts = 0
+foreach ($session in $sessions) {
+    $out = & $capture page --session $session.FullName --all 2>$null
+    foreach ($raw in $out) {
+        $page = "$raw".TrimStart()
+        if (-not $page.StartsWith("{")) { continue }
+        $parsed = $page | ConvertFrom-Json -ErrorAction SilentlyContinue
+        if ($null -eq $parsed) { continue }
+        foreach ($component in $parsed.createSurface.components) {
+            $properties += @($component.properties | Where-Object { $null -ne $_ }).Count
+            $shortcuts += @($component.shortcuts | Where-Object { $null -ne $_ }).Count
+        }
+    }
+}
+if ($properties -lt 100 -or $shortcuts -lt 10) {
+    Write-Host ("the corpus holds {0} propert(ies) and {1} shortcut(s), too few to measure anything" -f $properties, $shortcuts)
+    exit 1
+}
+$propertyCeiling = 1000
+$shortcutCeiling = 80
+if ($properties -gt $propertyCeiling) {
+    Write-Host ("properties: {0}, above the pinned ceiling of {1} - a name rule has loosened" -f $properties, $propertyCeiling)
+    exit 1
+}
+if ($shortcuts -gt $shortcutCeiling) {
+    Write-Host ("shortcuts: {0}, above the pinned ceiling of {1} - a binding rule has loosened" -f $shortcuts, $shortcutCeiling)
+    exit 1
+}
+Write-Host ("names stay names: {0} propert(ies), {1} shortcut(s), ceilings {2} and {3}" -f $properties, $shortcuts, $propertyCeiling, $shortcutCeiling)
+
 if ($diffs -eq 0) {
     Write-Host "no Diff component in the corpus, so the pinned number cannot be checked"
     exit 1
