@@ -132,13 +132,13 @@ $args = @("provenance")
 foreach ($session in $sessions) { $args += @("--session", $session.FullName) }
 $provenanceLine = (& $capture @args 2>$null | Select-Object -Last 1) -join ""
 if ($provenanceLine -match "(\d+) contradiction\(s\)") { $provenanceErrors = [int]$Matches[1] }
-$provenanceCeiling = 48
+$provenanceCeiling = 1
 if ($provenanceErrors -gt $provenanceCeiling) {
     Write-Host ("  the corpus holds {0} provenance contradiction(s); the pinned ceiling is {1}" -f $provenanceErrors, $provenanceCeiling)
     Write-Host "more pages contradict themselves than this project has accounted for"
     exit 1
 }
-Write-Host ("provenance contradictions: {0} of a pinned {1} (paned recordings; the builder marks same-frame duplicates carried)" -f $provenanceErrors, $provenanceCeiling)
+Write-Host ("provenance contradictions: {0} of a pinned {1} (paned recordings; one component per corpus is marked carried on its first appearance - the last case of the memory being written by intent rather than emission, round 229)" -f $provenanceErrors, $provenanceCeiling)
 
 # Every kind the catalogue claims must have enough material to be more than an anecdote. `Frame` was found to have
 # two components in the whole corpus (round 136) and a third arrived only when a centred dialog was recorded; a kind

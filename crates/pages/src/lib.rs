@@ -860,11 +860,40 @@ pub fn page_from_frame(frame: &Frame, surface_id: &str) -> Envelope {
 /// moments without diffing the JSON, and the plan's provenance rule (D5) is
 /// satisfied by observation rather than by assertion.
 pub fn pages(frames: &[Frame], surface_id: &str) -> Vec<Envelope> {
-    let mut appeared = HashSet::new();
-    frames
-        .iter()
-        .map(|frame| page_with(frame, surface_id, &mut appeared))
-        .collect()
+    let mut appeared: HashSet<String> = HashSet::new();
+    let mut described = Vec::with_capacity(frames.len());
+    for frame in frames {
+        // The memory is written by **intent** inside `page_with`: a block is remembered when it is considered, and
+        // then the rules may merge it, decline the split that would have shown it, or fold it into a neighbour. A page
+        // therefore marked `carried` components that had never been on screen — forty-eight of them, thirteen rounds
+        // to find (round 228). So the memory is restored to what the last frame actually emitted, and the sources are
+        // recomputed from that, once per frame.
+        let before = appeared.clone();
+        let mut page = page_with(frame, surface_id, &mut appeared);
+        appeared = before;
+        for component in page.create_surface.components.iter_mut() {
+            if component.component == "Column" {
+                continue;
+            }
+            // A page prints a unique id (`block-<hash>-2`) so it stays well-formed; the memory holds the base.
+            let base = match component.id.rsplit_once('-') {
+                Some((head, tail))
+                    if !tail.is_empty() && tail.chars().all(|c| c.is_ascii_digit()) =>
+                {
+                    head.to_owned()
+                }
+                _ => component.id.clone(),
+            };
+            let carried = !appeared.insert(base);
+            component.source = if carried {
+                Provenance::Carried
+            } else {
+                Provenance::Seen
+            };
+        }
+        described.push(page);
+    }
+    described
 }
 
 /// Builds the page a frame describes.
