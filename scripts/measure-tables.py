@@ -4,10 +4,28 @@ The ADR quoted numbers for two rounds that nobody could reproduce: the rule was 
 boundaries" and nothing said what a boundary was, which rows counted, or how a run was measured. This file is the
 missing half — the predicate in code, next to the decision it supports.
 
-The predicate, stated before it is applied:
+Two predicates are measured here, and they disagree completely:
 
-    A table is three or more consecutive rows with the same number of cells, cells separated by two or more spaces,
-    at the same character offsets in every row, and at least one cell numeric.
+**The alignment rule** (rejected): three or more consecutive rows with the same number of cells, cells separated by two
+or more spaces, at the same character offsets in every row. It matches `vim`'s help rows and scores zero on `df`.
+
+**The values rule** (round 1 of the second window): three or more consecutive rows of the same width in which at least
+two vertical strips of two or more characters hold a digit in most rows, separated by at least one blank column. This is
+what a person means by a table - numbers under a heading - and it does not care whether the columns are padded with one
+space (`df`) or many (`Format-Table`).
+
+On the screens that decide the question:
+
+    session                     alignment  values   is it a table?
+    df-table                            0      15   yes
+    linux-top                          18      24   yes
+    cmd-dir                             0      11   yes
+    pwsh-table                          4      10   yes
+    wsl-vim                            18       0   no
+    second-agent-17                     5       0   no
+
+Nine recordings in ten that hold a values-run are `ls`, `ps`, `df`, `top` and formatted listings; `vim` and the surveys
+score zero.
 
 Run from the repository root:
 
@@ -79,6 +97,58 @@ def longest_run(lines):
     return best
 
 
+NUMERIC_CHARS = set("0123456789.,%-+:")
+
+
+def numeric_strips(lines, min_rows=3):
+    """The second predicate: a table is **values in columns**, not padding.
+
+    Stated before measuring: three or more consecutive rows of the same width in which at least two vertical strips of
+    two or more characters hold a digit in most rows, separated by at least one entirely blank column. This is what a
+    person means by a table - numbers under a heading - and it does not care whether the columns are padded with one
+    space (`df`) or many (`Format-Table`).
+    """
+    best = 0
+    run = []
+    for text in lines + [""]:
+        if not text.strip():
+            if len(run) >= min_rows:
+                best = max(best, longest_strip_run(run))
+            run = []
+            continue
+        run.append(text)
+    if len(run) >= min_rows:
+        best = max(best, longest_strip_run(run))
+    return best
+
+
+def longest_strip_run(rows):
+    """How many rows in this block share two numeric strips."""
+    best = 0
+    for start in range(len(rows) - 2):
+        window = rows[start:]
+        width = min(len(r) for r in window)
+        if width < 8:
+            continue
+        strips = []
+        col = 0
+        while col < width:
+            holds = sum(1 for r in window if r[col] in NUMERIC_CHARS)
+            if holds * 2 >= len(window) + 1:
+                end = col
+                while end < width and sum(1 for r in window if r[end] in NUMERIC_CHARS) * 2 >= len(window) + 1:
+                    end += 1
+                if end - col >= 2:
+                    strips.append((col, end))
+                col = end
+            else:
+                col += 1
+        if len(strips) >= 2:
+            best = max(best, len(window))
+            break
+    return best
+
+
 def recordings(roots=("eval", "cases")):
     found = []
     for root in roots:
@@ -107,6 +177,21 @@ def measure(session):
     return best
 
 
+def measures(session):
+    """Both predicates for one session: the alignment rule and the values rule, over its busiest page."""
+    out = subprocess.run([CAPTURE, "page", "--session", session, "--all"],
+                         capture_output=True, text=True, errors="ignore").stdout
+    aligned, values = 0, 0
+    for raw in (line for line in out.splitlines() if line.startswith("{")):
+        page = json.loads(raw)
+        for component in page["createSurface"]["components"]:
+            rows = [line.get("text", "") if isinstance(line, dict) else str(line)
+                    for line in (component.get("lines") or [])]
+            aligned = max(aligned, longest_run(rows))
+            values = max(values, numeric_strips(rows))
+    return aligned, values
+
+
 def main():
     if not os.path.exists(CAPTURE):
         sys.exit("build first: cargo build --workspace")
@@ -115,12 +200,29 @@ def main():
         sys.exit("no recordings found, so nothing was measured")
 
     measured = [(session, measure(session)) for session in sessions]
+    measured_names = [session for session, _ in measured]
     matched = [(session, run) for session, run in measured if run]
 
     print(f"recordings: {len(measured)}   holding a table run: {len(matched)}")
     print("longest runs:")
     for session, run in sorted(matched, key=lambda m: -m[1])[:8]:
         print(f"  {run:3} row(s)  {session}")
+
+    matched_values = [s for s in measured_names if measures(s)[1] >= 3]
+    print(f"recordings holding a values-run of 3+ rows: {len(matched_values)} of {len(measured_names)}")
+    print("the longest values-runs:")
+    for session, run in sorted(((s, measures(s)[1]) for s in measured_names), key=lambda m: -m[1])[:6]:
+        print(f"  {run:3} row(s)  {session}")
+
+    print("the two predicates on the screens that decide the question:")
+    print(f"  {'session':32} {'alignment':>9} {'values':>7}   is it a table?")
+    for name, truth in (("df-table", "yes"), ("linux-top", "yes"), ("cmd-dir", "yes"), ("pwsh-table", "yes"),
+                        ("wsl-vim", "no"), ("second-agent-17", "no")):
+        for session in measured_names:
+            if name in session:
+                aligned, values = measures(session)
+                print(f"  {name:32} {aligned:9} {values:7}   {truth}")
+                break
 
     print("acceptance cases:")
     for name in ("df-table", "linux-top", "wsl-vim", "second-agent-17"):

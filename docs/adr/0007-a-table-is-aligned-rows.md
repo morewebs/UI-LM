@@ -114,6 +114,28 @@ columns are separated by single spaces because the widths are fixed, not by runs
 So the rule is not merely noisy — it is inverted with respect to the thing it was supposed to detect. That is a stronger
 rejection than this ADR had, and it rests on a predicate a reader can run.
 
+
+### The rule that does work, on values rather than padding
+
+Re-measured with a second predicate — three or more rows of the same width in which at least two vertical strips of two
+or more characters hold a digit in most rows, separated by a blank column:
+
+| session | alignment rule | values rule | is it a table? |
+|---|---|---|---|
+| `tui/df-table` | 0 | **15** | yes |
+| `tui/linux-top` | 18 | **24** | yes |
+| `apps/cmd-dir` | 0 | **11** | yes |
+| `apps/pwsh-table` | 4 | **10** | yes |
+| `tui/wsl-vim` | 18 | **0** | no |
+| `freebuff/second-agent-17` | 5 | **0** | no |
+
+**Nineteen of the corpus's 105 recordings hold a values-run**, headed by `ls` and `ps` at twenty-nine rows each. The rule
+separates every screen a person would call a table from the two that fooled the alignment rule.
+
+So this ADR's conclusion stands for the predicate it measured, and falls for the question it asked: **alignment is not a
+table, but values are.** A `Table` kind is now defensible on evidence, and adding one is the work
+`docs/adding-a-component.md` describes — a later decision, taken with these numbers in hand.
+
 **These numbers cannot be reproduced from this document**, and that is a defect in the ADR rather than in the
 measurement. The rule was written down as "2+ shared column boundaries" without saying what a boundary is, which rows
 count, or how a run is measured; a careful reconstruction in round 192 — gaps of two or more spaces shared by every
