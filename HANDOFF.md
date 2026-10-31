@@ -178,3 +178,22 @@ refused was refused by counting something.
    `scripts/measure-tables.py` reproduces that in one command.
 2. **A meter inside a panel** — measured and **declined**: accepting a glued budget costs nineteen lines of round trip on the one recording
    that holds it, so the panel keeps its rows.
+
+## Three open threads, each with its next step
+
+1. **One provenance contradiction stands, and it is understood.** Two components share a base hash in one frame of
+   `two-agents-one-screen`; the second is marked `carried` because the first inserted the base while the loop was still
+   walking. Pinned at 1 in `check-corpus` with that sentence beside it. Two attempts at the fix — deciding from a
+   pre-frame snapshot and building a second memory beside the loop — both produced 12070 contradictions and were
+   reverted. **Next step:** print `appeared.len()` at the *end* of the marking loop as well as its start (the start is
+   already printed under `UI_LM_DEBUG_APPEARED=1`), because the flow looks correct and the failures are not explained.
+2. **`Table` is rejected, and the rejection is now evidence rather than memory.** `scripts/measure-tables.py` runs the
+   alignment predicate: it matches `vim`'s help rows (34 lines) and a survey, and scores **0** on `df` — the one screen
+   that is a table — because `df` pads with single spaces. **Next step:** a predicate on *values* (a column whose cells
+   share a type across rows), measured before it is written into the catalogue.
+3. **`Meter` has one producer.** Grok and Freebuff both draw `N/M hours remaining`; a five-minute agent session drew no
+   meter at all, so the question of a *changing* limit has no material anywhere. **Next step:** second producer is an
+   application that draws a live limit with a spaced slash — no obvious candidate on this machine.
+
+**None of the three is a defect in the code that ships.** They are the frontiers: what the reader has not been shown,
+what the catalogue has refused, and what the vocabulary cannot yet be asked twice.
