@@ -870,7 +870,7 @@ pub fn pages(frames: &[Frame], surface_id: &str) -> Vec<Envelope> {
         // recomputed from that, once per frame.
         let before = appeared.clone();
         let mut page = page_with(frame, surface_id, &mut appeared);
-        appeared = before;
+        appeared = before.clone();
         for component in page.create_surface.components.iter_mut() {
             if component.component == "Column" {
                 continue;
@@ -890,6 +890,14 @@ pub fn pages(frames: &[Frame], surface_id: &str) -> Vec<Envelope> {
             } else {
                 Provenance::Seen
             };
+        }
+        if std::env::var("UI_LM_DEBUG_APPEARED").is_ok() {
+            eprintln!(
+                "appeared: {} carried over, {} component(s) marked, {} now",
+                before.len(),
+                page.create_surface.components.len().saturating_sub(1),
+                appeared.len()
+            );
         }
         described.push(page);
     }
