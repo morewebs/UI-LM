@@ -219,6 +219,19 @@ def measures(session):
     return aligned, values
 
 
+def underlined(rows):
+    """A second signal: `Format-Table` draws a row of dashes under its headings.
+
+    Four blocks in 6,774 carry one and every one is a `Format-Table` output, so the signal is precise. It catches a table
+    whose cells are words - which the values rule cannot see - and nothing else in the corpus (round 52).
+    """
+    if len(rows) < 4:
+        return False
+    underline = rows[1]
+    runs = [run for run in re.findall(r"-{2,}", underline)]
+    return len(runs) >= 2 and all(ch in "- " for ch in underline.strip())
+
+
 def disagreements():
     """Every component the predicate would promote but the reader left alone, and the reverse.
 
@@ -236,7 +249,7 @@ def disagreements():
                         for line in (component.get("lines") or [])]
                 # The ADR says a table is a *block of its own*, so the whole component is one run - not the
                 # longest blank-line separated stretch inside it, which is what `numeric_strips` reports.
-                matches = whole_block_strips(rows) >= 2
+                matches = whole_block_strips(rows) >= 2 or underlined(rows)
                 is_table = component["component"] == "Table"
                 if matches and not is_table:
                     missed.append((session, component["id"]))

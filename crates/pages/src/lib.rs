@@ -3606,6 +3606,57 @@ fn as_table_disabled(_lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)> 
 }
 
 #[allow(dead_code)]
+/// A table whose headings are underlined with dashes: `Name        Mode` over `----        ----`.
+///
+/// The dash run is the application telling a reader what the columns are, so the run bounds each cell exactly - no
+/// inference from spacing. Returns `None` when the second row is not such an underline.
+fn as_underlined_table(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)> {
+    let underline: Vec<char> = lines.get(1)?.chars().collect();
+    let mut runs: Vec<(usize, usize)> = Vec::new();
+    let mut index = 0;
+    while index < underline.len() {
+        if underline[index] == '-' {
+            let start = index;
+            while index < underline.len() && underline[index] == '-' {
+                index += 1;
+            }
+            if index - start >= 2 {
+                runs.push((start, index));
+            }
+        } else {
+            index += 1;
+        }
+    }
+    if runs.len() < 2 {
+        return None;
+    }
+    let columns: Vec<u16> = runs
+        .iter()
+        .map(|(start, _)| u16::try_from(*start).unwrap_or(u16::MAX))
+        .collect();
+    let mut cells: Vec<Vec<String>> = Vec::new();
+    for line in lines.iter().skip(2) {
+        let row: Vec<char> = line.chars().collect();
+        let mut line_cells: Vec<String> = Vec::new();
+        for (start, end) in &runs {
+            let text: String = if *start < row.len() {
+                row[*start..(*end).min(row.len())].iter().collect()
+            } else {
+                String::new()
+            };
+            line_cells.push(text.trim().to_owned());
+        }
+        if line_cells.iter().all(|cell| cell.is_empty()) {
+            continue;
+        }
+        cells.push(line_cells);
+    }
+    if cells.len() < 2 {
+        return None;
+    }
+    Some((columns, cells))
+}
+
 pub fn as_table(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)> {
     if lines.len() < 3 {
         return None;
@@ -3614,6 +3665,12 @@ pub fn as_table(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)> {
     // Cheap pre-filter: a table needs at least three rows holding a digit, and prose blocks almost never do. Checking
     // that before building a `Vec<char>` per row is what keeps a page under the render budget - the allocation cost
     // made `check-render-scale` fail at 13.8 ms against an 11.0 ms limit (round 25).
+    // A second signal, and a precise one: `Format-Table` draws a row of dashes under each heading. Measured before it
+    // was believed - 4 blocks in 6,774 carry one, and every one is a `Format-Table` output (round 52). It catches the
+    // word table the values rule cannot see, and nothing else in the corpus.
+    if let Some(table) = as_underlined_table(lines) {
+        return Some(table);
+    }
     let with_digit = lines
         .iter()
         .filter(|line| line.chars().any(|c| c.is_ascii_digit()))
