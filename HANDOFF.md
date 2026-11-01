@@ -142,7 +142,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
 shape, and **v0.44.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
-The corpus is **106 recordings, 1582 frames** per path, recorded from **11 distinct commands** — derived from the
+The corpus is **107 recordings, 1584 frames** per path, recorded from **11 distinct commands** — derived from the
 `command` field of every recording, which is the only definition that admits checking. Among them: Grok (the training
 application), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and
 `man`, `less`, `df`, `vim`, `top`, `git`, `cmd` and PowerShell — programs that are not agents at all.
@@ -187,7 +187,7 @@ refused was refused by counting something.
    pre-frame snapshot and building a second memory beside the loop — both produced 12070 contradictions and were
    reverted. **Next step:** print `appeared.len()` at the *end* of the marking loop as well as its start (the start is
    already printed under `UI_LM_DEBUG_APPEARED=1`), because the flow looks correct and the failures are not explained.
-2. **`Table` shipped, and its edges are measured.** The values rule matches nineteen of 106 recordings; two are agent
+2. **`Table` shipped, and its edges are measured.** The values rule matches nineteen of 107 recordings; two are agent
    screens where prose aligns by accident, kept out by requiring a block of its own. A table **inside a pane** was recorded
    in round 44 (`cases/hard/pane-with-tables`, text floor 0.0%) and is required by that hard case. **Next step:** a column
    of `Table` where the cells are **not** numeric - a word list under a heading - which the rule cannot see and which the
