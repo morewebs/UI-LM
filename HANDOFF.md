@@ -139,7 +139,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
 ## Where it stands now
 
 **27 checks, about 22 minutes, every axis green**, **17 hard cases** at 100% on score, round trip and
-shape, and **v0.44.0** verified by download and by asking the binary what it was built from (`version` prints the
+shape, and **v0.45.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
 The corpus is **107 recordings, 1584 frames** per path, recorded from **11 distinct commands** — derived from the
@@ -187,11 +187,11 @@ refused was refused by counting something.
    pre-frame snapshot and building a second memory beside the loop — both produced 12070 contradictions and were
    reverted. **Next step:** print `appeared.len()` at the *end* of the marking loop as well as its start (the start is
    already printed under `UI_LM_DEBUG_APPEARED=1`), because the flow looks correct and the failures are not explained.
-2. **`Table` shipped, and its edges are measured.** The values rule matches nineteen of 107 recordings; two are agent
-   screens where prose aligns by accident, kept out by requiring a block of its own. A table **inside a pane** was recorded
-   in round 44 (`cases/hard/pane-with-tables`, text floor 0.0%) and is required by that hard case. **Next step:** a column
-   of `Table` where the cells are **not** numeric - a word list under a heading - which the rule cannot see and which the
-   corpus holds no example of.
+2. **`Table` shipped, and both signals are measured.** Values catch numeric columns; a dash underline catches a word
+   table (`cases/hard/pwsh-word-table`, required). A table inside a pane is `cases/hard/pane-with-tables`. The heading and
+   the dash row are cell rows too - skipping them made the audit fail and left four lines of `pwsh-table` out of the
+   document. **Next step:** a word table the application does not underline, which neither signal can see, and which the
+   corpus does not hold.
 3. **`Meter` has one producer.** Grok and Freebuff both draw `N/M hours remaining`; a five-minute agent session drew no
    meter at all, so the question of a *changing* limit has no material anywhere. **Next step:** second producer is an
    application that draws a live limit with a spaced slash — no obvious candidate on this machine.
