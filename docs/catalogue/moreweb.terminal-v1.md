@@ -255,6 +255,35 @@ checked-in fixture, in CI:
 3. **Reproducibility** — two captures of the same deterministic scenario score 100%
    structure and 100% text against each other (`ui-lm-capture compare`).
 
+## What a runtime must draw
+
+A page is a description, and a runtime turns it into a GUI. The minimum a runtime owes each part of the page:
+
+| page holds | the runtime must draw |
+|---|---|
+| `Block` with `lines` and `spans` | the lines, with each span's attributes applied |
+| `Block` with `shortcuts` | **a control per shortcut**, carrying its `key` as the binding |
+| `Block` with `properties` | **a labelled field per property**, name beside value |
+| `Block` with `tabs` | the strip, with the first tab marked active |
+| `Table` | its `cells` as columns, or its `lines` verbatim |
+| `Diff` | one row per line, marked by that line's kind |
+| `ToolCall` | one row per call, with the tool and its target |
+| `Thought` | the summary line, not invented reasoning |
+| `Meter` | the drawn bar, with the numbers it carries |
+| `Frame` | a floating element, positioned over the page and titled |
+| `Surface.panes` | the components laid out side by side, in pane order |
+
+Two rules follow from the fields' meanings rather than their shapes:
+
+- **A binding is sent, not interpreted.** A runtime posts the `key` back as drawn; the terminal side is what knows that
+  `Ctrl+R` is `0x12`. `ui-lm-serve` does exactly this at `POST /keys?binding=`.
+- **A name is not a value.** `properties` are fields, not prose lines; `shortcuts` are commands, not text. A runtime that
+  draws them as text has thrown away the only reason the page carries them.
+
+**Everything else is the runtime's business** - colour, spacing, whether a `Table` becomes a real `<table>`, whether a
+`Frame` is a dialog element - and none of it is in the page, which is what lets the same page render as HTML, as terminal
+text, and as whatever comes next.
+
 ## Degradation
 
 An unknown component is rendered as a labelled placeholder and never dropped. That rule
