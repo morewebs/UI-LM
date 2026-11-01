@@ -102,6 +102,17 @@ The browser shows screens as they settle, and the box at the bottom types into t
 recorder forwards it to the terminal. A file rather than a socket on purpose — no port to open, nothing reachable from
 another machine. It listens on this machine only.
 
+**The loop closes.** A page's shortcuts are drawn as real buttons carrying their bindings:
+
+```html
+<button class="action" data-binding="ctrl+r">Resume session</button>
+<button class="action" data-binding="ctrl+q">Quit</button>
+```
+
+Pressing one posts the binding to the viewer, the viewer translates it into the keystroke a terminal would send
+(`Ctrl+R` is `0x12`), and the recorder forwards it to the program. `check-loop` proves every binding a page offers is
+accepted by the viewer — the seam that neither side's own tests could see.
+
 ## Measuring it
 
 Every claim here came from a command, and the commands are in the repository:
