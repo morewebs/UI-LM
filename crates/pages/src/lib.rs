@@ -2684,6 +2684,50 @@ mod tests {
     }
 
     #[test]
+    fn an_underlined_table_has_a_cell_row_for_every_line() {
+        // Format-Table draws the heading and a dash row, then the values. Those first two rows are part of the
+        // screen: the audit requires one cell row per line, and the HTML renderer only emits a line it can pair
+        // with a cell row. Skipping them leaves the document unable to rebuild the screen.
+        let frame = frame_of(
+            &[
+                "Name        Mode",
+                "----        ----",
+                "hosts       -a----",
+                "hosts.ics   -a----",
+                "lmhosts.sam -a----",
+            ],
+            40,
+        );
+        let page = page_from_frame(&frame, "s");
+        let table = page
+            .create_surface
+            .components
+            .iter()
+            .find(|component| component.component == "Table")
+            .expect("an underlined word table is a table");
+        match &table.body {
+            Body::Table { cells, lines, .. } => {
+                assert_eq!(
+                    cells.len(),
+                    lines.len(),
+                    "every drawn row is a cell row, including the heading and the dashes"
+                );
+                assert!(
+                    lines.iter().any(|line| line.contains("Name")),
+                    "the heading is a line of the table"
+                );
+                assert!(
+                    lines.iter().any(|line| line.contains("----")),
+                    "the dash row is a line of the table"
+                );
+            }
+            other => panic!("expected a table, got {other:?}"),
+        }
+        let problems = audit(&page);
+        assert!(problems.is_empty(), "{problems:?}");
+    }
+
+    #[test]
     fn blocks_are_runs_of_unblank_rows() {
         let frame = frame_of(&["one", "", "two", "three", "", "", "four"], 10);
         let page = page_from_frame(&frame, "s");
@@ -3634,8 +3678,11 @@ fn as_underlined_table(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)>
         .iter()
         .map(|(start, _)| u16::try_from(*start).unwrap_or(u16::MAX))
         .collect();
+    // One cell row per drawn line, including the heading and the dash row. The audit requires that, and the HTML
+    // renderer only emits a line it can pair with a cell row - skipping these two is what left `pwsh-table` unable
+    // to rebuild four lines of its screen.
     let mut cells: Vec<Vec<String>> = Vec::new();
-    for line in lines.iter().skip(2) {
+    for line in lines {
         let row: Vec<char> = line.chars().collect();
         let mut line_cells: Vec<String> = Vec::new();
         for (start, end) in &runs {
@@ -3646,12 +3693,16 @@ fn as_underlined_table(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)>
             };
             line_cells.push(text.trim().to_owned());
         }
-        if line_cells.iter().all(|cell| cell.is_empty()) {
-            continue;
-        }
         cells.push(line_cells);
     }
-    if cells.len() < 2 {
+    // The heading and the dash row are cell rows too, but they are not data. Two data rows is still the minimum,
+    // which is what the values rule asks and what kept a heading with no values from becoming a table.
+    let data_rows = cells
+        .iter()
+        .skip(2)
+        .filter(|row| row.iter().any(|cell| !cell.is_empty()))
+        .count();
+    if data_rows < 2 {
         return None;
     }
     Some((columns, cells))
