@@ -35,6 +35,26 @@ Measured in `scripts/measure-tables.py`, on the corpus as it stands:
 nineteen are screens a person would call a table: `df`, `ls`, `ps`, `top`, `dir`, `gh run list`, `git log --stat`,
 `Format-Table`.
 
+## A second signal: the underline
+
+The values rule cannot see a table whose cells are words - `Get-ChildItem | Format-Table Name, Mode` draws a heading and
+two text columns, and no strip holds a digit. That screen was recorded (`eval/apps/pwsh-word-table`) and left as the rule's
+blind spot for one round.
+
+Then the signal was measured: **`Format-Table` draws a row of dashes under its headings**, and **4 blocks in 6,774** carry
+one - every one of them a `Format-Table` output. The dash run bounds each column exactly, so nothing about spacing is
+inferred:
+
+```
+Name        Mode
+----        ----
+hosts       -a----
+```
+
+**A table is therefore either values in columns, or headings that the application underlined.** Both halves of the reader
+and the measurement script implement both signals, so the specification and the code cannot drift - `check-tables` failed
+the moment only the reader knew.
+
 ## Consequences
 
 **Two false positives, both inside a transcript.** Agent sessions `second-agent-2` and `second-agent-4` hold three and

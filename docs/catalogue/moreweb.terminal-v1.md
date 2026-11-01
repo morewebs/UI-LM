@@ -128,7 +128,10 @@ has finished drawing.
 | `cells` | one entry per row, one cell per column, trimmed |
 | `lines` | the rows as drawn, parallel to `cells` |
 
-**The rule (ADR 0008): values, not padding.** `df` separates its columns with single spaces and PowerShell's
+**Two signals (ADR 0008).** Either **values** - two vertical strips holding a digit in a majority of rows, separated by a blank column - or **an underline**: a second row of dashes under the headings, which is how
+`Format-Table` marks its columns and which bounds every cell exactly.
+
+**The rule: values, not padding.** `df` separates its columns with single spaces and PowerShell's
 `Format-Table` with many, so what makes a table is **two vertical strips of two or more characters holding a digit in a
 majority of the rows**, separated by a blank column - and the run must be a block of its own, not a streak inside prose.
 
