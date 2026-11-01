@@ -138,11 +138,11 @@ somebody gets round to the documents — which is what happened for twenty-four 
   evidence, or not at all.
 ## Where it stands now
 
-**27 checks, about 22 minutes, every axis green**, **15 hard cases** at 100% on score, round trip and
+**27 checks, about 22 minutes, every axis green**, **16 hard cases** at 100% on score, round trip and
 shape, and **v0.42.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
-The corpus is **105 recordings, 1580 frames** per path, recorded from **11 distinct commands** — derived from the
+The corpus is **106 recordings, 1582 frames** per path, recorded from **11 distinct commands** — derived from the
 `command` field of every recording, which is the only definition that admits checking. Among them: Grok (the training
 application), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and
 `man`, `less`, `df`, `vim`, `top`, `git`, `cmd` and PowerShell — programs that are not agents at all.
@@ -188,7 +188,7 @@ refused was refused by counting something.
    reverted. **Next step:** print `appeared.len()` at the *end* of the marking loop as well as its start (the start is
    already printed under `UI_LM_DEBUG_APPEARED=1`), because the flow looks correct and the failures are not explained.
 2. **`Table` shipped as the seventh kind (ADR 0008), and the threads that remain are its edges.** The values rule
-   matches nineteen of 105 recordings; two are agent screens where prose aligns by accident, kept out by requiring a
+   matches nineteen of 106 recordings; two are agent screens where prose aligns by accident, kept out by requiring a
    block of its own. **Next step:** measure a table inside a pane, where the run is bounded by a divider rather than
    by a blank row.
 3. **`Meter` has one producer.** Grok and Freebuff both draw `N/M hours remaining`; a five-minute agent session drew no

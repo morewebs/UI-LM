@@ -47,6 +47,7 @@ $expected = @{
     "pane-conversation" = 100.0
     "two-agents-one-screen" = 100.0
     "pane-resize" = 100.0
+    "pane-with-tables" = 100.0
     # Fixed: an advertisement panel whose border ends `╯  █` stopped being a panel once the scrollbar
     # column was not stripped, so the reader swallowed the rest of the screen into one block. Measured at
     # 99.7% before the fix and 100% after it; that is the number a regression would have to fall below.
@@ -81,6 +82,9 @@ $required = @{
     # Added in round 215: this case exists because a centred dialog is a `Frame`, and the table never said so — its
     # ceiling protects the count and its score protects the agreement, and nothing protected the kind.
     "whiptail-menu"          = @("Frame")
+    # The first recording with a **table inside a pane**: the cell the kind could not be tested in until now, and
+    # a screen whose text floor is 0% (round 44).
+    "pane-with-tables"       = @("Table")
     "whiptail-dialog"        = @("Frame")
     "every-kind-one-screen"  = @("Block", "ToolCall", "Diff", "Meter")
     "pane-conversation"      = @("Block", "Meter", "ToolCall")
@@ -112,6 +116,7 @@ $ceiling = @{
     "pane-conversation"        = 9
     "two-agents-one-screen"    = 15
     "pane-resize"              = 2
+    "pane-with-tables"         = 3
     # Both of these hold one component and that is the judgement being protected: a popup or a menu read as one
     # component per row would still score 100% and would be wrong. They were added without ceilings, which meant the
     # only thing checking them was the score (round 214).
