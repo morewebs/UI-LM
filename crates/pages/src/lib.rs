@@ -2720,6 +2720,11 @@ mod tests {
                     lines.iter().any(|line| line.contains("----")),
                     "the dash row is a line of the table"
                 );
+                assert_eq!(
+                    cells[2][0], "hosts",
+                    "a value wider than the dashes still belongs to that column"
+                );
+                assert_eq!(cells[2][1], "-a----");
             }
             other => panic!("expected a table, got {other:?}"),
         }
@@ -3685,9 +3690,15 @@ fn as_underlined_table(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)>
     for line in lines {
         let row: Vec<char> = line.chars().collect();
         let mut line_cells: Vec<String> = Vec::new();
-        for (start, end) in &runs {
+        for (index, (start, _)) in runs.iter().enumerate() {
+            // The dashes say where a column starts. The value may be wider than the dashes — `hosts` over `----` —
+            // so the cell runs to the next column, which is what the values rule already does.
+            let end = runs
+                .get(index + 1)
+                .map(|(next, _)| *next)
+                .unwrap_or(row.len());
             let text: String = if *start < row.len() {
-                row[*start..(*end).min(row.len())].iter().collect()
+                row[*start..end.min(row.len())].iter().collect()
             } else {
                 String::new()
             };

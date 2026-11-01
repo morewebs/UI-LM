@@ -190,10 +190,9 @@ refused was refused by counting something.
 2. **`Table` shipped, and both signals are measured.** Values catch numeric columns; a dash underline catches a word
    table (`cases/hard/pwsh-word-table`, required). A table inside a pane is `cases/hard/pane-with-tables`. The heading and
    the dash row are cell rows too - skipping them made the audit fail and left four lines of `pwsh-table` out of the
-   document. The underline marks where a column **starts**, not where the value ends: the shipped page stores `hosts` as
-   `host`, because the dash run is four characters and the cell was cut there. The lines are complete, so the round trip
-   holds; a runtime that draws `cells` does not. **Next step:** bound each cell to the next column, the way the values rule
-   already does. A word table with no underline is still unseen.
+   document. v0.45.0 cut each cell at the end of the dashes (`hosts` stored as `host`); the cell now runs to the next
+   column, which is what the values rule already did. **Next step:** a word table the application does not underline,
+   which neither signal can see, and which the corpus does not hold.
 3. **`Meter` has one producer.** Grok and Freebuff both draw `N/M hours remaining`; a five-minute agent session drew no
    meter at all, so the question of a *changing* limit has no material anywhere. **Next step:** second producer is an
    application that draws a live limit with a spaced slash — no obvious candidate on this machine.
