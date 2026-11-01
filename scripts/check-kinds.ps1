@@ -96,6 +96,30 @@ if (Test-Path $propertySession) {
     }
 }
 
+# The remaining rows of the catalogue's contract, each on a session that holds that part: a tab strip, a table's cells,
+# and panes laid out side by side. Round 47 walked these by hand; this keeps the walk (round 48).
+$contractRows = @(
+    @{ Session = "eval\tui\wsl-vim-numbered-tabs"; Pattern = 'class="tabs"';        What = "a tab strip" },
+    @{ Session = "eval\tui\df-table";              Pattern = 'data-cells="';        What = "a table's cells" },
+    @{ Session = "cases\hard\pane-with-tables";    Pattern = 'data-layout="row"';   What = "panes side by side" }
+)
+foreach ($row in $contractRows) {
+    $path = Join-Path $repo $row.Session
+    if (-not (Test-Path $path)) { continue }
+    $out = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-row-" + [guid]::NewGuid().ToString("N") + ".html")
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    & $capture render --session $path --all --out $out 2>&1 | Out-Null
+    $ErrorActionPreference = $previous
+    $html = if (Test-Path $out) { Get-Content -LiteralPath $out -Raw -Encoding UTF8 } else { "" }
+    Remove-Item -LiteralPath $out -Force -ErrorAction SilentlyContinue
+    if (-not $html.Contains($row.Pattern)) {
+        $failures += ("the document does not carry {0}: no {1} in {2}" -f $row.What, $row.Pattern, $row.Session)
+    } else {
+        Write-Host ("the contract holds: {0}" -f $row.What)
+    }
+}
+
 # The model's pages must carry the kinds too. `page --all --model` served a `Block` where the reader served a `Table`
 # for the same screen, and every check here passed because none of them looked at a model page (round 19).
 $modelFile = Join-Path $repo "models\page.json"
