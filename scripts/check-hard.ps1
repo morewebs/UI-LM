@@ -129,6 +129,20 @@ $ceiling = @{
     "vim-completion-popup"     = 1
 }
 $regressed = 0
+# An entry naming a case that is not in this folder is inert, and inert is indistinguishable from passing: the
+# word-table case was written into `$required` while the recording sat in `eval/apps`, and the check went green without
+# ever looking at it (round 53). Every table's keys must name a case, and every case must have an expectation.
+$present = @(Get-ChildItem -LiteralPath $cases -Directory | ForEach-Object { $_.Name })
+$known = @($expected.Keys) + @($required.Keys) + @($forbidden.Keys) + @($ceiling.Keys)
+$orphans = @($known | Select-Object -Unique | Where-Object { $present -notcontains $_ })
+$unscored = @($present | Where-Object { -not $expected.ContainsKey($_) })
+if ($orphans.Count -gt 0 -or $unscored.Count -gt 0) {
+    if ($orphans.Count -gt 0) { $failures += ("these entries name no case: " + ($orphans -join ", ")) }
+    if ($unscored.Count -gt 0) { $failures += ("these cases have no score expectation: " + ($unscored -join ", ")) }
+    Write-Host "a table on this check names a case that is not here"
+    exit 1
+}
+
 foreach ($case in (Get-ChildItem -LiteralPath $cases -Directory)) {
     $line = (& $capture score --session $case.FullName --model $model 2>&1 | Select-Object -First 1) -join ""
     $share = 0.0
