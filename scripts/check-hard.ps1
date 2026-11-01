@@ -48,6 +48,7 @@ $expected = @{
     "two-agents-one-screen" = 100.0
     "pane-resize" = 100.0
     "pane-with-tables" = 100.0
+    "pwsh-word-table" = 100.0
     # Fixed: an advertisement panel whose border ends `╯  █` stopped being a panel once the scrollbar
     # column was not stripped, so the reader swallowed the rest of the screen into one block. Measured at
     # 99.7% before the fix and 100% after it; that is the number a regression would have to fall below.
@@ -85,6 +86,9 @@ $required = @{
     # The first recording with a **table inside a pane**: the cell the kind could not be tested in until now, and
     # a screen whose text floor is 0% (round 44).
     "pane-with-tables"       = @("Table")
+    # A table of **words**, caught only by the dash underline `Format-Table` draws under its headings (round 52).
+    # Without that signal the reader calls this screen a block, which is what it did for a round.
+    "pwsh-word-table"        = @("Table")
     "whiptail-dialog"        = @("Frame")
     "every-kind-one-screen"  = @("Block", "ToolCall", "Diff", "Meter")
     "pane-conversation"      = @("Block", "Meter", "ToolCall")
@@ -117,6 +121,7 @@ $ceiling = @{
     "two-agents-one-screen"    = 15
     "pane-resize"              = 2
     "pane-with-tables"         = 3
+    "pwsh-word-table"          = 2
     # Both of these hold one component and that is the judgement being protected: a popup or a menu read as one
     # component per row would still score 100% and would be wrong. They were added without ceilings, which meant the
     # only thing checking them was the score (round 214).

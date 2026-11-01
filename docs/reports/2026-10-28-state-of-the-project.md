@@ -34,7 +34,7 @@ the code constructs.
 | new screens, recorded after training, read perfectly | **every batch since training, every kind it held, nothing missed** — the per-batch numbers are in the report |
 | a split screen's panes hold their own components | both paths ask the same question before splitting; audited on model pages too |
 | a floating window is named | **`Frame`**, added in round 48 from a vim popup: the first kind added since the vocabulary settled, and the first that needed a boundary before it needed a predicate |
-| the hard recordings hold their shapes | **16 hard recordings**, twelve at 100% on score and both round trips: an agent in a pane, an agent beside a shell, two agents, and two text buffers |
+| the hard recordings hold their shapes | **17 hard recordings**, twelve at 100% on score and both round trips: an agent in a pane, an agent beside a shell, two agents, and two text buffers |
 | an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
 | every word the page holds reaches the browser document | 107 recordings **on both paths**, checked; markup arrives escaped |
 | every recording on this machine reads on either builder | **107 recordings, 3164 pages**, reader and model, no error |
