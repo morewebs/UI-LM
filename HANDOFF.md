@@ -171,13 +171,13 @@ refused was refused by counting something.
 
 ### The two things worth doing next
 
-1. **A `Table`, by semantics rather than alignment** — a column whose values share a type across rows, with
-   `df`, `top` and `cargo tree` as the positives and Freebuff's survey rows as the counterweight. The alignment
-   predicate was re-measured in round 193 and is **inverted**: it matches `vim`'s help rows (34 lines) and a survey,
-   and scores **0** on `df`, the one screen that is a table — because `df` pads with single spaces.
-   `scripts/measure-tables.py` reproduces that in one command.
-2. **A meter inside a panel** — measured and **declined**: accepting a glued budget costs nineteen lines of round trip on the one recording
-   that holds it, so the panel keeps its rows.
+1. **A GUI that was not built here.** The loop now runs terminal -> page -> GUI -> keystroke -> terminal, and GUI -> TUI is
+   checked for five of six kinds. What has never been tried is taking an **HTML page this project did not produce** and
+   reading a terminal screen back out of it: the renderer is one direction, and the parser in `check-html-to-tui` is the
+   other half of a round trip rather than a reader of foreign markup.
+2. **A second producer for `Meter`.** Every meter in the corpus comes from an agent printing `N/M hours remaining`; a drawn
+   progress bar is deliberately not one. A second application drawing a live limit with a spaced slash would let the kind
+   be asked twice.
 
 ## Three open threads, each with its next step
 
@@ -187,10 +187,11 @@ refused was refused by counting something.
    pre-frame snapshot and building a second memory beside the loop — both produced 12070 contradictions and were
    reverted. **Next step:** print `appeared.len()` at the *end* of the marking loop as well as its start (the start is
    already printed under `UI_LM_DEBUG_APPEARED=1`), because the flow looks correct and the failures are not explained.
-2. **`Table` shipped as the seventh kind (ADR 0008), and the threads that remain are its edges.** The values rule
-   matches nineteen of 106 recordings; two are agent screens where prose aligns by accident, kept out by requiring a
-   block of its own. **Next step:** measure a table inside a pane, where the run is bounded by a divider rather than
-   by a blank row.
+2. **`Table` shipped, and its edges are measured.** The values rule matches nineteen of 106 recordings; two are agent
+   screens where prose aligns by accident, kept out by requiring a block of its own. A table **inside a pane** was recorded
+   in round 44 (`cases/hard/pane-with-tables`, text floor 0.0%) and is required by that hard case. **Next step:** a column
+   of `Table` where the cells are **not** numeric - a word list under a heading - which the rule cannot see and which the
+   corpus holds no example of.
 3. **`Meter` has one producer.** Grok and Freebuff both draw `N/M hours remaining`; a five-minute agent session drew no
    meter at all, so the question of a *changing* limit has no material anywhere. **Next step:** second producer is an
    application that draws a live limit with a spaced slash — no obvious candidate on this machine.
