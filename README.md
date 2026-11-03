@@ -128,6 +128,7 @@ ui-lm-capture self-check --session sessions/example                         # wh
 ui-lm-capture fields --left a --right b                                     # the parts `compare` does not look at
 ui-lm-capture baseline --session sessions/example                           # the text-only floor, printed
 ui-lm-capture tui --session sessions/example --seq 0                        # the page drawn back as terminal text
+ui-lm-capture read --html page.html   # the screen any HTML document describes
 ui-lm-capture frames --session sessions/example                             # one line per screen, with its kinds
 ui-lm-capture compare --left a --right b                                    # two recordings, side by side
 ui-lm-capture audit -- sessions/                                            # pages that contradict their screens

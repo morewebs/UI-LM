@@ -115,6 +115,8 @@ enum Command {
     Dataset(DatasetArgs),
     /// Draw recorded pages as one standalone HTML file you can open in a browser.
     Render(RenderArgs),
+    /// Read a screen back out of an HTML document, including one this project did not write.
+    Read(ReadArgs),
 
     /// List every frame with the kinds it holds and whether it splits into panes.
     Frames(FramesArgs),
@@ -270,6 +272,15 @@ struct FramesArgs {
     /// List the pages a model builds instead of the reader's.
     #[arg(long, value_name = "FILE")]
     model: Option<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+/// Arguments for `read`: the document, and nothing else.
+struct ReadArgs {
+    /// The HTML file to read. It does not have to have been written by this project: a plain `<table>`, or a document of
+    /// paragraphs and headings, both have a screen in them.
+    #[arg(long, value_name = "FILE")]
+    html: PathBuf,
 }
 
 #[derive(Debug, Args)]
@@ -483,6 +494,7 @@ fn run(command: Command) -> Result<ExitCode> {
         Command::Provenance(args) => provenance(&args),
         Command::Dataset(args) => dataset(&args),
         Command::Render(args) => render(&args),
+        Command::Read(args) => read(&args),
         Command::Frames(args) => {
             frames(&args);
             Ok(ExitCode::SUCCESS)
@@ -1265,6 +1277,24 @@ fn frames(args: &FramesArgs) {
             println!("frame {index:<3} {shape:<44} {split}");
         }
     }
+}
+
+/// Print the terminal screen an HTML document describes.
+///
+/// The loop this project exists for runs both ways, and the second way - a GUI back to a screen - grew up inside a check
+/// script that only understood markup this project wrote. `lines_from_html` reads a plain `<table>` and a document of
+/// paragraphs as well, so a stranger's page can be turned back into text (round 62).
+fn read(args: &ReadArgs) -> Result<ExitCode> {
+    let html = std::fs::read_to_string(&args.html)
+        .with_context(|| format!("failed to read {}", args.html.display()))?;
+    let lines = ui_lm_render::lines_from_html(&html);
+    if lines.is_empty() {
+        bail!("{} holds nothing this reader can draw", args.html.display());
+    }
+    for line in lines {
+        println!("{line}");
+    }
+    Ok(ExitCode::SUCCESS)
 }
 
 fn render(args: &RenderArgs) -> Result<ExitCode> {
