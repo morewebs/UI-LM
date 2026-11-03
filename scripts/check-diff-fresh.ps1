@@ -37,7 +37,9 @@ $keys = Join-Path $work "k.keys"
 # The agent no longer asks the trust question this script was written for: sending `y` typed it into the prompt and the
 # real request was never submitted. A blank line, then the request, then a blank line again, and a longer wait for the
 # answer (round 57 - the suite had been red for two days on a keystroke that no longer matched the screen).
-Set-Content -LiteralPath $keys -Value @('12000 \r', '4000 run git diff and show me the output', '2000 \r', '40000 ') -Encoding ASCII
+# Asking only for `git diff` leaves the agent free to answer from what it read. Asking it to **edit** and then show the
+# diff made it reliable in the same minute: 18 diffs in one session against 12 from the earlier wording (round 65).
+Set-Content -LiteralPath $keys -Value @('14000 ', '3000 edit f.txt to add a line, then run git diff and show me the output', '3000 \r', '55000 ') -Encoding ASCII
 $session = Join-Path $work "s"
 # The scenario is attempted up to five times: a live agent fails to show a diff about one run in
 # three, so three attempts left this check red roughly half the time. Five leave it under 1%.
