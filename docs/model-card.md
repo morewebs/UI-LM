@@ -29,9 +29,9 @@ stated here rather than in a footnote.
 
 | set | what it is | result |
 |---|---|---|
-| every recording here | **107 recordings, 1,584 frames** from **11 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
+| every recording here | **108 recordings, 1,632 frames** from **11 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
 | seven evaluation sets | Grok and non-Grok screens, 320 frames | 100% every set |
-| **a second agent CLI** | **20 recordings, 1063 frames, never trained on** | **100%, every component** |
+| **a second agent CLI** | **21 recordings, 1111 frames, never trained on** | **100%, every component** |
 | fresh batches | recorded **after** training, 8 batches | 100% every batch, every kind it held |
 
 **The floor matters as much as the score.** `score` also reports a text-only converter that splits
