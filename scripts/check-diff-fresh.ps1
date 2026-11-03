@@ -20,9 +20,10 @@ $work = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-diff-" + [guid]::New
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 
 # A repository with a real change, written through base64 so no shell can eat the newlines.
+$fixture = "/mnt/c/Users/moreweb/AppData/Local/Temp/ui-lm/gdiff"
 $base = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("one`ntwo`nthree`n"))
 $changed = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("one`nTWO`nthree`nfour`n"))
-& wsl.exe -e sh -c "mkdir -p /tmp/ui-lm/gdiff && cd /tmp/ui-lm/gdiff && git init -q . 2>/dev/null; echo $base | base64 -d > f.txt; git add f.txt; git -c user.email=a@b -c user.name=a commit -qm base 2>/dev/null; echo $changed | base64 -d > f.txt" 2>&1 | Out-Null
+& wsl.exe -e sh -c "mkdir -p $fixture && cd $fixture && git init -q . 2>/dev/null; echo $base | base64 -d > f.txt; git add f.txt; git -c user.email=a@b -c user.name=a commit -qm base 2>/dev/null; echo $changed | base64 -d > f.txt" 2>&1 | Out-Null
 
 # The agent is asked to run `git diff` and mostly does. Once in a while it answers from context without
 # running anything — which is not a defect in this project, but it does leave the check measuring nothing.
@@ -41,7 +42,7 @@ $attempt = 0
 while ($attempt -lt $attempts -and $diffs -lt 1) {
     $attempt++
     if (Test-Path $session) { Remove-Item -LiteralPath $session -Recurse -Force }
-    & $capture record --rows 30 --cols 110 --out $session --stop-after 50000 --script $keys -- wsl.exe -e tmux new-session -A -s gdiffcheck "cd /tmp/ui-lm/gdiff && /mnt/c/Users/moreweb/.grok/bin/grok.exe" *> $null
+    & $capture record --rows 30 --cols 110 --out $session --stop-after 50000 --script $keys -- wsl.exe -e tmux new-session -A -s gdiffcheck "cd $fixture && /mnt/c/Users/moreweb/.grok/bin/grok.exe" *> $null
     & wsl.exe -e sh -c 'tmux kill-server 2>/dev/null; true' 2>&1 | Out-Null
     if (-not (Test-Path (Join-Path $session "session.json"))) { continue }
     foreach ($line in (& $capture page --session $session --all 2>$null)) {
