@@ -36,7 +36,7 @@ because their first proof had been remembered rather than recorded.
 | `check-live-page` | the live page moves, a finished one does not | a constant document printed "the page did not change across three seconds of a drawing program" ; and the served document holds the recording's own words, proven by demanding a word it does not serve, which printed "the served document is missing 19 word(s), such as tick" ; and the viewer serves the model's pages too, proven by demanding a word they do not hold, which printed "the model's served document is missing 19 word(s), such as tick" |
 | `check-render-scale` | exporting stays linear | a 50 ms delay per page printed "a page cost 53.1 ms, more than the 11.0 ms limit" |
 | `check-fresh` | new material matches the model, and the batch finishes | an older model scored below the floor on the same batch; with the time limit at one second it printed "recording the batch took 262 s, beyond the 1 s limit" |
-| `check-diff-fresh` | a diff on new material is read exactly | removing the diff request printed "no diff appeared, so the check measured nothing" |
+| `check-diff-fresh` | a diff on new material is read exactly - Freebuff, on Windows, in a repository on this machine (12 diffs, 31 frames, floor 19%) | removing the diff request printed "no diff appeared, so the check measured nothing" |
 
 And four properties that run under `cargo test`, each proven by mutation:
 
