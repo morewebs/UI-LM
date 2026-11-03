@@ -436,7 +436,12 @@ pub fn lines_from_html(html: &str) -> Vec<String> {
 fn lines_of_lines(html: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut rest = html;
-    while let Some(start) = rest.find("<div class=\"line") {
+    // `class="line"` or `class="line row"` - never `class="lines"`, which is the container the rows sit in.
+    let mut found = rest
+        .find("<div class=\"line\"")
+        .map(|at| (at, 17))
+        .or_else(|| rest.find("<div class=\"line ").map(|at| (at, 17)));
+    while let Some(start) = found.map(|(at, _)| at) {
         let after = &rest[start..];
         let Some(open_end) = after.find('>') else {
             break;
@@ -447,6 +452,10 @@ fn lines_of_lines(html: &str) -> Vec<String> {
         };
         out.push(text_of(&body[..close]).trim_end().to_owned());
         rest = &body[close + 6..];
+        found = rest
+            .find("<div class=\"line\"")
+            .map(|at| (at, 17))
+            .or_else(|| rest.find("<div class=\"line ").map(|at| (at, 17)));
     }
     out
 }
