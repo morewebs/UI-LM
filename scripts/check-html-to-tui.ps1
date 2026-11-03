@@ -21,7 +21,8 @@ $probes = @(
     @{ Session = "eval\apps\git-help";          Seq = 0; Why = "a help listing" },
     @{ Session = "cases\hard\pane-with-tables";  Seq = 1; Why = "two panes side by side" },
     @{ Session = "eval\apps\git-diff";         Seq = 0; Why = "a diff from git itself" },
-    @{ Session = "eval\apps\git-clone";        Seq = 1; Why = "a limit from git itself" }
+    @{ Session = "eval\apps\git-clone";        Seq = 1; Why = "a limit from git itself" },
+    @{ Session = "eval\freebuff\second-agent-18"; Seq = 1; Why = "calls and thoughts" }
 )
 
 function Get-LinesFromHtml {
@@ -155,4 +156,20 @@ if ($failures.Count -gt 0) {
     exit 1
 }
 Write-Host ("the document can be turned back into the screen: {0} session(s), {1} line(s) rebuilt" -f $checked, $compared)
-exit 0
+
+# Seven kinds, and a round trip that covers five of them is not the claim it sounds like: `ToolCall` and `Thought` were
+# absent from every probe until a reader counted them (round 117).
+$covered = @{}
+foreach ($probe in $probes) {
+    $path = Join-Path $repo $probe.Session
+    if (-not (Test-Path $path)) { continue }
+    foreach ($line in (& $capture page --session $path --all 2>$null)) {
+        foreach ($m in [regex]::Matches("$line", '"component":"(\w+)"')) { $covered[$m.Groups[1].Value] = $true }
+    }
+}
+$missing = @("Block", "ToolCall", "Thought", "Meter", "Diff", "Frame", "Table" | Where-Object { -not $covered.ContainsKey($_) })
+if ($missing.Count -gt 0) {
+    $failures += ("the round trip covers no session holding: " + ($missing -join ", "))
+} else {
+    Write-Host ("every kind appears in a round-tripped session: {0}" -f $covered.Count)
+}exit 0
