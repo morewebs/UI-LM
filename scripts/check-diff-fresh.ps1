@@ -28,7 +28,10 @@ $changed = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("one`nTWO`nt
 # running anything — which is not a defect in this project, but it does leave the check measuring nothing.
 # So the scenario is attempted up to three times, and a run with no diff is retried rather than believed.
 $keys = Join-Path $work "k.keys"
-Set-Content -LiteralPath $keys -Value @('8000 y\r', '6000 \r', '8000 run git diff and show me the output\r', '25000 \r') -Encoding ASCII
+# The agent no longer asks the trust question this script was written for: sending `y` typed it into the prompt and the
+# real request was never submitted. A blank line, then the request, then a blank line again, and a longer wait for the
+# answer (round 57 - the suite had been red for two days on a keystroke that no longer matched the screen).
+Set-Content -LiteralPath $keys -Value @('12000 \r', '4000 run git diff and show me the output', '2000 \r', '40000 ') -Encoding ASCII
 $session = Join-Path $work "s"
 # The scenario is attempted up to five times: a live agent fails to show a diff about one run in
 # three, so three attempts left this check red roughly half the time. Five leave it under 1%.
