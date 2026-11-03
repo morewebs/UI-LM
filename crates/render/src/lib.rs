@@ -518,13 +518,14 @@ fn lines_of_table(html: &str) -> Vec<String> {
         .collect()
 }
 
-/// One line per block element, which is the least a reader can honestly do with markup it does not recognise.
+/// One line per block element - and the shapes a terminal gives them: a bullet for a list item, and a heading underlined
+/// with `=` or `-`, which is how every text renderer since `more` has marked one (round 67).
 ///
 /// It closes on the **element it opened** - `</p>`, `</li>` - rather than on the first `</` it meets, which is how
 /// `First <b>point</b>.` came out as `First point` with its full stop cut off (round 61).
 fn lines_of_blocks(html: &str) -> Vec<String> {
     let tags = ["h1", "h2", "h3", "li", "p", "pre", "div"];
-    let mut found: Vec<(usize, String)> = Vec::new();
+    let mut found: Vec<(usize, &str, String)> = Vec::new();
     for name in tags {
         let open = format!("<{name}");
         let close = format!("</{name}");
@@ -541,13 +542,26 @@ fn lines_of_blocks(html: &str) -> Vec<String> {
                 .trim()
                 .to_owned();
             if !text.is_empty() {
-                found.push((start, text));
+                found.push((start, name, text));
             }
             from = close_at + close.len();
         }
     }
-    found.sort_by_key(|(at, _)| *at);
-    found.into_iter().map(|(_, text)| text).collect()
+    found.sort_by_key(|(at, _, _)| *at);
+    let mut out = Vec::new();
+    for (_, name, text) in found {
+        match name {
+            "li" => out.push(format!("- {text}")),
+            "h1" | "h2" => {
+                let rule = if name == "h1" { '=' } else { '-' };
+                let width = text.chars().count();
+                out.push(text);
+                out.push(rule.to_string().repeat(width));
+            }
+            _ => out.push(text),
+        }
+    }
+    out
 }
 
 /// The text of a fragment: tags removed, entities decoded, whitespace collapsed the way a screen collapses it.
@@ -653,6 +667,25 @@ mod tests {
         assert_eq!(lines[0], "Name         Mode");
         assert_eq!(lines[1], "hosts        -a----");
         assert_eq!(lines[2], "lmhosts.sam  -a----");
+    }
+
+    #[test]
+    fn a_document_reads_the_way_a_terminal_draws_it() {
+        // Bullets for list items and a rule under a heading, which is how every text renderer marks one.
+        let html = "<h1>Notes</h1><p>Two things.</p><ul><li>one</li><li>two</li></ul><h2>More</h2>";
+        let lines = lines_from_html(html);
+        assert_eq!(
+            lines,
+            vec![
+                "Notes",
+                "=====",
+                "Two things.",
+                "- one",
+                "- two",
+                "More",
+                "----"
+            ]
+        );
     }
 
     #[test]
