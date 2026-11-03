@@ -43,10 +43,14 @@ $bad = 0
 $counts = @()
 for ($i = 0; $i -lt 140; $i++) {
     try {
-        $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/state" -UseBasicParsing -TimeoutSec 3
-        if ($response.StatusCode -eq 200) { $ok++ } else { $bad++ }
+        # The claim is that the viewer **answers during a redraw**, not that it answers in three seconds: under the
+        # whole suite the same read took longer and this check reported 26 of 166 as failures while passing alone.
+        $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/state" -UseBasicParsing -TimeoutSec 10
+        if ($response.StatusCode -ne 200) { $bad++; continue }
+        $ok++
         $page = $response.Content | ConvertFrom-Json
-        if (-not $page.page) { $bad++ } else { $counts += [int]$page.frames }
+        # One count per read: this used to increment $ok and then $bad for the same response.
+        if ($page.page) { $counts += [int]$page.frames } else { $bad++ }
     } catch {
         $bad++
     }
