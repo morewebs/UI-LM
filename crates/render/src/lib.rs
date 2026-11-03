@@ -412,6 +412,154 @@ fn escape(text: &str) -> String {
     out
 }
 
+/// Read a terminal screen back out of an HTML document.
+///
+/// This is the other half of the loop the project exists for: a page becomes a GUI, and a GUI becomes a page again. It grew
+/// up inside `check-html-to-tui` as a regex over `<div class="line">`, which only understands markup this project wrote.
+///
+/// It now also reads markup it did not write. A `<table>` whose cells carry no `class` becomes aligned columns, which is
+/// what a terminal would have drawn; anything else becomes one line per block element, with tags removed and entities
+/// decoded.
+pub fn lines_from_html(html: &str) -> Vec<String> {
+    let ours = crate::lines_of_lines(html);
+    if !ours.is_empty() {
+        return ours;
+    }
+    let table = crate::lines_of_table(html);
+    if !table.is_empty() {
+        return table;
+    }
+    crate::lines_of_blocks(html)
+}
+
+/// The `<div class="line">` rows this project's renderer writes, in order, with their tags removed.
+fn lines_of_lines(html: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut rest = html;
+    while let Some(start) = rest.find("<div class=\"line") {
+        let after = &rest[start..];
+        let Some(open_end) = after.find('>') else {
+            break;
+        };
+        let body = &after[open_end + 1..];
+        let Some(close) = body.find("</div>") else {
+            break;
+        };
+        out.push(text_of(&body[..close]).trim_end().to_owned());
+        rest = &body[close + 6..];
+    }
+    out
+}
+
+/// Rows of a `<table>`, with the cells padded to the widest in each column - what a terminal can draw.
+fn lines_of_table(html: &str) -> Vec<String> {
+    let mut rows: Vec<Vec<String>> = Vec::new();
+    let mut rest = html;
+    while let Some(start) = rest.find("<tr") {
+        let after = &rest[start..];
+        let Some(open_end) = after.find('>') else {
+            break;
+        };
+        let body = &after[open_end + 1..];
+        let Some(close) = body.find("</tr>") else {
+            break;
+        };
+        let row_html = &body[..close];
+        let mut cells = Vec::new();
+        let mut cell_rest = row_html;
+        while let Some(cell_start) = cell_rest.find("<td").or_else(|| cell_rest.find("<th")) {
+            let cell_after = &cell_rest[cell_start..];
+            let Some(cell_open_end) = cell_after.find('>') else {
+                break;
+            };
+            let cell_body = &cell_after[cell_open_end + 1..];
+            let cell_close = cell_body.find("</td>").or_else(|| cell_body.find("</th>"));
+            let Some(cell_close) = cell_close else { break };
+            cells.push(text_of(&cell_body[..cell_close]).trim().to_owned());
+            cell_rest = &cell_body[cell_close + 5..];
+        }
+        if !cells.is_empty() {
+            rows.push(cells);
+        }
+        rest = &body[close + 5..];
+    }
+    if rows.is_empty() {
+        return Vec::new();
+    }
+    let columns = rows.iter().map(Vec::len).max().unwrap_or(0);
+    let mut widths = vec![0usize; columns];
+    for row in &rows {
+        for (index, cell) in row.iter().enumerate() {
+            widths[index] = widths[index].max(cell.chars().count());
+        }
+    }
+    rows.iter()
+        .map(|row| {
+            let mut line = String::new();
+            for (index, width) in widths.iter().enumerate() {
+                let cell = row.get(index).map(String::as_str).unwrap_or("");
+                if index + 1 == columns {
+                    line.push_str(cell);
+                } else {
+                    line.push_str(&format!("{cell:<width$}  ", width = width));
+                }
+            }
+            line.trim_end().to_owned()
+        })
+        .collect()
+}
+
+/// One line per block element, which is the least a reader can honestly do with markup it does not recognise.
+///
+/// It closes on the **element it opened** - `</p>`, `</li>` - rather than on the first `</` it meets, which is how
+/// `First <b>point</b>.` came out as `First point` with its full stop cut off (round 61).
+fn lines_of_blocks(html: &str) -> Vec<String> {
+    let tags = ["h1", "h2", "h3", "li", "p", "pre", "div"];
+    let mut found: Vec<(usize, String)> = Vec::new();
+    for name in tags {
+        let open = format!("<{name}");
+        let close = format!("</{name}");
+        let mut from = 0;
+        while let Some(offset) = html[from..].find(&open) {
+            let start = from + offset;
+            let Some(open_end) = html[start..].find('>').map(|at| start + at) else {
+                break;
+            };
+            let Some(close_at) = html[open_end..].find(&close).map(|at| open_end + at) else {
+                break;
+            };
+            let text = text_of(&html[open_end + 1..close_at]).trim().to_owned();
+            if !text.is_empty() {
+                found.push((start, text));
+            }
+            from = close_at + close.len();
+        }
+    }
+    found.sort_by_key(|(at, _)| *at);
+    found.into_iter().map(|(_, text)| text).collect()
+}
+
+/// The text of a fragment: tags removed, entities decoded, whitespace collapsed the way a screen collapses it.
+fn text_of(fragment: &str) -> String {
+    let mut out = String::new();
+    let mut inside_tag = false;
+    for c in fragment.chars() {
+        match c {
+            '<' => inside_tag = true,
+            '>' => inside_tag = false,
+            other if !inside_tag => out.push(other),
+            _ => {}
+        }
+    }
+    let decoded = out
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&amp;", "&");
+    decoded.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -466,6 +614,42 @@ mod tests {
         let second = html.find("second").unwrap();
         assert!(first < second, "pages must keep their order");
         assert_eq!(html.matches("class=\"page\"").count(), 2);
+    }
+
+    #[test]
+    fn a_table_written_by_another_tool_is_read_as_columns() {
+        // The GUI -> TUI direction on markup this project did not write: a plain table, no classes, no data attributes.
+        let html = "<html><body><table>\
+                    <tr><th>Name</th><th>Mode</th></tr>\
+                    <tr><td>hosts</td><td>-a----</td></tr>\
+                    <tr><td>lmhosts.sam</td><td>-a----</td></tr>\
+                    </table></body></html>";
+        let lines = lines_from_html(html);
+        assert_eq!(lines.len(), 3, "{lines:?}");
+        assert_eq!(lines[0], "Name         Mode");
+        assert_eq!(lines[1], "hosts        -a----");
+        assert_eq!(lines[2], "lmhosts.sam  -a----");
+    }
+
+    #[test]
+    fn a_paragraph_document_becomes_one_line_per_block() {
+        let html = "<h1>Report</h1><p>First <b>point</b>.</p><p>Second &amp; last.</p>";
+        let lines = lines_from_html(html);
+        assert!(lines.contains(&"Report".to_owned()), "{lines:?}");
+        assert!(lines.contains(&"First point.".to_owned()), "{lines:?}");
+        assert!(lines.contains(&"Second & last.".to_owned()), "{lines:?}");
+    }
+
+    #[test]
+    fn this_project_s_own_markup_is_read_before_anything_else() {
+        let page = page_of(&["│ Resume Session   Ctrl+R │"]);
+        let html = render_page(&page, "t");
+        let lines = lines_from_html(&html);
+        assert!(!lines.is_empty());
+        assert!(
+            lines.iter().any(|line| line.contains("Resume Session")),
+            "{lines:?}"
+        );
     }
 
     #[test]
