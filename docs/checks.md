@@ -7,6 +7,22 @@ A check that has never failed is a check of unknown strength. This is the ledger
 Nineteen scripts and four properties were each made to fail, and the output kept — five of them re-proven in the last week
 because their first proof had been remembered rather than recorded.
 
+## A number inside a check is a claim
+
+Two constants decided a check's verdict for two days and neither was written down as a claim: **three seconds** and **one
+count per read**. `check-race` reported `26 of 166 reads during a redraw failed` while passing on its own a minute later,
+because the machine was busy with the other checks and one response could be counted as both a success and a failure.
+
+What the ledger asks of an assertion, it now asks of the numbers inside one:
+
+- **a timeout is patience, not a claim.** The claim is that the viewer *answers during a redraw*; the wait was never part of
+  it. It is ten seconds wherever a check waits for the viewer under load.
+- **one observation, one count.** A read that answers without a page is a different event from a read that never answered,
+  and a check that adds both to the same counter cannot say which happened.
+
+Swept afterwards: the four checks that wait on the viewer use five seconds and none of them has ever failed under load;
+`check-race`, which waits inside a redraw, uses ten.
+
 | check | protects | how it was made to fail |
 |---|---|---|
 | `gate.ps1` | clippy, fmt, tests | an unformatted function in a shipped file printed "the gate is closed: 2 check(s) failed, nothing is committed" |
