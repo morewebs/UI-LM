@@ -29,8 +29,8 @@ stated here rather than in a footnote.
 
 | set | what it is | result |
 |---|---|---|
-| every recording here | **109 recordings, 1,637 frames** from **11 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
-| seven evaluation sets | Grok and non-Grok screens, 325 frames | 100% every set |
+| every recording here | **110 recordings, 1,639 frames** from **11 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
+| seven evaluation sets | Grok and non-Grok screens, 327 frames | 100% every set |
 | **a second agent CLI** | **21 recordings, 1111 frames, never trained on** | **100%, every component** |
 | fresh batches | recorded **after** training, 8 batches | 100% every batch, every kind it held |
 

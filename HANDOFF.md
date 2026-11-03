@@ -143,7 +143,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
 shape, and **v0.52.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
-The corpus is **109 recordings, 1637 frames** per path, recorded from **11 distinct commands** — derived from the
+The corpus is **110 recordings, 1637 frames** per path, recorded from **11 distinct commands** — derived from the
 `command` field of every recording, which is the only definition that admits checking. Among them: Grok (the training
 application), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and
 `man`, `less`, `df`, `vim`, `top`, `git`, `cmd` and PowerShell — programs that are not agents at all.

@@ -1899,9 +1899,18 @@ fn as_frame(lines: &[String]) -> Option<String> {
 fn as_meter(lines: &[String]) -> Option<MeterParts> {
     let line = lines.first()?;
     let words: Vec<&str> = line.split_whitespace().collect();
-    let slash = words.iter().position(|word| *word == "/")?;
-    let used = *words.get(slash.checked_sub(1)?)?;
-    let limit = *words.get(slash + 1)?;
+    // Two shapes, measured before the second was admitted: an application that draws a limit with spaces round the slash
+    // (`1 / 4 steps`), and one that draws it in parentheses (`Receiving objects: 100% (15006/15006)`). The corpus holds
+    // 8 lines of the second shape and 2,391 bare `N/M` that are almost all dates, so only the parenthesised form is
+    // admitted - it costs no calendar and buys every progress counter git draws (round 98).
+    let (used, limit) = match words.iter().position(|word| *word == "/") {
+        Some(slash) => (*words.get(slash.checked_sub(1)?)?, *words.get(slash + 1)?),
+        None => {
+            let inner = line.split('(').nth(1)?.split(')').next()?;
+            let (left, right) = inner.split_once('/')?;
+            (left.trim(), right.trim())
+        }
+    };
     let used_value = number(used)?;
     let limit_value = number(limit)?;
     let label = words
