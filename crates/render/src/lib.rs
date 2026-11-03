@@ -70,6 +70,14 @@ fn body_of(page: &Envelope, out: &mut String) {
         out.push_str("</div>");
     }
     out.push_str("</div>");
+    // A paned document also carries the **screen**: the rows a terminal draws, with the column boundary in them. The
+    // panes above give a GUI its two containers, and neither view can be derived from the other - a reader that sees only
+    // the containers puts the panes one after another instead of side by side (rounds 74-75).
+    out.push_str("<div class=\"screen\">");
+    for line in crate::terminal::render_terminal(page).lines() {
+        let _ = write!(out, "<div class=\"line\">{}</div>", escape(line));
+    }
+    out.push_str("</div>");
 }
 /// Renders one page into its own document.
 pub fn render_page(page: &Envelope, title: &str) -> String {
@@ -421,6 +429,15 @@ fn escape(text: &str) -> String {
 /// what a terminal would have drawn; anything else becomes one line per block element, with tags removed and entities
 /// decoded.
 pub fn lines_from_html(html: &str) -> Vec<String> {
+    // A paned document holds its panes **and** the screen they make; the screen is the one that has the column boundary
+    // in it, so it is what a reader wants (round 75).
+    let screen = match html.find("<div class=\"screen\">") {
+        Some(at) => crate::lines_of_lines(&html[at..]),
+        None => Vec::new(),
+    };
+    if !screen.is_empty() {
+        return screen;
+    }
     let ours = crate::lines_of_lines(html);
     if !ours.is_empty() {
         return ours;
