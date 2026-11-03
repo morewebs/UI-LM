@@ -41,7 +41,13 @@ try {
         $out = Join-Path $work (([guid]::NewGuid().ToString("N")) + ".html")
         & $capture render --session $session --all --out $out 2>&1 | Out-Null
         if (-not (Test-Path $out)) { $failures += ("the renderer wrote nothing for " + $probe.Session); continue }
-        $fromHtml = Get-LinesFromHtml (Get-Content -LiteralPath $out -Raw -Encoding UTF8)
+        # The reader the product ships, not a copy of it: `Get-LinesFromHtml` was this check's own regex and could
+    # agree with the renderer while `ui-lm-capture read` was broken (round 63).
+    $previousRead = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $readRaw = & $capture read --html $out 2>&1
+    $ErrorActionPreference = $previousRead
+    $fromHtml = @($readRaw | ForEach-Object { "$_" } | Where-Object { $_ -ne "" })
         $previous = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
         $raw = & $capture tui --session $session --seq $probe.Seq 2>&1
@@ -59,6 +65,30 @@ try {
         }
         if ($missing -gt 0) { $failures += ("{0} ({1}): {2} line(s) of the screen cannot be rebuilt from the document" -f $probe.Session, $probe.Why, $missing) }
     }
+
+# A document this project did not write, which is the handoff's "GUI that was not built here": a plain table with no
+# classes, whose columns must arrive padded exactly as a terminal would draw them (round 63).
+$foreignPath = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-foreign-" + [guid]::NewGuid().ToString("N") + ".html")
+Set-Content -LiteralPath $foreignPath -Encoding UTF8 -Value @"
+<table>
+<tr><th>Name</th><th>Mode</th></tr>
+<tr><td>hosts</td><td>-a----</td></tr>
+<tr><td>lmhosts.sam</td><td>-a----</td></tr>
+</table>
+"@
+$previousRead = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+$foreignLines = @(& $capture read --html $foreignPath 2>&1 | ForEach-Object { "$_" })
+$ErrorActionPreference = $previousRead
+Remove-Item -LiteralPath $foreignPath -Force -ErrorAction SilentlyContinue
+if ($foreignLines.Count -lt 3) {
+    $failures += "a table this project did not write came back with no rows"
+} elseif ($foreignLines[0].Trim() -ne "Name         Mode") {
+    $failures += ("a foreign table's columns did not line up: " + $foreignLines[0])
+} else {
+    Write-Host ("a foreign table reads back as {0} line(s): {1}" -f $foreignLines.Count, $foreignLines[1].Trim())
+}
+
 } finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }

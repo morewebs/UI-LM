@@ -537,7 +537,9 @@ fn lines_of_blocks(html: &str) -> Vec<String> {
             let Some(close_at) = html[open_end..].find(&close).map(|at| open_end + at) else {
                 break;
             };
-            let text = text_of(&html[open_end + 1..close_at]).trim().to_owned();
+            let text = text_of_collapsed(&html[open_end + 1..close_at])
+                .trim()
+                .to_owned();
             if !text.is_empty() {
                 found.push((start, text));
             }
@@ -550,6 +552,15 @@ fn lines_of_blocks(html: &str) -> Vec<String> {
 
 /// The text of a fragment: tags removed, entities decoded, whitespace collapsed the way a screen collapses it.
 fn text_of(fragment: &str) -> String {
+    decode(fragment, false)
+}
+
+/// Block text: whitespace collapsed, the way a browser renders a paragraph.
+fn text_of_collapsed(fragment: &str) -> String {
+    decode(fragment, true)
+}
+
+fn decode(fragment: &str, collapse: bool) -> String {
     let mut out = String::new();
     let mut inside_tag = false;
     for c in fragment.chars() {
@@ -566,7 +577,11 @@ fn text_of(fragment: &str) -> String {
         .replace("&quot;", "\"")
         .replace("&#39;", "'")
         .replace("&amp;", "&");
-    decoded.split_whitespace().collect::<Vec<_>>().join(" ")
+    if collapse {
+        decoded.split_whitespace().collect::<Vec<_>>().join(" ")
+    } else {
+        decoded
+    }
 }
 
 #[cfg(test)]
