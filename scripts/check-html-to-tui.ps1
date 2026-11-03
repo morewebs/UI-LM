@@ -90,6 +90,27 @@ if ($foreignLines.Count -lt 3) {
     $failures += ("a foreign table's columns did not line up: " + $foreignLines[0])
 } else {
     Write-Host ("a foreign table reads back as {0} line(s): {1}" -f $foreignLines.Count, $foreignLines[1].Trim())
+
+# Two more shapes a page from anywhere can have: a form, and a wrapper `<div>` that holds blocks. Both were found by
+# feeding the reader documents it had never seen, and both must keep working (rounds 68-80).
+$shapePath = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-shape-" + [guid]::NewGuid().ToString("N") + ".html")
+Set-Content -LiteralPath $shapePath -Encoding UTF8 -Value @"
+<body><div><h1>Sign up</h1><p>Fill this in.</p>
+<form><label>Name</label><input value="Jane"><button>Save</button></form></div></body>
+"@
+$previousRead = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+$shapeLines = @(& $capture read --html $shapePath 2>&1 | ForEach-Object { "$_" })
+$ErrorActionPreference = $previousRead
+Remove-Item -LiteralPath $shapePath -Force -ErrorAction SilentlyContinue
+$want = @("Sign up", "=======", "Fill this in.", "Name", "[ Jane ]", "[ Save ]")
+if ($shapeLines.Count -ne $want.Count) {
+    $failures += ("a document with a wrapper div read back as {0} line(s), not {1}: {2}" -f $shapeLines.Count, $want.Count, ($shapeLines -join " | "))
+} elseif (($shapeLines -join "`n") -ne ($want -join "`n")) {
+    $failures += ("a wrapper div or a form did not read as a screen: " + ($shapeLines -join " | "))
+} else {
+    Write-Host ("a wrapper div and a form read back as {0} line(s), in order" -f $shapeLines.Count)
+}
 }
 
 } finally {
