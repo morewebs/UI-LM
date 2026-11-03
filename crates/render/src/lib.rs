@@ -472,12 +472,7 @@ pub fn lines_from_html(html: &str) -> Vec<String> {
 fn lines_of_lines(html: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut rest = html;
-    // `class="line"` or `class="line row"` - never `class="lines"`, which is the container the rows sit in.
-    let mut found = rest
-        .find("<div class=\"line\"")
-        .map(|at| (at, 17))
-        .or_else(|| rest.find("<div class=\"line ").map(|at| (at, 17)));
-    while let Some(start) = found.map(|(at, _)| at) {
+    while let Some(start) = next_row(rest) {
         let after = &rest[start..];
         let Some(open_end) = after.find('>') else {
             break;
@@ -488,12 +483,24 @@ fn lines_of_lines(html: &str) -> Vec<String> {
         };
         out.push(text_of(&body[..close]).trim_end().to_owned());
         rest = &body[close + 6..];
-        found = rest
-            .find("<div class=\"line\"")
-            .map(|at| (at, 17))
-            .or_else(|| rest.find("<div class=\"line ").map(|at| (at, 17)));
     }
     out
+}
+
+/// The start of the next row in `html`: `class="line"` or `class="line row"` or `class="line meter-line"`, never
+/// `class="lines"`, which is the container the rows sit in.
+///
+/// It must be the **earliest** of the two spellings. Searching for one and falling back to the other only when the first is
+/// absent skipped every `class="line meter-line"` row that preceded a plain one: a page with four meters and four rows
+/// returned six lines for eight rows and repeated one of them (rounds 114-115).
+fn next_row(html: &str) -> Option<usize> {
+    match (
+        html.find("<div class=\"line\""),
+        html.find("<div class=\"line "),
+    ) {
+        (Some(plain), Some(spaced)) => Some(plain.min(spaced)),
+        (plain, spaced) => plain.or(spaced),
+    }
 }
 
 /// Rows of a `<table>`, with the cells padded to the widest in each column - what a terminal can draw.

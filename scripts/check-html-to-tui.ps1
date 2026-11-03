@@ -20,7 +20,8 @@ $probes = @(
     @{ Session = "cases\hard\pwsh-word-table";  Seq = 1; Why = "a table of words" },
     @{ Session = "eval\apps\git-help";          Seq = 0; Why = "a help listing" },
     @{ Session = "cases\hard\pane-with-tables";  Seq = 1; Why = "two panes side by side" },
-    @{ Session = "eval\apps\git-diff";         Seq = 0; Why = "a diff from git itself" }
+    @{ Session = "eval\apps\git-diff";         Seq = 0; Why = "a diff from git itself" },
+    @{ Session = "eval\apps\git-clone";        Seq = 1; Why = "a limit from git itself" }
 )
 
 function Get-LinesFromHtml {
