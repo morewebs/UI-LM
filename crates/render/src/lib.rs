@@ -429,7 +429,11 @@ pub fn lines_from_html(html: &str) -> Vec<String> {
     if !table.is_empty() {
         return table;
     }
-    crate::lines_of_blocks(html)
+    let blocks = crate::lines_of_blocks(html);
+    if !blocks.is_empty() {
+        return blocks;
+    }
+    crate::lines_of_forms(html)
 }
 
 /// The `<div class="line">` rows this project's renderer writes, in order, with their tags removed.
@@ -516,6 +520,69 @@ fn lines_of_table(html: &str) -> Vec<String> {
             line.trim_end().to_owned()
         })
         .collect()
+}
+
+/// A form: each control in the shape a terminal gives it - a label as itself, a field as a box, a button in brackets.
+///
+/// A `<form>` used to read as **nothing at all**, because the reader only knew elements that contain text and a field
+/// contains none (round 68).
+fn lines_of_forms(html: &str) -> Vec<String> {
+    let mut found: Vec<(usize, String)> = Vec::new();
+    let mut from = 0;
+    while let Some(offset) = html[from..].find('<') {
+        let start = from + offset;
+        let Some(open_end) = html[start..].find('>').map(|at| start + at) else {
+            break;
+        };
+        let tag = &html[start..open_end];
+        let lowered = tag.to_lowercase();
+        let line = if lowered.starts_with("<input") || lowered.starts_with("<textarea") {
+            let value = attribute(tag, "value").unwrap_or_default();
+            let placeholder = attribute(tag, "placeholder").unwrap_or_default();
+            let shown = if !value.is_empty() {
+                value
+            } else {
+                placeholder
+            };
+            Some(format!("[ {shown} ]"))
+        } else if lowered.starts_with("<button") {
+            let close = html[open_end..].find("</button").map(|at| open_end + at);
+            let text = close
+                .map(|at| text_of_collapsed(&html[open_end + 1..at]).trim().to_owned())
+                .unwrap_or_default();
+            Some(format!("[ {text} ]"))
+        } else if lowered.starts_with("<label") {
+            let close = html[open_end..].find("</label").map(|at| open_end + at);
+            close.map(|at| text_of_collapsed(&html[open_end + 1..at]).trim().to_owned())
+        } else {
+            None
+        };
+        if let Some(line) = line {
+            if !line.trim().is_empty() {
+                found.push((start, line));
+            }
+        }
+        from = open_end + 1;
+    }
+    found.sort_by_key(|(at, _)| *at);
+    found.into_iter().map(|(_, line)| line).collect()
+}
+
+/// The value of an attribute in a tag, without its quotes.
+fn attribute(tag: &str, name: &str) -> Option<String> {
+    let at = tag.to_lowercase().find(&format!("{name}="))?;
+    let rest = &tag[at + name.len() + 1..];
+    let quote = rest.chars().next()?;
+    if quote != '"' && quote != '\'' {
+        return Some(
+            rest.split_whitespace()
+                .next()
+                .unwrap_or_default()
+                .to_owned(),
+        );
+    }
+    let end = rest[1..].find(quote)?;
+    Some(rest[1..1 + end].to_owned())
 }
 
 /// One line per block element - and the shapes a terminal gives them: a bullet for a list item, and a heading underlined
@@ -667,6 +734,15 @@ mod tests {
         assert_eq!(lines[0], "Name         Mode");
         assert_eq!(lines[1], "hosts        -a----");
         assert_eq!(lines[2], "lmhosts.sam  -a----");
+    }
+
+    #[test]
+    fn a_form_reads_as_a_form() {
+        // A `<form>` used to read as nothing: only elements that contain text were known, and a field contains none.
+        let html = "<form><label>Name</label><input type=\"text\" value=\"Jane\">\
+                    <label>Age</label><input type=\"number\"><button>Save</button></form>";
+        let lines = lines_from_html(html);
+        assert_eq!(lines, vec!["Name", "[ Jane ]", "Age", "[  ]", "[ Save ]"]);
     }
 
     #[test]
