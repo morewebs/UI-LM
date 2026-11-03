@@ -429,6 +429,12 @@ pub fn lines_from_html(html: &str) -> Vec<String> {
     if !table.is_empty() {
         return table;
     }
+    // One pass first: it sees prose, lists, headings and a form together, in the order the page draws them. The two older
+    // readers stay as a fallback until the merged one has run on every document in the corpus (round 71).
+    let flow = crate::lines_of_flow(html);
+    if !flow.is_empty() {
+        return flow;
+    }
     let blocks = crate::lines_of_blocks(html);
     if !blocks.is_empty() {
         return blocks;
@@ -665,6 +671,87 @@ fn decode(fragment: &str, collapse: bool) -> String {
     }
 }
 
+/// Every element of a document in **one** pass, in the order it appears, each in the shape a terminal gives it.
+///
+/// This exists because the two readers it replaces - blocks, then forms - had a fallback between them, so a page holding
+/// prose **and** a form lost the form: the second reader only ran when the first produced nothing (rounds 69-71).
+fn lines_of_flow(html: &str) -> Vec<String> {
+    let mut found: Vec<(usize, &'static str, String)> = Vec::new();
+    for name in ["h1", "h2", "h3", "li", "p", "pre", "div", "label"] {
+        let open = format!("<{name}");
+        let close = format!("</{name}");
+        let mut from = 0;
+        while let Some(offset) = html[from..].find(&open) {
+            let start = from + offset;
+            let Some(open_end) = html[start..].find('>').map(|at| start + at) else {
+                break;
+            };
+            let Some(close_at) = html[open_end..].find(&close).map(|at| open_end + at) else {
+                break;
+            };
+            let text = text_of_collapsed(&html[open_end + 1..close_at])
+                .trim()
+                .to_owned();
+            if !text.is_empty() {
+                let kind: &'static str = match name {
+                    "li" => "li",
+                    "h1" => "h1",
+                    "h2" => "h2",
+                    _ => "p",
+                };
+                found.push((start, kind, text));
+            }
+            from = close_at + close.len();
+        }
+    }
+    // A field and a button hold no text, so they are found by their own scan and merged by position.
+    let mut at = 0;
+    while let Some(offset) = html[at..].find('<') {
+        let start = at + offset;
+        let Some(open_end) = html[start..].find('>').map(|x| start + x) else {
+            break;
+        };
+        let tag = &html[start..open_end];
+        let lowered = tag.to_lowercase();
+        if lowered.starts_with("<input") || lowered.starts_with("<textarea") {
+            let value = attribute(tag, "value").unwrap_or_default();
+            let placeholder = attribute(tag, "placeholder").unwrap_or_default();
+            let shown = if !value.is_empty() {
+                value
+            } else {
+                placeholder
+            };
+            found.push((start, "field", format!("[ {shown} ]")));
+        } else if lowered.starts_with("<button") {
+            let text = html[open_end..]
+                .find("</button")
+                .map(|x| {
+                    text_of_collapsed(&html[open_end + 1..open_end + x])
+                        .trim()
+                        .to_owned()
+                })
+                .unwrap_or_default();
+            found.push((start, "button", format!("[ {text} ]")));
+        }
+        at = open_end + 1;
+    }
+    found.sort_by_key(|(at, _, _)| *at);
+    let mut out = Vec::new();
+    for (_, kind, text) in found {
+        match kind {
+            "li" => out.push(format!("- {text}")),
+            "h1" | "h2" => {
+                let rule = if kind == "h1" { '=' } else { '-' };
+                let width = text.chars().count();
+                out.push(text);
+                out.push(rule.to_string().repeat(width));
+            }
+            _ => out.push(text),
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -734,6 +821,26 @@ mod tests {
         assert_eq!(lines[0], "Name         Mode");
         assert_eq!(lines[1], "hosts        -a----");
         assert_eq!(lines[2], "lmhosts.sam  -a----");
+    }
+
+    #[test]
+    fn one_pass_keeps_prose_and_a_form_in_order() {
+        let html = "<h1>Sign up</h1><p>Fill this in.</p><form><label>Name</label>\
+                    <input value=\"Jane\"><button>Save</button></form><p>Thanks.</p>";
+        let lines = lines_of_flow(html);
+        assert_eq!(
+            lines,
+            vec![
+                "Sign up",
+                "=======",
+                "Fill this in.",
+                "Name",
+                "[ Jane ]",
+                "[ Save ]",
+                "Thanks."
+            ],
+            "{lines:?}"
+        );
     }
 
     #[test]
