@@ -97,6 +97,22 @@ foreach ($line in $screenLines) {
         if ($visible -notmatch [regex]::Escape($word)) { $absent += $word }
     }
 }
+# The product claims a document can be read back as a screen, and the viewer's page is a document. Nothing asked the viewer
+# for that: the comparison below is by **words**, and words reach a document however it is drawn (rounds 106-107).
+$livePath = Join-Path $work "live-page.html"
+Set-Content -LiteralPath $livePath -Value $frozenFirst -Encoding UTF8
+$liveRead = @(& $capture read --html $livePath 2>&1 | ForEach-Object { "$_" } | Where-Object { $_ -ne "" })
+$liveMissing = @($screenLines | Where-Object { $liveRead -notcontains $_.TrimEnd() })
+if ($screenLines.Count -eq 0) {
+    # nothing to compare; the guard below says so
+} elseif ($liveRead.Count -eq 0) {
+    $failures += "the served page holds no screen a reader can find"
+} elseif ($liveMissing.Count -gt 0) {
+    $failures += ("the served page cannot be read back as the screen: {0} line(s) missing, such as {1}" -f $liveMissing.Count, $liveMissing[0])
+} else {
+    Write-Host ("the served page reads back as the screen: {0} line(s)" -f $liveRead.Count)
+}
+
 if ($screenLines.Count -eq 0) {
     $failures += "the recording held no screen to compare the document against"
 } elseif ($checked -lt 5) {
