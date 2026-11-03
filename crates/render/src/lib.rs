@@ -858,6 +858,15 @@ fn normalize_inline(inner: &str) -> String {
                 out.push_str(&alt);
             }
         }
+        // A tag between two runs of text is a gap: `<span>Key</span><span>Value</span>` is two cells, and reading it
+        // as `KeyValue` was the framework page's first defect (round 92).
+        let next_char = rest_after(tail, end);
+        if !lowered.starts_with("<br")
+            && !out.ends_with(' ')
+            && next_char.is_some_and(|c| !matches!(c, '.' | ',' | ';' | ':' | '!' | '?' | ')'))
+        {
+            out.push(' ');
+        }
         rest = &tail[end + 1..];
     }
     out.push_str(rest);
@@ -888,6 +897,11 @@ fn close_of(html: &str, open_end: usize, name: &str) -> Option<usize> {
         }
     }
     None
+}
+
+/// The character that follows a tag which ends at `end` inside `tail`.
+fn rest_after(tail: &str, end: usize) -> Option<char> {
+    tail[end + 1..].chars().next()
 }
 
 #[cfg(test)]
