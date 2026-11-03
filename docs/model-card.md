@@ -12,6 +12,8 @@ ADR 0008). That is the split the project runs on: what a thing *is*, is learned;
 |---|---|
 | weights | `models/page.json`, 19 x 5 matrix and 5 biases, SHA-256 begins `433465EADD618E45` |
 | features | 19, read off the screen itself: tool glyphs, meter ratios, indentation, box characters, elapsed-time phrases, diff markers, and so on |
+| generalisation | **110 recordings, every one at 100%** - including five made after training: a `git clone`, a
+scripted progress loop, a table of words, a split screen and a diff |
 | parameters | 100 |
 | inference | Rust, `crates/model`, no runtime dependencies |
 | training code | `scripts/train_model.py`, `python3 scripts/train_model.py` |
