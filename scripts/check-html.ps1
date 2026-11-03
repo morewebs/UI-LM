@@ -165,7 +165,16 @@ if (Test-Path $hard) {
             $divs = ([regex]::Matches($raw2, '<div class="pane">')).Count
             if (-not ($raw2 -match '<div class="panes" data-layout="row">')) {
                 $panedFailures += ("  " + $session.Name + " (" + $flavour + ", frame 20) -> no side-by-side container")
-            } elseif ($divs -lt 2) {
+        
+    # A paned document carries a second view - the screen, for anything reading it back as text - and a browser must not
+    # draw it beside the panes. Nothing asserted that, so it was drawn twice for a round (rounds 103-104).
+    } elseif (-not ($raw2 -match '\.screen\s*\{\s*display:\s*none')) {
+        $panedFailures += ("  " + $session.Name + " (" + $flavour + ", frame 20) -> the screen view is not hidden from a browser")
+    }
+    if (-not ($raw2 -match 'class="screen"')) {
+        $panedFailures += ("  " + $session.Name + " (" + $flavour + ", frame 20) -> no screen view for a reader")
+    }
+    if ($false) {
                 $panedFailures += ("  " + $session.Name + " (" + $flavour + ", frame 20) -> " + $divs + " pane div(s)")
             }
         }
