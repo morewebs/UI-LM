@@ -698,7 +698,8 @@ fn lines_of_flow(html: &str) -> Vec<String> {
         "h1", "h2", "h3", "li", "p", "pre", "div", "label", "dt", "dd", "summary",
     ] {
         let open = format!("<{name}");
-        let close = format!("</{name}");
+        let close = format!("</{name}>");
+        let _unused_close = &close;
         let mut from = 0;
         while let Some(offset) = html[from..].find(&open) {
             let start = from + offset;
@@ -732,7 +733,8 @@ fn lines_of_flow(html: &str) -> Vec<String> {
                 .iter()
                 .any(|tag| inner.contains(tag))
             {
-                from = close_at + close.len();
+                // Step past the open tag, not the close: everything inside still gets its own line.
+                from = open_end + 1;
                 continue;
             }
             // A list inside a list is its own items: taking the outer item's text up to the inner list keeps `one` and
@@ -781,7 +783,8 @@ fn lines_of_flow(html: &str) -> Vec<String> {
                     }
                 }
             }
-            from = close_at + close.len();
+            // Past the open tag, so a list inside a list is visited as well (round 89).
+            from = open_end + 1;
         }
     }
     // A field and a button hold no text, so they are found by their own scan and merged by position.
@@ -956,6 +959,14 @@ mod tests {
         assert_eq!(lines[0], "Name         Mode");
         assert_eq!(lines[1], "hosts        -a----");
         assert_eq!(lines[2], "lmhosts.sam  -a----");
+    }
+
+    #[test]
+    fn a_list_inside_a_list_keeps_both_items() {
+        // The scan used to step past the outer item's close, so the inner item was never visited: `one.a` was first glued
+        // to `one`, then dropped (rounds 88-89).
+        let html = "<ul><li>one<ul><li>one.a</li></ul></li><li>two</li></ul>";
+        assert_eq!(lines_from_html(html), vec!["- one", "- one.a", "- two"]);
     }
 
     #[test]
