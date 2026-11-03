@@ -700,6 +700,16 @@ fn lines_of_flow(html: &str) -> Vec<String> {
         let mut from = 0;
         while let Some(offset) = html[from..].find(&open) {
             let start = from + offset;
+            // The tag name must end here: `<p` is a prefix of `<pre`, so a scan for one matched both and every code block
+            // was emitted twice - once as a paragraph and once as itself (round 85).
+            let after_name = html[start + 1 + name.len()..].chars().next();
+            if !matches!(
+                after_name,
+                Some('>') | Some(' ') | Some('\t') | Some('\n') | Some('\r')
+            ) {
+                from = start + 1;
+                continue;
+            }
             let Some(open_end) = html[start..].find('>').map(|at| start + at) else {
                 break;
             };
@@ -728,7 +738,19 @@ fn lines_of_flow(html: &str) -> Vec<String> {
                     "h2" => "h2",
                     _ => "p",
                 };
-                found.push((start, kind, text));
+                if name == "pre" {
+                    // A code block is lines, not a paragraph: its breaks and its indentation are the content. The
+                    // paragraph branch owns every other element, and the tag boundary above keeps `<p` from matching
+                    // `<pre`, so this subtree is emitted exactly once (round 85).
+                    for line in inner.lines() {
+                        let line = line.trim_end();
+                        if !line.is_empty() {
+                            found.push((start, "code", line.to_owned()));
+                        }
+                    }
+                } else {
+                    found.push((start, kind, text));
+                }
             }
             from = close_at + close.len();
         }
@@ -850,6 +872,24 @@ mod tests {
         assert_eq!(lines[0], "Name         Mode");
         assert_eq!(lines[1], "hosts        -a----");
         assert_eq!(lines[2], "lmhosts.sam  -a----");
+    }
+
+    #[test]
+    fn a_code_block_keeps_its_lines_and_appears_once() {
+        // `<p` is a prefix of `<pre`, so the paragraph scan matched every code block and emitted it twice - once glued
+        // and once as itself (rounds 83-85).
+        let html = "<div><h2>Example</h2><pre>def f():\n    return 1\nprint(f())</pre></div>";
+        let lines = lines_from_html(html);
+        assert_eq!(
+            lines,
+            vec![
+                "Example",
+                "-------",
+                "def f():",
+                "    return 1",
+                "print(f())"
+            ]
+        );
     }
 
     #[test]
