@@ -140,7 +140,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
 ## Where it stands now
 
 **27 checks, about 22 minutes, every axis green**, **17 hard cases** at 100% on score, round trip and
-shape, and **v0.50.0** verified by download and by asking the binary what it was built from (`version` prints the
+shape, and **v0.51.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
 The corpus is **108 recordings, 1632 frames** per path, recorded from **11 distinct commands** — derived from the
