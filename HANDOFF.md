@@ -143,7 +143,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
 shape, and **v0.52.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
-The corpus is **108 recordings, 1632 frames** per path, recorded from **11 distinct commands** — derived from the
+The corpus is **109 recordings, 1637 frames** per path, recorded from **11 distinct commands** — derived from the
 `command` field of every recording, which is the only definition that admits checking. Among them: Grok (the training
 application), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and
 `man`, `less`, `df`, `vim`, `top`, `git`, `cmd` and PowerShell — programs that are not agents at all.
@@ -176,9 +176,11 @@ refused was refused by counting something.
    What it cannot see is a page whose content arrives **without any of those shapes**: a document built entirely from
    `<div class="row">` and CSS, which is what most modern sites are. The question is not whether the reader can be taught
    every framework - it cannot - but what it should say when it recognises nothing, which today is one line per block.
-2. **A second producer for `Meter`.** Every meter in the corpus comes from an agent printing `N/M hours remaining`; a drawn
-   progress bar is deliberately not one. A second application drawing a live limit with a spaced slash would let the kind
-   be asked twice.
+2. **`Meter` has two producers, and one of them was written for the purpose.** The corpus now holds
+   `eval/tui/scripted-progress` - a PowerShell loop printing `Task 1 of 4 - 1 / 4 steps used` - and the reader calls it a
+   `Meter` ten times over five frames. What is still missing is a **third-party** application that draws one, because a
+   script written here is evidence about the reader and not about the world. **Next step:** a real program that shows a
+   live limit - an installer, a package manager, a build tool - recorded while it runs.
 
 ## Three open threads, each with its next step
 
