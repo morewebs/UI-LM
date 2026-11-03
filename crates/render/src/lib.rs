@@ -118,6 +118,9 @@ section.page > header {{ color: #6f6f76; font-size: 11px; letter-spacing: .08em;
         .property {{ display: flex; gap: 8px; align-items: baseline; margin: 4px 0; }}
         .property .name {{ color: #8ab4f8; }}
         .property .value {{ color: #d6d6d7; }}
+        /* A paned document carries the screen as well as the panes: the screen is what `read` turns back into a terminal,
+           and a browser has the panes. It had no styles, so the live view drew both - the split screen twice (round 103). */
+        .screen {{ display: none; }}
 .tool .counts {{ color: #6f6f76; }}
 .thought {{ color: #8f8f98; font-style: italic; margin: 4px 0; }}
 .meter {{ display: flex; align-items: center; gap: 10px; margin: 6px 0; }}
