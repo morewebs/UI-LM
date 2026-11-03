@@ -694,7 +694,9 @@ fn decode(fragment: &str, collapse: bool) -> String {
 /// prose **and** a form lost the form: the second reader only ran when the first produced nothing (rounds 69-71).
 fn lines_of_flow(html: &str) -> Vec<String> {
     let mut found: Vec<(usize, &'static str, String)> = Vec::new();
-    for name in ["h1", "h2", "h3", "li", "p", "pre", "div", "label"] {
+    for name in [
+        "h1", "h2", "h3", "li", "p", "pre", "div", "label", "dt", "dd",
+    ] {
         let open = format!("<{name}");
         let close = format!("</{name}");
         let mut from = 0;
@@ -736,6 +738,8 @@ fn lines_of_flow(html: &str) -> Vec<String> {
                     "li" => "li",
                     "h1" => "h1",
                     "h2" => "h2",
+                    "dt" => "dt",
+                    "dd" => "dd",
                     _ => "p",
                 };
                 if name == "pre" {
@@ -791,6 +795,8 @@ fn lines_of_flow(html: &str) -> Vec<String> {
     for (_, kind, text) in found {
         match kind {
             "li" => out.push(format!("- {text}")),
+            // A definition list is a term and its meaning, and a terminal indents the meaning under the term.
+            "dd" => out.push(format!("    {text}")),
             "h1" | "h2" => {
                 let rule = if kind == "h1" { '=' } else { '-' };
                 let width = text.chars().count();
@@ -872,6 +878,13 @@ mod tests {
         assert_eq!(lines[0], "Name         Mode");
         assert_eq!(lines[1], "hosts        -a----");
         assert_eq!(lines[2], "lmhosts.sam  -a----");
+    }
+
+    #[test]
+    fn a_definition_list_indents_its_meanings() {
+        // A `<dl>` came back as nothing at all: neither `dt` nor `dd` was in the scan list (round 86).
+        let html = "<dl><dt>Term</dt><dd>Its definition.</dd></dl>";
+        assert_eq!(lines_from_html(html), vec!["Term", "    Its definition."]);
     }
 
     #[test]
