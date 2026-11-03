@@ -16,7 +16,9 @@ if (-not (Test-Path $capture)) { Write-Host "no capture binary, so nothing was m
 $probes = @(
     @{ Session = "eval\structured\diff-f1"; Seq = 0; Why = "a diff page" },
     @{ Session = "eval\apps\pwsh-table";    Seq = 1; Why = "a table page" },
-    @{ Session = "cases\hard\whiptail-dialog";   Seq = 0; Why = "a floating window" }
+    @{ Session = "cases\hard\whiptail-dialog";   Seq = 0; Why = "a floating window" },
+    @{ Session = "cases\hard\pwsh-word-table";  Seq = 1; Why = "a table of words" },
+    @{ Session = "eval\apps\git-help";          Seq = 0; Why = "a help listing" }
 )
 
 function Get-LinesFromHtml {
