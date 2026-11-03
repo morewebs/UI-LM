@@ -172,10 +172,10 @@ refused was refused by counting something.
 
 ### The two things worth doing next
 
-1. **A GUI that was not built here.** The loop now runs terminal -> page -> GUI -> keystroke -> terminal, and GUI -> TUI is
-   checked for five of six kinds. What has never been tried is taking an **HTML page this project did not produce** and
-   reading a terminal screen back out of it: the renderer is one direction, and the parser in `check-html-to-tui` is the
-   other half of a round trip rather than a reader of foreign markup.
+1. **A page that is not text.** The reader now turns a document from anywhere into a screen, and nine shapes are checked.
+   What it cannot see is a page whose content arrives **without any of those shapes**: a document built entirely from
+   `<div class="row">` and CSS, which is what most modern sites are. The question is not whether the reader can be taught
+   every framework - it cannot - but what it should say when it recognises nothing, which today is one line per block.
 2. **A second producer for `Meter`.** Every meter in the corpus comes from an agent printing `N/M hours remaining`; a drawn
    progress bar is deliberately not one. A second application drawing a live limit with a spaced slash would let the kind
    be asked twice.
@@ -194,9 +194,10 @@ refused was refused by counting something.
    document. v0.45.0 cut each cell at the end of the dashes (`hosts` stored as `host`); the cell now runs to the next
    column, which is what the values rule already did. **Next step:** a word table the application does not underline,
    which neither signal can see, and which the corpus does not hold.
-3. **`Meter` has one producer.** Grok and Freebuff both draw `N/M hours remaining`; a five-minute agent session drew no
-   meter at all, so the question of a *changing* limit has no material anywhere. **Next step:** second producer is an
-   application that draws a live limit with a spaced slash — no obvious candidate on this machine.
+3. **The reader's silence.** Nine document shapes are checked and all nine read back; what is unmeasured is
+   what the reader does with a page built from `div` and CSS, where it recognises no shape at all. **Next
+   step:** a fixture of a real framework-rendered page, and a decision about whether one line per block is
+   an honest answer or a silent failure.
 
 **None of the three is a defect in the code that ships.** They are the frontiers: what the reader has not been shown,
 what the catalogue has refused, and what the vocabulary cannot yet be asked twice.
