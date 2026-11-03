@@ -160,6 +160,12 @@ A renderer that cannot use the columns can always draw `lines`: a table never lo
 The drawn strings are kept verbatim beside the computed `fraction`, so a renderer that
 wants a bar and a reader that wants the number need not parse the screen.
 
+**Two shapes count as a limit, and both were measured.** A fraction drawn with spaces round the slash
+(`1 / 4 steps used`) and one drawn in parentheses (`Receiving objects: 100% (15006/15006)`). A bare `N/M`, does
+**not**: the corpus holds 2,391 of those and nearly all are dates - `10/17/2026  07:18 PM`. The kind has two
+producers in the corpus, an agent's own quota line and `git clone --progress`.
+
+
 ### `Diff` — an edit to a file
 
 ```json

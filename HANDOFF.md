@@ -176,11 +176,10 @@ refused was refused by counting something.
    What it cannot see is a page whose content arrives **without any of those shapes**: a document built entirely from
    `<div class="row">` and CSS, which is what most modern sites are. The question is not whether the reader can be taught
    every framework - it cannot - but what it should say when it recognises nothing, which today is one line per block.
-2. **`Meter` has two producers, and one of them was written for the purpose.** The corpus now holds
-   `eval/tui/scripted-progress` - a PowerShell loop printing `Task 1 of 4 - 1 / 4 steps used` - and the reader calls it a
-   `Meter` ten times over five frames. What is still missing is a **third-party** application that draws one, because a
-   script written here is evidence about the reader and not about the world. **Next step:** a real program that shows a
-   live limit - an installer, a package manager, a build tool - recorded while it runs.
+2. **`Meter` has two producers, one of them third-party.** An agent's quota line and `git clone --progress` -
+   `Receiving objects: 100% (15006/15006)` - both read as the kind, and the rule now admits a parenthesised fraction
+   because 8 corpus lines carry that shape against 2,391 bare slashes that are nearly all dates. **Next step:** the same
+   question for `Diff`'s one producer, and for `Frame`, which the corpus holds three of.
 
 ## Three open threads, each with its next step
 
