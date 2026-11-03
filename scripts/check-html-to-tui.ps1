@@ -121,7 +121,10 @@ $contractShapes = @(
     @{ What = "a form";       Html = '<form><label>L</label><input value="V"><button>B</button></form>';     Want = @("L", "[ V ]", "[ B ]") },
     @{ What = "an image";     Html = '<p>see <img alt="pic"> here</p>';                                     Want = @("see pic here") },
     @{ What = "a break";      Html = "<p>a<br>b</p>";                                                       Want = @("a", "b") },
-    @{ What = "a summary";    Html = "<details><summary>S</summary><p>H.</p></details>";                    Want = @("S", "H.") }
+    @{ What = "a summary";    Html = "<details><summary>S</summary><p>H.</p></details>";                    Want = @("S", "H.") },
+    # A page built from `div` and CSS: two spans that a stylesheet puts side by side read as two cells, one space apart,
+    # because the reader cannot recover a column width from a class name (round 92).
+    @{ What = "two CSS cells"; Html = '<div class="row"><span class="k">Key</span><span class="v">Value</span></div>'; Want = @("Key Value") }
 )
 foreach ($shape in $contractShapes) {
     $one = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-shape-" + [guid]::NewGuid().ToString("N") + ".html")
