@@ -258,6 +258,31 @@ checked-in fixture, in CI:
 3. **Reproducibility** — two captures of the same deterministic scenario score 100%
    structure and 100% text against each other (`ui-lm-capture compare`).
 
+## A page may arrive from anywhere
+
+The loop runs both ways, and the second direction does not require this project to have written the document. A terminal
+program draws a screen, the screen becomes a page, and the page becomes a document; **the same reading works on a document
+someone else wrote**, because the shapes are the same ones:
+
+| the document holds | the screen it describes |
+|---|---|
+| `<table>` with `<tr>`/`<td>` | columns, padded to the widest cell |
+| `<pre>` | its lines, with their indentation |
+| `<h1>`, `<h2>`, `<h3>` | the heading, ruled with `=` or `-` |
+| `<li>`, nested or not | a bullet per item |
+| `<dl><dt>`/`<dd>` | a term, and its meaning indented under it |
+| `<form>` with `<label>`, `<input>`, `<button>` | a label, a box, and a control in brackets |
+| `<img alt="...">` | the alt text |
+| `<br>` | a line break |
+| `<details><summary>` | the summary, and what it hides |
+
+`ui-lm-capture read --html <FILE>` is that reader, and it is the one `check-html-to-tui` holds the renderer to - a copy of a
+reader can agree with the renderer while the product is broken, which is exactly what happened for two rounds.
+
+**Anything not in that list is still read**: text is taken with its tags removed and its entities decoded, one line per
+block element. A shape missing from the list is a shape that reads as prose, not a shape that disappears - with one
+exception worth naming: an attribute is not text, so only `alt` and `value` are consulted.
+
 ## What a runtime must draw
 
 A page is a description, and a runtime turns it into a GUI. The minimum a runtime owes each part of the page:
