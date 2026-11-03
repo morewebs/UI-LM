@@ -706,9 +706,21 @@ fn lines_of_flow(html: &str) -> Vec<String> {
             let Some(close_at) = html[open_end..].find(&close).map(|at| open_end + at) else {
                 break;
             };
-            let text = text_of_collapsed(&html[open_end + 1..close_at])
-                .trim()
-                .to_owned();
+            let inner = &html[open_end + 1..close_at];
+            // A `<div>` that wraps other blocks is a container, not a line. Read as one it glues the whole page into a
+            // single row, and every element inside is then emitted again - which is what `example.com` did to the reader
+            // the first time it met a real page (round 79).
+            if name == "div"
+                && [
+                    "<h1", "<h2", "<h3", "<p", "<li", "<div", "<table", "<form", "<ul",
+                ]
+                .iter()
+                .any(|tag| inner.contains(tag))
+            {
+                from = close_at + close.len();
+                continue;
+            }
+            let text = text_of_collapsed(inner).trim().to_owned();
             if !text.is_empty() {
                 let kind: &'static str = match name {
                     "li" => "li",
@@ -838,6 +850,22 @@ mod tests {
         assert_eq!(lines[0], "Name         Mode");
         assert_eq!(lines[1], "hosts        -a----");
         assert_eq!(lines[2], "lmhosts.sam  -a----");
+    }
+
+    #[test]
+    fn a_wrapper_div_is_not_a_line() {
+        // `example.com` reduced to its shell: the div holds blocks, so it is a container. Read as a block it glued the
+        // page into one row and repeated every element inside (round 79).
+        let html = "<body><div><h1>Example Domain</h1><p>This domain is for use.</p></div></body>";
+        let lines = lines_from_html(html);
+        assert_eq!(
+            lines,
+            vec![
+                "Example Domain",
+                "==============",
+                "This domain is for use."
+            ]
+        );
     }
 
     #[test]
