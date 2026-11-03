@@ -732,7 +732,8 @@ fn lines_of_flow(html: &str) -> Vec<String> {
                 from = close_at + close.len();
                 continue;
             }
-            let text = text_of_collapsed(inner).trim().to_owned();
+            let prepared = normalize_inline(inner);
+            let text = text_of_collapsed(&prepared).trim().to_owned();
             if !text.is_empty() {
                 let kind: &'static str = match name {
                     "li" => "li",
@@ -753,7 +754,17 @@ fn lines_of_flow(html: &str) -> Vec<String> {
                         }
                     }
                 } else {
-                    found.push((start, kind, text));
+                    if name != "pre" && prepared.contains('\n') {
+                        // A break inside a paragraph is a line on the screen.
+                        for piece in prepared.split('\n') {
+                            let piece = text_of_collapsed(piece).trim().to_owned();
+                            if !piece.is_empty() {
+                                found.push((start, kind, piece));
+                            }
+                        }
+                    } else {
+                        found.push((start, kind, text));
+                    }
                 }
             }
             from = close_at + close.len();
@@ -806,6 +817,33 @@ fn lines_of_flow(html: &str) -> Vec<String> {
             _ => out.push(text),
         }
     }
+    out
+}
+
+/// Prepare the inside of an element before its text is taken: a `<br>` is a line break, and an image speaks through its
+/// `alt` text. Both were dropped - `first<br>second` read as `firstsecond`, and a diagram read as nothing (round 87).
+fn normalize_inline(inner: &str) -> String {
+    let mut out = String::new();
+    let mut rest = inner;
+    while let Some(at) = rest.find('<') {
+        out.push_str(&rest[..at]);
+        let tail = &rest[at..];
+        let Some(end) = tail.find('>') else {
+            out.push_str(tail);
+            return out;
+        };
+        let tag = &tail[..=end];
+        let lowered = tag.to_lowercase();
+        if lowered.starts_with("<br") {
+            out.push('\n');
+        } else if lowered.starts_with("<img") {
+            if let Some(alt) = attribute(tag, "alt") {
+                out.push_str(&alt);
+            }
+        }
+        rest = &tail[end + 1..];
+    }
+    out.push_str(rest);
     out
 }
 
