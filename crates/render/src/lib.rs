@@ -127,6 +127,7 @@ section.page > header {{ color: #6f6f76; font-size: 11px; letter-spacing: .08em;
 .meter .track {{ flex: 1; height: 6px; background: #232329; border-radius: 3px;
         overflow: hidden; }}
 .meter .fill {{ height: 100%; background: #4f9d69; }}
+        .meter-line {{ display: none; }}
 .diff .add {{ color: #7cc48a; }}
 .diff .remove {{ color: #d87373; }}
 .diff .context {{ color: #9a9aa2; }}
@@ -306,6 +307,7 @@ fn render_component(out: &mut String, component: &Component) {
             limit,
             fraction,
             label,
+            text,
             ..
         } => {
             let share = fraction.unwrap_or(0.0).clamp(0.0, 1.0) * 100.0;
@@ -318,6 +320,10 @@ fn render_component(out: &mut String, component: &Component) {
                 escape(limit),
                 escape(label.as_deref().unwrap_or_default())
             );
+            // The terminal draws a meter as a bar **carrying its text**, and a document that held only the bar lost the
+            // numbers on the way back: four lines of a git clone could not be rebuilt (rounds 111-112). The drawn string is
+            // a line here, hidden from a browser the same way a paned document's screen is.
+            let _ = writeln!(out, "<div class=\"line meter-line\">{}</div>", escape(text));
         }
         Body::Diff { lines, .. } => {
             out.push_str("<div class=\"block diff\">\n");
