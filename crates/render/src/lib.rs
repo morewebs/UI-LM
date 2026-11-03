@@ -695,7 +695,7 @@ fn decode(fragment: &str, collapse: bool) -> String {
 fn lines_of_flow(html: &str) -> Vec<String> {
     let mut found: Vec<(usize, &'static str, String)> = Vec::new();
     for name in [
-        "h1", "h2", "h3", "li", "p", "pre", "div", "label", "dt", "dd",
+        "h1", "h2", "h3", "li", "p", "pre", "div", "label", "dt", "dd", "summary",
     ] {
         let open = format!("<{name}");
         let close = format!("</{name}");
@@ -715,8 +715,11 @@ fn lines_of_flow(html: &str) -> Vec<String> {
             let Some(open_end) = html[start..].find('>').map(|at| start + at) else {
                 break;
             };
-            let Some(close_at) = html[open_end..].find(&close).map(|at| open_end + at) else {
-                break;
+            // The close must belong to **this** element: a list inside a list has a `</li>` that is not the outer
+            // one's, and closing there glued `one` and `one.a` into `- oneone.a` (round 88).
+            let close_at = match close_of(html, open_end, name) {
+                Some(at) => at,
+                None => break,
             };
             let inner = &html[open_end + 1..close_at];
             // A `<div>` that wraps other blocks is a container, not a line. Read as one it glues the whole page into a
@@ -732,7 +735,18 @@ fn lines_of_flow(html: &str) -> Vec<String> {
                 from = close_at + close.len();
                 continue;
             }
-            let prepared = normalize_inline(inner);
+            // A list inside a list is its own items: taking the outer item's text up to the inner list keeps `one` and
+            // `one.a` apart instead of gluing them into `oneone.a` (round 88).
+            let own = if name == "li" {
+                let cut = inner
+                    .find("<ul")
+                    .or_else(|| inner.find("<ol"))
+                    .unwrap_or(inner.len());
+                &inner[..cut]
+            } else {
+                inner
+            };
+            let prepared = normalize_inline(own);
             let text = text_of_collapsed(&prepared).trim().to_owned();
             if !text.is_empty() {
                 let kind: &'static str = match name {
@@ -845,6 +859,32 @@ fn normalize_inline(inner: &str) -> String {
     }
     out.push_str(rest);
     out
+}
+
+/// The index of the `</name>` that closes the element opened at `open_end`, counting nested opens of the same name.
+fn close_of(html: &str, open_end: usize, name: &str) -> Option<usize> {
+    let open = format!("<{name}");
+    let close = format!("</{name}");
+    let mut depth = 1usize;
+    let mut at = open_end;
+    while at < html.len() {
+        let next_open = html[at..].find(&open).map(|x| at + x);
+        let next_close = html[at..].find(&close).map(|x| at + x);
+        let (Some(open_at), Some(close_at)) = (next_open, next_close) else {
+            return next_close;
+        };
+        if open_at < close_at {
+            depth += 1;
+            at = open_at + open.len();
+        } else {
+            depth -= 1;
+            if depth == 0 {
+                return Some(close_at);
+            }
+            at = close_at + close.len();
+        }
+    }
+    None
 }
 
 #[cfg(test)]
