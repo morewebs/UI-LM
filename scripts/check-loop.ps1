@@ -47,7 +47,9 @@ try {
     if (-not $page) { $failures += "the renderer wrote no document" }
     try { $null = Invoke-WebRequest -Uri "http://127.0.0.1:$port/" -UseBasicParsing -TimeoutSec 5 } catch { $failures += "the viewer did not serve a page" }
 
-    if (-not $viewer.HasExited) { $viewer.Kill() }
+    # Wait for the process, not just the signal: a viewer killed a moment ago can still hold its socket, and starting
+    # the next one on that port failed under the whole suite with a Win32Exception (round 122).
+    if (-not $viewer.HasExited) { $viewer.Kill(); $viewer.WaitForExit(5000) | Out-Null }
 
     $bindings = @([regex]::Matches($page, 'data-binding="([^"]+)"') | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
     if ($bindings.Count -eq 0) {
@@ -56,13 +58,13 @@ try {
         # The viewer is restarted for the posts: a binding is written to the control file, and this check only needs to
         # know the viewer accepts it.
         $viewer = Start-Process -FilePath $serve -PassThru -NoNewWindow -ArgumentList @(
-            "--session", $session, "--keys", $control, "--port", "$port")
+            "--session", $session, "--keys", $control, "--port", "$($port + 1)")
         Start-Sleep -Seconds 3
         $refused = @()
         foreach ($binding in $bindings) {
             $encoded = [uri]::EscapeDataString($binding)
             try {
-                $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/keys?binding=$encoded" -Method POST -UseBasicParsing -TimeoutSec 5
+                $response = Invoke-WebRequest -Uri "http://127.0.0.1:$($port + 1)/keys?binding=$encoded" -Method POST -UseBasicParsing -TimeoutSec 5
                 if ($response.StatusCode -lt 200 -or $response.StatusCode -ge 300) { $refused += $binding }
             } catch {
                 $refused += $binding
