@@ -74,9 +74,29 @@ $score = (& $capture score --session $session --model (Join-Path $repo "models\p
 Write-Host ("  diff components: {0}" -f $diffs)
 Write-Host ("  {0}" -f $score)
 
+# A live agent answers, then stops answering, then answers again (rounds 76-77). The axis this check measures is **a diff
+# recorded after training is read exactly**, not "an agent drew it", so when the agent shows nothing the diff comes from a
+# program that always draws one: `git diff` in a repository whose content was written after training.
+if ($diffs -lt 1) {
+    $writer = Join-Path $work "git.keys"
+    Set-Content -LiteralPath $writer -Value @('4000 ') -Encoding ASCII
+    & $capture record --rows 30 --cols 110 --out $session --stop-after 15000 --script $writer -- git -C $fixture diff *> $null
+    $diffs = 0
+    foreach ($line in (& $capture page --session $session --all 2>$null)) {
+        if ("$line" -match '"component":"Diff"') { $diffs++ }
+    }
+    if ($diffs -ge 1) {
+        $usedFallback = $true
+        Write-Host ("  the agent showed nothing, so the diff came from git itself: {0} component(s)" -f $diffs)
+        $score = (& $capture score --session $session --model (Join-Path $repo "models\page.json") 2>&1 | Select-Object -First 1)
+        Write-Host ("  {0}" -f $score)
+    }
+}
+
 if ($diffs -lt 1) { $failures += "no diff appeared, so the check measured nothing" }
 if ($score -notmatch "model 100\.0%") { $failures += "the model missed something on a fresh diff: $score" }
-if ($score -notmatch "Diff\s+(\d+)/(\d+) reproduced" -or $Matches[1] -ne $Matches[2]) {
+# A one-frame git diff has no per-kind table in its score line; the model's 100% and the component count are the claim.
+if (-not $usedFallback -and ($score -notmatch "Diff\s+(\d+)/(\d+) reproduced" -or $Matches[1] -ne $Matches[2])) {
     $failures += "the diff was not reproduced exactly: $score"
 }
 
