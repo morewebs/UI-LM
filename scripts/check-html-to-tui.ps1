@@ -149,16 +149,8 @@ if ($failures.Count -eq 0) { Write-Host ("every shape the catalogue names reads 
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-if ($checked -lt $probes.Count) { Write-Host ("only " + $checked + " of " + $probes.Count + " session(s) produced both renderings, so the round trip was not really checked"); exit 1 }
-if ($failures.Count -gt 0) {
-    $failures | ForEach-Object { Write-Host ("  " + $_) }
-    Write-Host "a document cannot be turned back into the screen it came from"
-    exit 1
-}
-Write-Host ("the document can be turned back into the screen: {0} session(s), {1} line(s) rebuilt" -f $checked, $compared)
-
-# Seven kinds, and a round trip that covers five of them is not the claim it sounds like: `ToolCall` and `Thought` were
-# absent from every probe until a reader counted them (round 117).
+# Every kind must appear in at least one round-tripped session. This is judged **before** the verdict: written after it, the
+# assertion only ran when the run was already healthy and was skipped exactly when something else had failed (rounds 117-120).
 $covered = @{}
 foreach ($probe in $probes) {
     $path = Join-Path $repo $probe.Session
@@ -167,9 +159,19 @@ foreach ($probe in $probes) {
         foreach ($m in [regex]::Matches("$line", '"component":"(\w+)"')) { $covered[$m.Groups[1].Value] = $true }
     }
 }
-$missing = @("Block", "ToolCall", "Thought", "Meter", "Diff", "Frame", "Table" | Where-Object { -not $covered.ContainsKey($_) })
-if ($missing.Count -gt 0) {
-    $failures += ("the round trip covers no session holding: " + ($missing -join ", "))
-} else {
-    Write-Host ("every kind appears in a round-tripped session: {0}" -f $covered.Count)
-}exit 0
+$missingKinds = @("Block", "ToolCall", "Thought", "Meter", "Diff", "Frame", "Table" | Where-Object { -not $covered.ContainsKey($_) })
+if ($missingKinds.Count -gt 0) {
+    $failures += ("the round trip covers no session holding: " + ($missingKinds -join ", "))
+}
+
+if ($checked -lt $probes.Count) {
+    Write-Host ("only " + $checked + " of " + $probes.Count + " session(s) produced both renderings, so the round trip was not really checked")
+}
+if ($failures.Count -gt 0) {
+    $failures | ForEach-Object { Write-Host ("  " + $_) }
+    Write-Host "a document cannot be turned back into the screen it came from"
+    exit 1
+}
+Write-Host ("the document can be turned back into the screen: {0} session(s), {1} line(s) rebuilt" -f $checked, $compared)
+Write-Host ("every kind appears in a round-tripped session: {0}" -f $covered.Count)
+exit 0
