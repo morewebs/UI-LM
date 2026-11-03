@@ -110,6 +110,32 @@ if ($shapeLines.Count -ne $want.Count) {
     $failures += ("a wrapper div or a form did not read as a screen: " + ($shapeLines -join " | "))
 } else {
     Write-Host ("a wrapper div and a form read back as {0} line(s), in order" -f $shapeLines.Count)
+
+# Every row of the catalogue's "A page may arrive from anywhere" table, read one document at a time (round 91).
+$contractShapes = @(
+    @{ What = "a table";      Html = "<table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table>"; Want = @("A  B", "1  2") },
+    @{ What = "a code block"; Html = "<pre>line one`n    line two</pre>";                                   Want = @("line one", "    line two") },
+    @{ What = "a heading";    Html = "<h3>Part</h3>";                                                       Want = @("Part") },
+    @{ What = "a list";       Html = "<ul><li>a</li></ul>";                                                 Want = @("- a") },
+    @{ What = "a definition"; Html = "<dl><dt>T</dt><dd>D.</dd></dl>";                                      Want = @("T", "    D.") },
+    @{ What = "a form";       Html = '<form><label>L</label><input value="V"><button>B</button></form>';     Want = @("L", "[ V ]", "[ B ]") },
+    @{ What = "an image";     Html = '<p>see <img alt="pic"> here</p>';                                     Want = @("see pic here") },
+    @{ What = "a break";      Html = "<p>a<br>b</p>";                                                       Want = @("a", "b") },
+    @{ What = "a summary";    Html = "<details><summary>S</summary><p>H.</p></details>";                    Want = @("S", "H.") }
+)
+foreach ($shape in $contractShapes) {
+    $one = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-shape-" + [guid]::NewGuid().ToString("N") + ".html")
+    Set-Content -LiteralPath $one -Value $shape.Html -Encoding UTF8
+    $previousRead = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $got = @(& $capture read --html $one 2>&1 | ForEach-Object { "$_" })
+    $ErrorActionPreference = $previousRead
+    Remove-Item -LiteralPath $one -Force -ErrorAction SilentlyContinue
+    if (($got -join "`n") -ne ($shape.Want -join "`n")) {
+        $failures += ("the catalogue promises {0} reads as a shape, and it reads as: {1}" -f $shape.What, ($got -join " | "))
+    }
+}
+if ($failures.Count -eq 0) { Write-Host ("every shape the catalogue names reads back: {0}" -f $contractShapes.Count) }
 }
 }
 
