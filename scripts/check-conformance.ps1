@@ -20,6 +20,11 @@ foreach ($case in $cases) {
     if ($LASTEXITCODE -ne 0) { $failures += ("{0}: the renderer refused the page: {1}" -f $case.Name, ($raw -join " ")); continue }
     $got = (@($raw) -join "`n")
     $expected = Get-Content -LiteralPath $want -Raw -Encoding UTF8
+    # An empty case passes against an empty rendering: a page that draws nothing would be written down as correct (round 163).
+    if ($expected.Trim().Length -eq 0) {
+        $failures += ("{0}: the case expects an empty screen, so it proves nothing" -f $case.Name)
+        continue
+    }
     if ($got.TrimEnd("`n") -ne $expected.TrimEnd("`n")) {
         $first = 0
         $a = $got -split "`n"; $b = $expected -split "`n"

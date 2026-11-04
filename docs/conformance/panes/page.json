@@ -1,0 +1,280 @@
+{
+  "version": "v0.9.1",
+  "createSurface": {
+    "surfaceId": "pane-with-tables",
+    "catalogId": "moreweb.terminal/v1",
+    "root": "root",
+    "components": [
+      {
+        "id": "root",
+        "component": "Column",
+        "source": "seen",
+        "children": [
+          "block-b23c80adb1fcc1bc",
+          "block-880f109f3799ac7b"
+        ]
+      },
+      {
+        "id": "block-b23c80adb1fcc1bc",
+        "component": "Table",
+        "source": "seen",
+        "rows": [
+          0,
+          26
+        ],
+        "columns": [
+          17,
+          29,
+          35
+        ],
+        "cells": [
+          [
+            "ize  Used Av",
+            "ail Us",
+            "e% Mounted on                 │"
+          ],
+          [
+            "16G     0",
+            "16G",
+            "0% /usr/lib/modules/6.18.54.1-│"
+          ],
+          [
+            "d-WSL2",
+            "",
+            "│"
+          ],
+          [
+            "97M   97M",
+            "0 10",
+            "0% /usr/lib/linux-tools/6.18.5│"
+          ],
+          [
+            "ndard-WSL2",
+            "",
+            "│"
+          ],
+          [
+            "16G  4.0K",
+            "16G",
+            "1% /mnt/wsl                   │"
+          ],
+          [
+            "77G  400G",
+            "78G  8",
+            "4% /usr/lib/wsl/drivers       │"
+          ],
+          [
+            "07G   17G  9",
+            "39G",
+            "2% /                          │"
+          ],
+          [
+            "16G   32K",
+            "16G",
+            "1% /mnt/wslg                  │"
+          ],
+          [
+            "16G     0",
+            "16G",
+            "0% /usr/lib/wsl/lib           │"
+          ],
+          [
+            "16G  3.4M",
+            "16G",
+            "1% /init                      │"
+          ],
+          [
+            "16G  572K",
+            "16G",
+            "1% /run                       │"
+          ],
+          [
+            "16G     0",
+            "16G",
+            "0% /run/lock                  │"
+          ],
+          [
+            "16G     0",
+            "16G",
+            "0% /run/shm                   │"
+          ],
+          [
+            "16G   68K",
+            "16G",
+            "1% /mnt/wslg/versions.txt     │"
+          ],
+          [
+            "16G   68K",
+            "16G",
+            "1% /mnt/wslg/doc              │"
+          ],
+          [
+            "77G  400G",
+            "78G  8",
+            "4% /mnt/c                     │"
+          ],
+          [
+            "32G  575G  3",
+            "58G  6",
+            "2% /mnt/d                     │"
+          ],
+          [
+            ".2G   20K  3",
+            ".2G",
+            "1% /run/user/1001             │"
+          ],
+          [
+            "",
+            "",
+            "│"
+          ],
+          [
+            "",
+            "",
+            "│"
+          ],
+          [
+            "",
+            "",
+            "│"
+          ],
+          [
+            "",
+            "",
+            "│"
+          ],
+          [
+            "",
+            "",
+            "│"
+          ],
+          [
+            "",
+            "",
+            "│"
+          ],
+          [
+            "",
+            "",
+            ""
+          ]
+        ],
+        "lines": [
+          "Filesystem      Size  Used Avail Use% Mounted on                 │",
+          "none             16G     0   16G   0% /usr/lib/modules/6.18.54.1-│",
+          "microsoft-standard-WSL2                                          │",
+          "/dev/sdb         97M   97M     0 100% /usr/lib/linux-tools/6.18.5│",
+          "4.1-microsoft-standard-WSL2                                      │",
+          "none             16G  4.0K   16G   1% /mnt/wsl                   │",
+          "drivers         477G  400G   78G  84% /usr/lib/wsl/drivers       │",
+          "/dev/sdd       1007G   17G  939G   2% /                          │",
+          "none             16G   32K   16G   1% /mnt/wslg                  │",
+          "none             16G     0   16G   0% /usr/lib/wsl/lib           │",
+          "rootfs           16G  3.4M   16G   1% /init                      │",
+          "none             16G  572K   16G   1% /run                       │",
+          "none             16G     0   16G   0% /run/lock                  │",
+          "none             16G     0   16G   0% /run/shm                   │",
+          "none             16G   68K   16G   1% /mnt/wslg/versions.txt     │",
+          "none             16G   68K   16G   1% /mnt/wslg/doc              │",
+          "C:\\             477G  400G   78G  84% /mnt/c                     │",
+          "D:\\             932G  575G  358G  62% /mnt/d                     │",
+          "tmpfs           3.2G   20K  3.2G   1% /run/user/1001             │",
+          "                                                                 │",
+          "                                                                 │",
+          "                                                                 │",
+          "                                                                 │",
+          "                                                                 │",
+          "                                                                 │",
+          "[tab] 0:sleep*                                                    "
+        ]
+      },
+      {
+        "id": "block-880f109f3799ac7b",
+        "component": "Block",
+        "source": "seen",
+        "role": "pane",
+        "rows": [
+          0,
+          26
+        ],
+        "lines": [
+          "lrwxrwxrwx 1 root root            4 Feb 10  2024 NF -> col1",
+          "lrwxrwxrwx 1 root root            1 Apr  8  2024 X11 -> .",
+          "-rwxr-xr-x 1 root root        55744 Aug 25 16:09 [",
+          "-rwxr-xr-x 1 root root        18744 Mar 31  2024 aa-enabled",
+          "-rwxr-xr-x 1 root root        18744 Mar 31  2024 aa-exec",
+          "-rwxr-xr-x 1 root root        18736 Mar 31  2024 aa-features-abi",
+          "-rwxr-xr-x 1 root root        16422 Apr 18  2024 add-apt-reposit",
+          "ory",
+          "-rwxr-xr-x 1 root root        14720 Aug 19 17:47 addpart",
+          "lrwxrwxrwx 1 root root           26 Dec  3  2025 addr2line -> x8",
+          "6_64-linux-gnu-addr2line",
+          "-rwxr-xr-x 1 root root         2322 Apr 18  2024 apport-bug",
+          "-rwxr-xr-x 1 root root        13625 Jul  8  2025 apport-cli",
+          "lrwxrwxrwx 1 root root           10 Jul  8  2025 apport-collect",
+          "-> apport-bug",
+          "-rwxr-xr-x 1 root root         3790 Jul  8  2025 apport-unpack",
+          "-rwxr-xr-x 1 root root       141544 Apr  8  2024 appstreamcli",
+          "lrwxrwxrwx 1 root root            6 Apr  8  2024 apropos -> what",
+          "is",
+          "-rwxr-xr-x 1 root root        18824 Mar 31  2024 apt",
+          "lrwxrwxrwx 1 root root           18 Apr 18  2024 apt-add-reposit",
+          "ory -> add-apt-repository",
+          "-rwxr-xr-x 1 root root        88544 Mar 31  2024 apt-cache",
+          "-rwxr-xr-x 1 root root        27104 Mar 31  2024 apt-cdrom",
+          "",
+          "                               \"DESKTOP-H6G9MSV\" 00:06 01-Nov-26"
+        ],
+        "spans": [
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [
+            {
+              "start": 0,
+              "end": 64,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "indexed:0",
+                "bg": "indexed:2"
+              }
+            }
+          ]
+        ]
+      }
+    ],
+    "panes": [
+      [
+        "block-b23c80adb1fcc1bc"
+      ],
+      [
+        "block-880f109f3799ac7b"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,677 @@
+{
+  "version": "v0.9.1",
+  "createSurface": {
+    "surfaceId": "second-agent-18",
+    "catalogId": "moreweb.terminal/v1",
+    "root": "root",
+    "components": [
+      {
+        "id": "root",
+        "component": "Column",
+        "source": "seen",
+        "children": [
+          "block-ba119d9238d8dfc1",
+          "block-adf58150683cf264",
+          "block-8ad72f9c4aae8e1f",
+          "block-86823dbce380eca4"
+        ]
+      },
+      {
+        "id": "block-ba119d9238d8dfc1",
+        "component": "Block",
+        "source": "seen",
+        "role": "text",
+        "rows": [
+          0,
+          5
+        ],
+        "lines": [
+          " ███▀▀▀▀▀▀▀▀                        ██                 ██    ██▀",
+          " ███ █████  ██████ ▄█████   ▄████▄  ██████▄  ██   ██ ████████████",
+          " ███ ███▀▀  ██▀   ███▄▄▄██ ██▄▄▄███ ██   ▀██ ██   ██   ██    ██",
+          " ███ ███    ███   ███▀▀▀▀▀ ██▀▀▀▀▀  ██▄  ▄██ ██▄  ██   ██    ██",
+          " ███ ██▀    ██▀    ▀█████   ▀████▀  ██████▀   ▀████▀   ██    ██"
+        ],
+        "spans": [
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 64,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 65,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 63,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 63,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 63,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "block-adf58150683cf264",
+        "component": "Block",
+        "source": "seen",
+        "role": "panel",
+        "rows": [
+          6,
+          10
+        ],
+        "lines": [
+          " ┌──────────────────────────────────────────────────────────────────┐",
+          " │ Your first message starts the session.                           │",
+          " │ Some models aren't available on this connection                  │",
+          " └──────────────────────────────────────────────────────────────────┘"
+        ],
+        "spans": [
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 69,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:83,97,117"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:83,97,117"
+              }
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 3,
+              "end": 41,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            },
+            {
+              "start": 41,
+              "end": 68,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 68,
+              "end": 69,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:83,97,117"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:83,97,117"
+              }
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 3,
+              "end": 50,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            },
+            {
+              "start": 50,
+              "end": 68,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 68,
+              "end": 69,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:83,97,117"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 69,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:83,97,117"
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "block-8ad72f9c4aae8e1f",
+        "component": "Block",
+        "source": "seen",
+        "role": "panel",
+        "rows": [
+          32,
+          37
+        ],
+        "lines": [
+          "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+          "│                                                                                                                      │",
+          "│  ▍Enter a coding task or / for commands                                                                              │",
+          "│                                                                                                                      │",
+          "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+        ],
+        "spans": [
+          [
+            {
+              "start": 0,
+              "end": 120,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            },
+            {
+              "start": 1,
+              "end": 119,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 119,
+              "end": 120,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            },
+            {
+              "start": 1,
+              "end": 3,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 3,
+              "end": 4,
+              "style": {
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:158,252,98"
+              }
+            },
+            {
+              "start": 4,
+              "end": 41,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            },
+            {
+              "start": 41,
+              "end": 119,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 119,
+              "end": 120,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            },
+            {
+              "start": 1,
+              "end": 119,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 119,
+              "end": 120,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 120,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "block-86823dbce380eca4",
+        "component": "Block",
+        "source": "seen",
+        "role": "text",
+        "rows": [
+          37,
+          40
+        ],
+        "lines": [
+          " MiMo v2.6 Flash Fast · ~\\AppData\\Local\\Temp\\ui-lm-fb-2097695368\\repo · /model to change · Chat: New chat",
+          " ← for history · ? for help",
+          "Gi=31337,s=1,v=1,a=q,t=d,f=24;AAAA"
+        ],
+        "spans": [
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 21,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:158,252,98"
+              }
+            },
+            {
+              "start": 21,
+              "end": 72,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            },
+            {
+              "start": 72,
+              "end": 78,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:158,252,98"
+              }
+            },
+            {
+              "start": 78,
+              "end": 105,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            },
+            {
+              "start": 2,
+              "end": 17,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            },
+            {
+              "start": 17,
+              "end": 18,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            },
+            {
+              "start": 18,
+              "end": 27,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            }
+          ],
+          []
+        ]
+      }
+    ]
+  }
+}
