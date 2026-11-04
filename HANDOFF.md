@@ -139,7 +139,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
   evidence, or not at all.
 ## Where it stands now
 
-**27 checks, about 22 minutes, every axis green**, **17 hard cases** at 100% on score, round trip and
+**28 checks, about 22 minutes, every axis green**, **17 hard cases** at 100% on score, round trip and
 shape, and **v0.62.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 

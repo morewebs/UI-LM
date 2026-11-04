@@ -47,6 +47,7 @@ $all = @(
     @{ name = "claims";      script = "check-claims.ps1"; slow = $false },
     @{ name = "enumerations"; script = "check-enumerations.ps1"; slow = $false },
     @{ name = "tables";      script = "check-tables.ps1"; slow = $false },
+    @{ name = "schema";      script = "check-schema.ps1"; slow = $true },
     @{ name = "race";        script = "check-race.ps1";  slow = $true },
     @{ name = "interaction"; script = "check-interaction.ps1"; slow = $true },
     @{ name = "live-page";   script = "check-live-page.ps1"; slow = $true },
