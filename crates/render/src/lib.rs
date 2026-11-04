@@ -985,7 +985,9 @@ fn own_text(inner: &str) -> String {
 /// The document without its `<script>` and `<style>` blocks, which are code and not content.
 fn strip_code(document: &str) -> String {
     let mut out = document.to_owned();
-    for tag in ["script", "style"] {
+    for tag in ["script", "style", "template", "noscript"] {
+        // Not rendered by a browser, so not part of any screen: a `<template>`'s contents appeared in the output
+        // although no person would ever see them (round 133).
         let open = format!("<{tag}");
         let close = format!("</{tag}");
         loop {
