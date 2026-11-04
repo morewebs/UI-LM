@@ -171,6 +171,9 @@ Against **105 recordings and 1,580 frames** from eleven distinct commands — tw
 
 The longer account — every attempt, every rejected hypothesis, every cost — is in
 [docs/reports/2026-10-28-model.md](docs/reports/2026-10-28-model.md).
+- **The shipped model cannot be re-derived.** Training is deterministic given its pairs - two runs on one pairs file gave
+  the same digest - but the pairs this model was built from were never kept, so the artefact can be replaced and not rebuilt.
+  Every retrain from now on keeps them beside it.
 
 ## Where things are
 
