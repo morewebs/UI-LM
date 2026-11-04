@@ -63,16 +63,33 @@ foreach ($check in $selected) {
     $watch = [System.Diagnostics.Stopwatch]::StartNew()
     $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script 2>&1
     $code = $LASTEXITCODE
+    $first = ($out | Where-Object { "$_".Trim() } | Select-Object -Last 1) -join ""
+    # Five checks have been red once and green the next time - race, loop, layout, validate, sizes - and every one of them
+    # starts a process, opens a port or reads a file another check just wrote (round 136). A single flake must not read as a
+    # regression, and a real failure must still read as red, so a failed check is run **once more** and both outcomes are
+    # reported. This is a retry that is written down and printed, not a quiet re-run.
+    $again = $false
+    if ($code -ne 0) {
+        $again = $true
+        Start-Sleep -Seconds 5
+        $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script 2>&1
+        $code = $LASTEXITCODE
+    }
     $watch.Stop()
-    $last = ($out | Where-Object { "$_".Trim() } | Select-Object -Last 1) -join ""
+    $last = (($out | Where-Object { "$_".Trim() } | Select-Object -Last 1) -join "")
+    if ($again) {
+        $verdict = if ($code -eq 0) { "flaked" } else { "FAILED" }
+        $last = ("{0} (first run: {1})" -f $last, $first)
+    } else {
+        $verdict = "ok"
+    }
     $results += [pscustomobject]@{
         check   = $check.name
         code    = $code
         seconds = [Math]::Round($watch.Elapsed.TotalSeconds, 1)
         line    = $last.Trim()
     }
-    Write-Host ("  {0,-14} {1,-6} {2,6}s  {3}" -f $check.name,
-        $(if ($code -eq 0) { "ok" } else { "FAILED" }), $results[-1].seconds, $results[-1].line)
+    Write-Host ("  {0,-14} {1,-6} {2,6}s  {3}" -f $check.name, $verdict, $results[-1].seconds, $results[-1].line)
 }
 
 if ($Tag -ne "") {
