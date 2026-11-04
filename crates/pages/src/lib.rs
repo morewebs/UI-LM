@@ -44,7 +44,7 @@
 
 use std::collections::HashSet;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 pub mod labeled;
 pub use labeled::page_from_labels;
@@ -602,7 +602,7 @@ pub fn component_text(body: &Body) -> Vec<String> {
 /// Only `Seen` is produced today. The other variants exist so that a slice which
 /// reconstructs or carries content has the word to say so, rather than quietly
 /// presenting a guess as an observation (D5, D15).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Provenance {
     /// Every character came from the recorded cells.
@@ -614,7 +614,7 @@ pub enum Provenance {
 }
 
 /// An A2UI message carrying one surface.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Envelope {
     /// The A2UI version this envelope is written to.
@@ -624,7 +624,7 @@ pub struct Envelope {
 }
 
 /// One surface: its root, its catalogue, and every component in it.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Surface {
     /// Identifies this surface within a conversation.
@@ -652,7 +652,7 @@ pub struct Surface {
 }
 
 /// One component in the `moreweb.terminal/v1` catalogue.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Component {
     /// Stable across scrolling: derived from the component's own content.
     pub id: String,
@@ -666,7 +666,7 @@ pub struct Component {
 }
 
 /// The parts of a component that vary by kind.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Body {
     /// A container: its children, by id.
@@ -807,7 +807,7 @@ pub enum Body {
 }
 
 /// One line of a diff.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DiffLine {
     /// `add`, `remove` or `context`.
     pub kind: String,
@@ -830,7 +830,7 @@ const TOOL_BULLET: char = '•';
 const TOOL_BULLET_TEXT: &str = "•";
 
 /// A run of tool lines inside a transcript block.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ToolCallLine {
     /// Lifecycle state. `done` for every line this slice can see, because the glyph
     /// marks a call the application has finished drawing.
@@ -851,7 +851,7 @@ pub struct ToolCallLine {
 }
 
 /// A run of cells inside one line that shares a non-default style.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InlineSpan {
     /// First column of the run, counting from the line's left edge.
     pub start: u16,
@@ -867,7 +867,7 @@ pub struct InlineSpan {
 /// renderers of several languages, and `indexed:4` / `rgb:12,34,56` needs no shared
 /// type to be read. It is omitted when the terminal's default was in force, which is
 /// the common case and the one worth keeping out of the file.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Emphasis {
     /// Bold or increased intensity.
     pub bold: bool,
@@ -2031,7 +2031,7 @@ fn thought_seconds(text: &str) -> Option<f64> {
 }
 
 /// One row of a shortcut list: what it does, and the key that does it.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Shortcut {
     /// The action, as drawn: `Resume session`.
     pub label: String,
@@ -2040,7 +2040,7 @@ pub struct Shortcut {
 }
 
 /// One named value: a property an information panel reports.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Property {
     /// The name, as drawn: `Model`.
     pub label: String,

@@ -204,7 +204,12 @@ struct ScoreArgs {
 struct TuiArgs {
     /// The session directory holding the frames.
     #[arg(long, value_name = "DIR")]
-    session: PathBuf,
+    session: Option<PathBuf>,
+
+    /// A page as JSON, instead of a recording: `tui --page page.json` draws any page this format describes,
+    /// including one another program wrote (round 156).
+    #[arg(long, value_name = "FILE")]
+    page: Option<PathBuf>,
 
     /// Which frame, by sequence number. Defaults to the session's last frame.
     #[arg(long)]
@@ -547,9 +552,21 @@ fn component_texts(page: &ui_lm_pages::Envelope) -> Vec<(String, String)> {
 /// Two numbers side by side, because one alone says nothing: a model is only worth having
 /// if it beats doing nothing, and the margin is the whole claim.
 fn tui(args: &TuiArgs) -> Result<ExitCode> {
-    let frames = match ui_lm_frames::read_frames(&args.session) {
+    if let Some(path) = &args.page {
+        let text = std::fs::read_to_string(path)
+            .with_context(|| format!("failed to read {}", path.display()))?;
+        let page: ui_lm_pages::Envelope = serde_json::from_str(&text)
+            .with_context(|| format!("{} is not a page", path.display()))?;
+        print!("{}", ui_lm_render::render_terminal(&page));
+        return Ok(ExitCode::SUCCESS);
+    }
+    let session = args
+        .session
+        .as_ref()
+        .context("tui needs either --session or --page")?;
+    let frames = match ui_lm_frames::read_frames(session) {
         Ok((_, frames)) => frames,
-        Err(_) => ui_lm_frames::read_orphaned_frames(&args.session)?,
+        Err(_) => ui_lm_frames::read_orphaned_frames(session)?,
     };
     let chosen: Vec<&ui_lm_frames::Frame> = if args.all {
         frames.iter().collect()
@@ -559,15 +576,11 @@ fn tui(args: &TuiArgs) -> Result<ExitCode> {
                 .iter()
                 .find(|frame| frame.seq == seq)
                 .with_context(|| {
-                    format!(
-                        "the session {} has no frame {}",
-                        args.session.display(),
-                        seq
-                    )
+                    format!("the session {} has no frame {}", session.display(), seq)
                 })?,
             None => frames
                 .last()
-                .with_context(|| format!("{} holds no frames", args.session.display()))?,
+                .with_context(|| format!("{} holds no frames", session.display()))?,
         }]
     };
     let mut same = 0usize;
