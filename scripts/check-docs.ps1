@@ -548,4 +548,22 @@ if (Test-Path $ledgerPath) {
     }
 }
 
+# The model card names the digest of the model it describes. Nothing compared it, so a rebuilt or replaced `page.json` would
+# leave every number in the documents pointing at an artefact that no longer exists (round 144).
+$cardPath = Join-Path $repo "docs\model-card.md"
+$weightsPath = Join-Path $repo "models\page.json"
+if ((Test-Path $cardPath) -and (Test-Path $weightsPath)) {
+    $card = Get-Content -LiteralPath $cardPath -Raw -Encoding UTF8
+    if ($card -match 'SHA-256 begins `([0-9A-Fa-f]+)`') {
+        $claimed = $Matches[1].ToUpper()
+        $actual = (Get-FileHash -LiteralPath $weightsPath -Algorithm SHA256).Hash.ToUpper()
+        if (-not $actual.StartsWith($claimed)) {
+            Write-Host ("  the card names {0}; the weights hash to {1}" -f $claimed, $actual.Substring(0, $claimed.Length))
+            Write-Host "the model card describes a model that is not here"
+            exit 1
+        }
+        Write-Host ("the model card names the weights it ships: {0}" -f $claimed)
+    }
+}
+
 Write-Host "every front page opens with a sentence"
