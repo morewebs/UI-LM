@@ -4,7 +4,7 @@ A check that has never failed is a check of unknown strength. This is the ledger
 `scripts/`, what it protects, and the failure that was produced to prove it can fail.
 
 **Every row quotes a message the check actually printed when it was broken on purpose.**
-Twenty-eight scripts were each made to fail, and the output kept — five of them re-proven in the last week
+28 scripts were each made to fail, and the output kept — five of them re-proven in the last week
 because their first proof had been remembered rather than recorded.
 
 ## A number inside a check is a claim

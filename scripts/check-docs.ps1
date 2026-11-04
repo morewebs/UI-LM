@@ -531,4 +531,21 @@ if (Test-Path $handoffPath) {
     }
 }
 
+# The ledger opens by saying how many scripts it is about. That sentence was nineteen while the folder held twenty-eight -
+# a document that counts things is a thing that must be counted (rounds 140-141).
+$ledgerPath = Join-Path $repo "docs\checks.md"
+if (Test-Path $ledgerPath) {
+    $ledger = Get-Content -LiteralPath $ledgerPath -Raw -Encoding UTF8
+    $rows = ([regex]::Matches($ledger, '(?m)^\| `')).Count
+    if ($ledger -match '(\d+) scripts were each made to fail') {
+        $claimed = [int]$Matches[1]
+        if ($claimed -ne $rows) {
+            Write-Host ("  the ledger says {0} scripts; {1} row(s) are in it" -f $claimed, $rows)
+            Write-Host "the ledger counts itself wrongly"
+            exit 1
+        }
+        Write-Host ("the ledger counts itself: {0} row(s), and it says so" -f $rows)
+    }
+}
+
 Write-Host "every front page opens with a sentence"
