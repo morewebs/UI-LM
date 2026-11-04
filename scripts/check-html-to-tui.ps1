@@ -128,6 +128,11 @@ $contractShapes = @(
     # A page built from `div` and CSS: two spans that a stylesheet puts side by side read as two cells, one space apart,
     # because the reader cannot recover a column width from a class name (round 92).
     @{ What = "two CSS cells"; Html = '<div class="row"><span class="k">Key</span><span class="v">Value</span></div>'; Want = @("Key Value") }
+    # A page built the way a framework builds one: landmarks wrapping content, text inside spans. Every piece of text must
+    # appear exactly once - the header's own beside its nav's (rounds 126-129).
+    @{ What = "a landmark page";
+       Html = "<header><span>Acme</span><nav><span>Docs</span></nav></header><main><h2>Ship</h2></main><footer><span>(c) 2026</span></footer>";
+       Want = @("Acme", "Docs", "Ship", "----", "(c) 2026") }
 )
 foreach ($shape in $contractShapes) {
     $one = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-shape-" + [guid]::NewGuid().ToString("N") + ".html")

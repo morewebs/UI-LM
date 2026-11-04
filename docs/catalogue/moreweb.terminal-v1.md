@@ -282,6 +282,8 @@ someone else wrote**, because the shapes are the same ones:
 | `<br>` | a line break |
 | `<details><summary>` | the summary, and what it hides |
 | two elements a stylesheet puts side by side | **one space between them** - a width cannot be recovered from a class name |
+| `header`, `nav`, `footer`, `section`, `article`, `aside`, `main` | the text each one **owns**, with its children's taken by the children - a logo beside a nav appears once |
+| `header`, `nav`, `footer`, `section`, `article`, `aside`, `main` | the text each one **owns**, with its children's taken by the children - a logo beside a nav appears once |
 
 `ui-lm-capture read --html <FILE>` is that reader, and it is the one `check-html-to-tui` holds the renderer to - a copy of a
 reader can agree with the renderer while the product is broken, which is exactly what happened for two rounds.
