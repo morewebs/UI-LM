@@ -180,6 +180,34 @@ if (Test-Path $hard) {
         }
     }
 }
+# The seven attributes a reader cannot infer anything without, each on a page that emits it (rounds 123-124). Matched as
+# `name="` and not as a bare name: the first version used a substring test, and a deliberately misspelt `data-rol` passed
+# because it sits inside `data-role`.
+$attributeProbes = @(
+    @{ Session = "eval\unseen\unseen-listing"; Attr = "data-binding" },
+    @{ Session = "eval\apps\pwsh-table";       Attr = "data-cells" },
+    @{ Session = "eval\apps\pwsh-table";       Attr = "data-columns" },
+    @{ Session = "cases\hard\whiptail-dialog"; Attr = "data-title" },
+    @{ Session = "cases\hard\whiptail-dialog"; Attr = "data-frame" },
+    @{ Session = "cases\hard\pane-with-tables"; Attr = "data-layout" },
+    @{ Session = "eval\apps\git-help";         Attr = "data-role" }
+)
+$missingAttrs = @()
+foreach ($probe in $attributeProbes) {
+    $path = Join-Path $repo $probe.Session
+    if (-not (Test-Path $path)) { continue }
+    $one = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-attr-" + [guid]::NewGuid().ToString("N") + ".html")
+    & $capture render --session $path --all --out $one 2>&1 | Out-Null
+    $body = if (Test-Path $one) { Get-Content -LiteralPath $one -Raw -Encoding UTF8 } else { "" }
+    Remove-Item -LiteralPath $one -Force -ErrorAction SilentlyContinue
+    if (-not ($body -match [regex]::Escape($probe.Attr + '="'))) { $missingAttrs += ($probe.Attr + " on " + $probe.Session) }
+}
+if ($missingAttrs.Count -gt 0) {
+    $panedFailures += ("a document that cannot be read back is missing: " + ($missingAttrs -join ", "))
+} else {
+    Write-Host ("every attribute a reader needs is in the document: {0}" -f $attributeProbes.Count)
+}
+
 Write-Host ("paned documents checked: {0}" -f $panedPages)
 if ($panedFailures.Count -gt 0) {
     $panedFailures | ForEach-Object { Write-Host $_ }
