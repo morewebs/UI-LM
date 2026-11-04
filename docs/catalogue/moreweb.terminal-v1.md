@@ -4,6 +4,11 @@ What this vocabulary contains today, what each part guarantees, and which parts 
 seen on a recorded screen. It is the reference for the runtime and for the next plan; where
 it and the code disagree, the code is right and this page is a bug.
 
+**The format has a machine-readable schema**: [`moreweb.terminal-v1.schema.json`](moreweb.terminal-v1.schema.json).
+Every key, type and optionality in it was derived from the corpus - 1,639 pages across 110 recordings - rather than from
+an example, and `scripts/check-schema.py` validates every page against it on every run. A runtime that implements this
+format can read a page only if that file accepts it.
+
 ## The envelope
 
 A page is one A2UI v0.9.1 message:
