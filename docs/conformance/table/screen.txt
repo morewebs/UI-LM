@@ -1,0 +1,18 @@
+Name                        Id         WS
+----                        --         --
+DeepSeek Harness          4232 1346121728
+Telegram                 12040 1295192064
+sherpa-onnx-ws-win32-x64 11888 1076109312
+MsMpEng                   4808  828801024
+DeepSeek Harness         12396  702533632
+ChatGPT                  31656  489578496
+msedge                   32376  399597568
+ChatGPT                  35096  363192320
+Name        Length
+----        ------
+hosts          900
+hosts.ics      444
+lmhosts.sam   3683
+networks       407
+protocol      1358
+services     17635

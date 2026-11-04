@@ -4,7 +4,7 @@ A check that has never failed is a check of unknown strength. This is the ledger
 `scripts/`, what it protects, and the failure that was produced to prove it can fail.
 
 **Every row quotes a message the check actually printed when it was broken on purpose.**
-29 scripts were each made to fail, and the output kept — five of them re-proven in the last week
+30 scripts were each made to fail, and the output kept — five of them re-proven in the last week
 because their first proof had been remembered rather than recorded.
 
 ## A number inside a check is a claim
@@ -37,6 +37,7 @@ Swept afterwards: the four checks that wait on the viewer use five seconds and n
 | `check-loop` | every binding a page offers is accepted by the viewer | making the viewer refuse `ctrl+*` printed "the page offers 3 binding(s) and the viewer refuses 3: ctrl+r, ctrl+w, ctrl+q" |
 | `check-tables` | the documented table rule and the shipped reader agree about every component | a predicate that promotes nothing printed "the rule and the reader disagree about a component" |
 | `check-schema` | every page the recorder produces satisfies the envelope's schema | replacing `oneOf` with `allOf` printed "every page satisfies the schema" but a schema that requires every kind at once; the real failure was found by validating: 47,141 pages did not satisfy the first, assumed schema |
+| `check-conformance` | four stored pages draw the screens they are defined by | changing one word of a case's expected screen printed "table: line 1 differs - the page draws 'Name                        Id         WS', the case expects 'Nom                        Id         WS'" |
 | `check-html-to-tui` | the rendered document can be turned back into the screen | a parser that dropped the text printed "eval\structured\diff-f1 (a diff page): 10 line(s) of the screen cannot be rebuilt from the document" ; now through the shipped `read` command, plus a table this project did not write, proven by collapsing the reader whitespace, which printed "2 line(s) of the screen cannot be rebuilt" ; and a wrapper `div` with a form inside it, proven by disabling the container rule, which printed "a document with a wrapper div read back as 7 line(s), not 6" ; and a diff printed by git itself, which takes the round trip to 7 session(s) and 112 line(s) |
 | `check-layout` | a paned page is drawn side by side, and a frame with no split carries no pane container | stacking the stylesheet with `display: block` printed "the pane container's stylesheet does not lay two tracks out in a row" ; and it now walks every recording that holds a split (15 of them), not one ; both builders and every paned recording (30 documents) |
 | `check-second-machine` | a screen recorded on this machine round trips exactly, and reads as the same shape on any machine | recording `cmd /c exit` printed "the screen holds no lines, so a perfect round trip would prove nothing"; applying its shape rule to `cases/hard/pane-conversation` printed "a plain directory listing was read as Meter, which no machine's listing is" ; and a whiptail dialog is a `Frame` on any machine, proven by expecting a `Diff`, which printed "a dialog box -> was read as Column=1, Frame=1, and this screen is a Diff" |

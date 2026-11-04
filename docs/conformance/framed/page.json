@@ -1,0 +1,40 @@
+{
+  "version": "v0.9.1",
+  "createSurface": {
+    "surfaceId": "whiptail-dialog",
+    "catalogId": "moreweb.terminal/v1",
+    "root": "root",
+    "components": [
+      {
+        "id": "root",
+        "component": "Column",
+        "source": "seen",
+        "children": [
+          "block-bd653bd850c813f8"
+        ]
+      },
+      {
+        "id": "block-bd653bd850c813f8",
+        "component": "Frame",
+        "source": "seen",
+        "title": "Confirm",
+        "rows": [
+          7,
+          17
+        ],
+        "lines": [
+          "               ┌──────────────────┤ Confirm ├───────────────────┐",
+          "               │                                                │",
+          "               │ Delete the build folder?                       │",
+          "               │                                                │",
+          "               │                                                │",
+          "               │                                                │",
+          "               │                                                │",
+          "               │                     <Ok>                       │",
+          "               │                                                │",
+          "               └────────────────────────────────────────────────┘"
+        ]
+      }
+    ]
+  }
+}

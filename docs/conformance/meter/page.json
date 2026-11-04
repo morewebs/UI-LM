@@ -1,0 +1,122 @@
+{
+  "version": "v0.9.1",
+  "createSurface": {
+    "surfaceId": "git-clone",
+    "catalogId": "moreweb.terminal/v1",
+    "root": "root",
+    "components": [
+      {
+        "id": "root",
+        "component": "Column",
+        "source": "seen",
+        "children": [
+          "block-4234bd666c658a2a",
+          "block-c744bfaf65fc9d36",
+          "block-f1d983d65b0bc4b3",
+          "block-5c38a96c3a16d59e",
+          "block-31310521c3f3f962",
+          "block-86045cc4c45ea3b3"
+        ]
+      },
+      {
+        "id": "block-4234bd666c658a2a",
+        "component": "Block",
+        "source": "seen",
+        "role": "text",
+        "rows": [
+          0,
+          2
+        ],
+        "lines": [
+          "Cloning into 'C:\\Users\\moreweb\\AppData\\Local\\Temp\\gc2-1397885426\\r'...",
+          "remote: Enumerating objects: 15006, done."
+        ],
+        "spans": [
+          [],
+          []
+        ],
+        "properties": [
+          {
+            "label": "remote",
+            "value": "Enumerating objects: 15006, done."
+          }
+        ]
+      },
+      {
+        "id": "block-c744bfaf65fc9d36",
+        "component": "Meter",
+        "source": "seen",
+        "rows": [
+          2,
+          3
+        ],
+        "used": "121",
+        "limit": "121",
+        "fraction": 1.0,
+        "text": "remote: Counting objects: 100% (121/121), done."
+      },
+      {
+        "id": "block-f1d983d65b0bc4b3",
+        "component": "Meter",
+        "source": "seen",
+        "rows": [
+          3,
+          4
+        ],
+        "used": "73",
+        "limit": "73",
+        "fraction": 1.0,
+        "text": "remote: Compressing objects: 100% (73/73), done."
+      },
+      {
+        "id": "block-5c38a96c3a16d59e",
+        "component": "Block",
+        "source": "seen",
+        "role": "text",
+        "rows": [
+          4,
+          5
+        ],
+        "lines": [
+          "remote: Total 15006 (delta 82), reused 48 (delta 48), pack-reused 14885 (from 2)"
+        ],
+        "spans": [
+          []
+        ],
+        "properties": [
+          {
+            "label": "remote",
+            "value": "Total 15006 (delta 82), reused 48 (delta 48), pack-reused 14885 (from 2)"
+          }
+        ]
+      },
+      {
+        "id": "block-31310521c3f3f962",
+        "component": "Meter",
+        "source": "seen",
+        "rows": [
+          5,
+          6
+        ],
+        "used": "15006",
+        "limit": "15006",
+        "fraction": 1.0,
+        "label": "4.71 MiB/s, done.",
+        "text": "Receiving objects: 100% (15006/15006), 4.38 MiB | 4.71 MiB/s, done."
+      },
+      {
+        "id": "block-86045cc4c45ea3b3",
+        "component": "Meter",
+        "source": "seen",
+        "rows": [
+          6,
+          7
+        ],
+        "used": "8619",
+        "limit": "8619",
+        "fraction": 1.0,
+        "text": "Resolving deltas: 100% (8619/8619), done."
+      }
+    ]
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "version": "v0.9.1",
+  "createSurface": {
+    "surfaceId": "pwsh-table",
+    "catalogId": "moreweb.terminal/v1",
+    "root": "root",
+    "components": [
+      {
+        "id": "root",
+        "component": "Column",
+        "source": "seen",
+        "children": [
+          "block-897bd60d6137d8b9",
+          "block-3baef6a049b42ab6"
+        ]
+      },
+      {
+        "id": "block-897bd60d6137d8b9",
+        "component": "Table",
+        "source": "seen",
+        "rows": [
+          1,
+          11
+        ],
+        "columns": [
+          0,
+          28,
+          39
+        ],
+        "cells": [
+          [
+            "Name",
+            "Id",
+            "WS"
+          ],
+          [
+            "----",
+            "--",
+            "--"
+          ],
+          [
+            "DeepSeek Harness          42",
+            "32 13461217",
+            "28"
+          ],
+          [
+            "Telegram                 120",
+            "40 12951920",
+            "64"
+          ],
+          [
+            "sherpa-onnx-ws-win32-x64 118",
+            "88 10761093",
+            "12"
+          ],
+          [
+            "MsMpEng                   48",
+            "08  8288010",
+            "24"
+          ],
+          [
+            "DeepSeek Harness         123",
+            "96  7025336",
+            "32"
+          ],
+          [
+            "ChatGPT                  316",
+            "56  4895784",
+            "96"
+          ],
+          [
+            "msedge                   323",
+            "76  3995975",
+            "68"
+          ],
+          [
+            "ChatGPT                  350",
+            "96  3631923",
+            "20"
+          ]
+        ],
+        "lines": [
+          "Name                        Id         WS",
+          "----                        --         --",
+          "DeepSeek Harness          4232 1346121728",
+          "Telegram                 12040 1295192064",
+          "sherpa-onnx-ws-win32-x64 11888 1076109312",
+          "MsMpEng                   4808  828801024",
+          "DeepSeek Harness         12396  702533632",
+          "ChatGPT                  31656  489578496",
+          "msedge                   32376  399597568",
+          "ChatGPT                  35096  363192320"
+        ]
+      },
+      {
+        "id": "block-3baef6a049b42ab6",
+        "component": "Table",
+        "source": "seen",
+        "rows": [
+          14,
+          22
+        ],
+        "columns": [
+          0,
+          12
+        ],
+        "cells": [
+          [
+            "Name",
+            "Length"
+          ],
+          [
+            "----",
+            "------"
+          ],
+          [
+            "hosts",
+            "900"
+          ],
+          [
+            "hosts.ics",
+            "444"
+          ],
+          [
+            "lmhosts.sam",
+            "3683"
+          ],
+          [
+            "networks",
+            "407"
+          ],
+          [
+            "protocol",
+            "1358"
+          ],
+          [
+            "services",
+            "17635"
+          ]
+        ],
+        "lines": [
+          "Name        Length",
+          "----        ------",
+          "hosts          900",
+          "hosts.ics      444",
+          "lmhosts.sam   3683",
+          "networks       407",
+          "protocol      1358",
+          "services     17635"
+        ]
+      }
+    ]
+  }
+}

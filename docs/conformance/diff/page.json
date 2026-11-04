@@ -1,0 +1,175 @@
+{
+  "version": "v0.9.1",
+  "createSurface": {
+    "surfaceId": "diff-f1",
+    "catalogId": "moreweb.terminal/v1",
+    "root": "root",
+    "components": [
+      {
+        "id": "root",
+        "component": "Column",
+        "source": "seen",
+        "children": [
+          "block-a796f11bcfe2e94d"
+        ]
+      },
+      {
+        "id": "block-a796f11bcfe2e94d",
+        "component": "Diff",
+        "source": "seen",
+        "rows": [
+          0,
+          10
+        ],
+        "lines": [
+          {
+            "kind": "context",
+            "text": "diff --git a/f1.txt b/f1.txt",
+            "spans": [
+              {
+                "start": 0,
+                "end": 28,
+                "style": {
+                  "bold": true,
+                  "italic": false,
+                  "underline": false,
+                  "reverse": false,
+                  "fg": "indexed:15"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "context",
+            "text": "index 6313432..5f58a15 100644",
+            "spans": [
+              {
+                "start": 0,
+                "end": 29,
+                "style": {
+                  "bold": true,
+                  "italic": false,
+                  "underline": false,
+                  "reverse": false,
+                  "fg": "indexed:15"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "remove",
+            "text": "--- a/f1.txt",
+            "spans": [
+              {
+                "start": 0,
+                "end": 12,
+                "style": {
+                  "bold": true,
+                  "italic": false,
+                  "underline": false,
+                  "reverse": false,
+                  "fg": "indexed:15"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "add",
+            "text": "+++ b/f1.txt",
+            "spans": [
+              {
+                "start": 0,
+                "end": 12,
+                "style": {
+                  "bold": true,
+                  "italic": false,
+                  "underline": false,
+                  "reverse": false,
+                  "fg": "indexed:15"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "context",
+            "text": "@@ -1,3 +1,4 @@",
+            "spans": [
+              {
+                "start": 0,
+                "end": 15,
+                "style": {
+                  "bold": false,
+                  "italic": false,
+                  "underline": false,
+                  "reverse": false,
+                  "fg": "indexed:6"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "context",
+            "text": " line one 1",
+            "spans": []
+          },
+          {
+            "kind": "remove",
+            "text": "-line two 1",
+            "spans": [
+              {
+                "start": 0,
+                "end": 11,
+                "style": {
+                  "bold": false,
+                  "italic": false,
+                  "underline": false,
+                  "reverse": false,
+                  "fg": "indexed:1"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "add",
+            "text": "+changed two 1",
+            "spans": [
+              {
+                "start": 0,
+                "end": 14,
+                "style": {
+                  "bold": false,
+                  "italic": false,
+                  "underline": false,
+                  "reverse": false,
+                  "fg": "indexed:2"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "context",
+            "text": " line three 1",
+            "spans": []
+          },
+          {
+            "kind": "add",
+            "text": "+added four 1",
+            "spans": [
+              {
+                "start": 0,
+                "end": 13,
+                "style": {
+                  "bold": false,
+                  "italic": false,
+                  "underline": false,
+                  "reverse": false,
+                  "fg": "indexed:2"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
