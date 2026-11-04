@@ -1,0 +1,7 @@
+Cloning into 'C:\Users\moreweb\AppData\Local\Temp\gc2-1397885426\r'...
+remote: Enumerating objects: 15006, done.
+remote: Counting objects: 100% (121/121), done.
+remote: Compressing objects: 100% (73/73), done.
+remote: Total 15006 (delta 82), reused 48 (delta 48), pack-reused 14885 (from 2)
+Receiving objects: 100% (15006/15006), 4.38 MiB | 4.71 MiB/s, done.
+Resolving deltas: 100% (8619/8619), done.

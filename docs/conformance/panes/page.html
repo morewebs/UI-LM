@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>page</title>
+<style>
+:root { color-scheme: dark; }
+body { margin: 0; padding: 24px; background: #0b0b0c; color: #d6d6d7;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px; line-height: 1.45; }
+section.page { margin: 0 auto 28px; max-width: 1100px; }
+section.page > header { color: #6f6f76; font-size: 11px; letter-spacing: .08em;
+        text-transform: uppercase; margin-bottom: 8px; }
+.line { white-space: pre; overflow-x: auto; }
+.block { margin: 6px 0; }
+.panel, .composer { border: 1px solid #33333a; border-radius: 10px; padding: 8px 10px;
+        margin: 8px 0; background: #101013; }
+.composer { border-color: #4a4a55; }
+.panel > .tag, .composer > .tag { color: #6f6f76; font-size: 10px; letter-spacing: .1em;
+        text-transform: uppercase; display: block; margin-bottom: 4px; }
+.panes { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+      .pane { min-width: 0; }
+      .tool { display: flex; gap: 8px; align-items: baseline; margin: 4px 0; }
+.tool .name { color: #8ab4f8; }
+.tool .target { color: #d6d6d7; }
+        .property { display: flex; gap: 8px; align-items: baseline; margin: 4px 0; }
+        .property .name { color: #8ab4f8; }
+        .property .value { color: #d6d6d7; }
+        /* A paned document carries the screen as well as the panes: the screen is what `read` turns back into a terminal,
+           and a browser has the panes. It had no styles, so the live view drew both - the split screen twice (round 103). */
+        .screen { display: none; }
+.tool .counts { color: #6f6f76; }
+.thought { color: #8f8f98; font-style: italic; margin: 4px 0; }
+.meter { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.meter .track { flex: 1; height: 6px; background: #232329; border-radius: 3px;
+        overflow: hidden; }
+.meter .fill { height: 100%; background: #4f9d69; }
+        .meter-line { display: none; }
+.diff .add { color: #7cc48a; }
+.diff .remove { color: #d87373; }
+.diff .context { color: #9a9aa2; }
+.tabs { color: #6f6f76; margin-bottom: 6px; }
+button.action { display: flex; gap: 10px; align-items: baseline; width: 100%;
+        text-align: left; background: #14141a; color: inherit; border: 1px solid #2a2a31;
+        border-radius: 8px; padding: 5px 9px; margin: 3px 0; font: inherit; cursor: pointer; }
+button.action:hover { border-color: #4a4a55; background: #191922; }
+button.action .target { color: #8ab4f8; margin-left: auto; }
+.tabs span.active { color: #d6d6d7; }
+</style>
+</head>
+<body>
+<div class="panes" data-layout="row"><div class="pane"><div class="block table"> data-columns="3"><div class="line row" data-cells="ize  Used Avail Use% Mounted on                 │">Filesystem      Size  Used Avail Use% Mounted on                 │</div><div class="line row" data-cells="16G     016G0% /usr/lib/modules/6.18.54.1-│">none             16G     0   16G   0% /usr/lib/modules/6.18.54.1-│</div><div class="line row" data-cells="d-WSL2│">microsoft-standard-WSL2                                          │</div><div class="line row" data-cells="97M   97M0 100% /usr/lib/linux-tools/6.18.5│">/dev/sdb         97M   97M     0 100% /usr/lib/linux-tools/6.18.5│</div><div class="line row" data-cells="ndard-WSL2│">4.1-microsoft-standard-WSL2                                      │</div><div class="line row" data-cells="16G  4.0K16G1% /mnt/wsl                   │">none             16G  4.0K   16G   1% /mnt/wsl                   │</div><div class="line row" data-cells="77G  400G78G  84% /usr/lib/wsl/drivers       │">drivers         477G  400G   78G  84% /usr/lib/wsl/drivers       │</div><div class="line row" data-cells="07G   17G  939G2% /                          │">/dev/sdd       1007G   17G  939G   2% /                          │</div><div class="line row" data-cells="16G   32K16G1% /mnt/wslg                  │">none             16G   32K   16G   1% /mnt/wslg                  │</div><div class="line row" data-cells="16G     016G0% /usr/lib/wsl/lib           │">none             16G     0   16G   0% /usr/lib/wsl/lib           │</div><div class="line row" data-cells="16G  3.4M16G1% /init                      │">rootfs           16G  3.4M   16G   1% /init                      │</div><div class="line row" data-cells="16G  572K16G1% /run                       │">none             16G  572K   16G   1% /run                       │</div><div class="line row" data-cells="16G     016G0% /run/lock                  │">none             16G     0   16G   0% /run/lock                  │</div><div class="line row" data-cells="16G     016G0% /run/shm                   │">none             16G     0   16G   0% /run/shm                   │</div><div class="line row" data-cells="16G   68K16G1% /mnt/wslg/versions.txt     │">none             16G   68K   16G   1% /mnt/wslg/versions.txt     │</div><div class="line row" data-cells="16G   68K16G1% /mnt/wslg/doc              │">none             16G   68K   16G   1% /mnt/wslg/doc              │</div><div class="line row" data-cells="77G  400G78G  84% /mnt/c                     │">C:\             477G  400G   78G  84% /mnt/c                     │</div><div class="line row" data-cells="32G  575G  358G  62% /mnt/d                     │">D:\             932G  575G  358G  62% /mnt/d                     │</div><div class="line row" data-cells=".2G   20K  3.2G1% /run/user/1001             │">tmpfs           3.2G   20K  3.2G   1% /run/user/1001             │</div><div class="line row" data-cells="│">                                                                 │</div><div class="line row" data-cells="│">                                                                 │</div><div class="line row" data-cells="│">                                                                 │</div><div class="line row" data-cells="│">                                                                 │</div><div class="line row" data-cells="│">                                                                 │</div><div class="line row" data-cells="│">                                                                 │</div><div class="line row" data-cells="">[tab] 0:sleep*                                                    </div></div>
+</div><div class="pane"><div class="block" data-role="pane">
+<div class="line">lrwxrwxrwx 1 root root            4 Feb 10  2024 NF -&gt; col1</div>
+<div class="line">lrwxrwxrwx 1 root root            1 Apr  8  2024 X11 -&gt; .</div>
+<div class="line">-rwxr-xr-x 1 root root        55744 Aug 25 16:09 [</div>
+<div class="line">-rwxr-xr-x 1 root root        18744 Mar 31  2024 aa-enabled</div>
+<div class="line">-rwxr-xr-x 1 root root        18744 Mar 31  2024 aa-exec</div>
+<div class="line">-rwxr-xr-x 1 root root        18736 Mar 31  2024 aa-features-abi</div>
+<div class="line">-rwxr-xr-x 1 root root        16422 Apr 18  2024 add-apt-reposit</div>
+<div class="line">ory</div>
+<div class="line">-rwxr-xr-x 1 root root        14720 Aug 19 17:47 addpart</div>
+<div class="line">lrwxrwxrwx 1 root root           26 Dec  3  2025 addr2line -&gt; x8</div>
+<div class="line">6_64-linux-gnu-addr2line</div>
+<div class="line">-rwxr-xr-x 1 root root         2322 Apr 18  2024 apport-bug</div>
+<div class="line">-rwxr-xr-x 1 root root        13625 Jul  8  2025 apport-cli</div>
+<div class="line">lrwxrwxrwx 1 root root           10 Jul  8  2025 apport-collect</div>
+<div class="line">-&gt; apport-bug</div>
+<div class="line">-rwxr-xr-x 1 root root         3790 Jul  8  2025 apport-unpack</div>
+<div class="line">-rwxr-xr-x 1 root root       141544 Apr  8  2024 appstreamcli</div>
+<div class="line">lrwxrwxrwx 1 root root            6 Apr  8  2024 apropos -&gt; what</div>
+<div class="line">is</div>
+<div class="line">-rwxr-xr-x 1 root root        18824 Mar 31  2024 apt</div>
+<div class="line">lrwxrwxrwx 1 root root           18 Apr 18  2024 apt-add-reposit</div>
+<div class="line">ory -&gt; add-apt-repository</div>
+<div class="line">-rwxr-xr-x 1 root root        88544 Mar 31  2024 apt-cache</div>
+<div class="line">-rwxr-xr-x 1 root root        27104 Mar 31  2024 apt-cdrom</div>
+<div class="line"></div>
+<div class="line"><span style="color:#000000;background:#0dbc79;">                               &quot;DESKTOP-H6G9MSV&quot; 00:06 01-Nov-26</span></div>
+</div>
+</div></div><div class="screen"><div class="line">Filesystem      Size  Used Avail Use% Mounted on                 │lrwxrwxrwx 1 root root            4 Feb 10  2024 NF -&gt; col1</div><div class="line">none             16G     0   16G   0% /usr/lib/modules/6.18.54.1-│lrwxrwxrwx 1 root root            1 Apr  8  2024 X11 -&gt; .</div><div class="line">microsoft-standard-WSL2                                          │-rwxr-xr-x 1 root root        55744 Aug 25 16:09 [</div><div class="line">/dev/sdb         97M   97M     0 100% /usr/lib/linux-tools/6.18.5│-rwxr-xr-x 1 root root        18744 Mar 31  2024 aa-enabled</div><div class="line">4.1-microsoft-standard-WSL2                                      │-rwxr-xr-x 1 root root        18744 Mar 31  2024 aa-exec</div><div class="line">none             16G  4.0K   16G   1% /mnt/wsl                   │-rwxr-xr-x 1 root root        18736 Mar 31  2024 aa-features-abi</div><div class="line">drivers         477G  400G   78G  84% /usr/lib/wsl/drivers       │-rwxr-xr-x 1 root root        16422 Apr 18  2024 add-apt-reposit</div><div class="line">/dev/sdd       1007G   17G  939G   2% /                          │ory</div><div class="line">none             16G   32K   16G   1% /mnt/wslg                  │-rwxr-xr-x 1 root root        14720 Aug 19 17:47 addpart</div><div class="line">none             16G     0   16G   0% /usr/lib/wsl/lib           │lrwxrwxrwx 1 root root           26 Dec  3  2025 addr2line -&gt; x8</div><div class="line">rootfs           16G  3.4M   16G   1% /init                      │6_64-linux-gnu-addr2line</div><div class="line">none             16G  572K   16G   1% /run                       │-rwxr-xr-x 1 root root         2322 Apr 18  2024 apport-bug</div><div class="line">none             16G     0   16G   0% /run/lock                  │-rwxr-xr-x 1 root root        13625 Jul  8  2025 apport-cli</div><div class="line">none             16G     0   16G   0% /run/shm                   │lrwxrwxrwx 1 root root           10 Jul  8  2025 apport-collect</div><div class="line">none             16G   68K   16G   1% /mnt/wslg/versions.txt     │-&gt; apport-bug</div><div class="line">none             16G   68K   16G   1% /mnt/wslg/doc              │-rwxr-xr-x 1 root root         3790 Jul  8  2025 apport-unpack</div><div class="line">C:\             477G  400G   78G  84% /mnt/c                     │-rwxr-xr-x 1 root root       141544 Apr  8  2024 appstreamcli</div><div class="line">D:\             932G  575G  358G  62% /mnt/d                     │lrwxrwxrwx 1 root root            6 Apr  8  2024 apropos -&gt; what</div><div class="line">tmpfs           3.2G   20K  3.2G   1% /run/user/1001             │is</div><div class="line">                                                                 │-rwxr-xr-x 1 root root        18824 Mar 31  2024 apt</div><div class="line">                                                                 │lrwxrwxrwx 1 root root           18 Apr 18  2024 apt-add-reposit</div><div class="line">                                                                 │ory -&gt; add-apt-repository</div><div class="line">                                                                 │-rwxr-xr-x 1 root root        88544 Mar 31  2024 apt-cache</div><div class="line">                                                                 │-rwxr-xr-x 1 root root        27104 Mar 31  2024 apt-cdrom</div><div class="line">                                                                 │</div><div class="line">[tab] 0:sleep*                                                                                   &quot;DESKTOP-H6G9MSV&quot; 00:06 01-Nov-26</div></div></body>
+</html>

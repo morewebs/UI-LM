@@ -1,0 +1,26 @@
+Filesystem      Size  Used Avail Use% Mounted on                 │lrwxrwxrwx 1 root root            4 Feb 10  2024 NF -> col1
+none             16G     0   16G   0% /usr/lib/modules/6.18.54.1-│lrwxrwxrwx 1 root root            1 Apr  8  2024 X11 -> .
+microsoft-standard-WSL2                                          │-rwxr-xr-x 1 root root        55744 Aug 25 16:09 [
+/dev/sdb         97M   97M     0 100% /usr/lib/linux-tools/6.18.5│-rwxr-xr-x 1 root root        18744 Mar 31  2024 aa-enabled
+4.1-microsoft-standard-WSL2                                      │-rwxr-xr-x 1 root root        18744 Mar 31  2024 aa-exec
+none             16G  4.0K   16G   1% /mnt/wsl                   │-rwxr-xr-x 1 root root        18736 Mar 31  2024 aa-features-abi
+drivers         477G  400G   78G  84% /usr/lib/wsl/drivers       │-rwxr-xr-x 1 root root        16422 Apr 18  2024 add-apt-reposit
+/dev/sdd       1007G   17G  939G   2% /                          │ory
+none             16G   32K   16G   1% /mnt/wslg                  │-rwxr-xr-x 1 root root        14720 Aug 19 17:47 addpart
+none             16G     0   16G   0% /usr/lib/wsl/lib           │lrwxrwxrwx 1 root root           26 Dec  3  2025 addr2line -> x8
+rootfs           16G  3.4M   16G   1% /init                      │6_64-linux-gnu-addr2line
+none             16G  572K   16G   1% /run                       │-rwxr-xr-x 1 root root         2322 Apr 18  2024 apport-bug
+none             16G     0   16G   0% /run/lock                  │-rwxr-xr-x 1 root root        13625 Jul  8  2025 apport-cli
+none             16G     0   16G   0% /run/shm                   │lrwxrwxrwx 1 root root           10 Jul  8  2025 apport-collect
+none             16G   68K   16G   1% /mnt/wslg/versions.txt     │-> apport-bug
+none             16G   68K   16G   1% /mnt/wslg/doc              │-rwxr-xr-x 1 root root         3790 Jul  8  2025 apport-unpack
+C:\             477G  400G   78G  84% /mnt/c                     │-rwxr-xr-x 1 root root       141544 Apr  8  2024 appstreamcli
+D:\             932G  575G  358G  62% /mnt/d                     │lrwxrwxrwx 1 root root            6 Apr  8  2024 apropos -> what
+tmpfs           3.2G   20K  3.2G   1% /run/user/1001             │is
+                                                                 │-rwxr-xr-x 1 root root        18824 Mar 31  2024 apt
+                                                                 │lrwxrwxrwx 1 root root           18 Apr 18  2024 apt-add-reposit
+                                                                 │ory -> add-apt-repository
+                                                                 │-rwxr-xr-x 1 root root        88544 Mar 31  2024 apt-cache
+                                                                 │-rwxr-xr-x 1 root root        27104 Mar 31  2024 apt-cdrom
+                                                                 │
+[tab] 0:sleep*                                                                                   "DESKTOP-H6G9MSV" 00:06 01-Nov-26

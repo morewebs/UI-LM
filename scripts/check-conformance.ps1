@@ -37,6 +37,26 @@ if ($failures.Count -gt 0) {
     Write-Host "a page did not draw the screen it is defined by"
     exit 1
 }
+# The same page, drawn as a document and read back: a case holds `document.txt` for the HTML path as well as `screen.txt` for the
+# terminal one, so a runtime that renders HTML is held to the same page (round 165).
+foreach ($case in $cases) {
+    $page = Join-Path $case.FullName "page.json"
+    $wantDoc = Join-Path $case.FullName "document.txt"
+    if (-not (Test-Path $wantDoc)) { continue }
+    $html = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-conf-" + [guid]::NewGuid().ToString("N") + ".html")
+    & $capture render --page $page --out $html 2>&1 | Out-Null
+    if (-not (Test-Path $html)) { $failures += ("{0}: the document renderer wrote nothing" -f $case.Name); continue }
+    $back = (@(& $capture read --html $html 2>&1) -join "`n")
+    Remove-Item -LiteralPath $html -Force -ErrorAction SilentlyContinue
+    $expected = (Get-Content -LiteralPath $wantDoc -Raw -Encoding UTF8).TrimEnd("`n")
+    if ($back.TrimEnd("`n") -ne $expected) {
+        $a = $back -split "`n"; $b = $expected -split "`n"
+        $first = 0
+        while ($first -lt $a.Count -and $first -lt $b.Count -and $a[$first] -eq $b[$first]) { $first++ }
+        $failures += ("{0}: document line {1} differs - '{2}' against '{3}'" -f $case.Name, ($first + 1), $a[$first], $b[$first])
+    }
+}
+
 # A kit that omits a kind teaches a runtime nothing about it: every kind of the vocabulary must appear in at least one case
 # (round 164).
 $seen = @{}
@@ -48,6 +68,13 @@ $missingKinds = @("Block", "ToolCall", "Thought", "Meter", "Diff", "Frame", "Tab
 if ($missingKinds.Count -gt 0) {
     Write-Host ("  no conformance case holds: " + ($missingKinds -join ", "))
     Write-Host "the kit does not show a runtime every kind"
+    exit 1
+}
+# Every loop above adds to `$failures`, and the report at line 36 runs before two of them - so the verdict has to be asked
+# again here, or a document finding is written down and then ignored (round 165).
+if ($failures.Count -gt 0) {
+    $failures | ForEach-Object { Write-Host ("  " + $_) }
+    Write-Host "a page did not draw what it is defined by"
     exit 1
 }
 Write-Host ("every conformance page draws its screen: {0} case(s)" -f $cases.Count)
