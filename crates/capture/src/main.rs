@@ -292,7 +292,12 @@ struct ReadArgs {
 struct RenderArgs {
     /// The session directory holding the frames.
     #[arg(long, value_name = "DIR")]
-    session: PathBuf,
+    session: Option<PathBuf>,
+
+    /// A page as JSON, instead of a recording: `render --page page.json --out page.html` draws any page this
+    /// format describes (round 158).
+    #[arg(long, value_name = "FILE")]
+    page: Option<PathBuf>,
 
     /// Which frame, by sequence number. Defaults to the session's last frame.
     #[arg(long)]
@@ -1311,13 +1316,24 @@ fn read(args: &ReadArgs) -> Result<ExitCode> {
 }
 
 fn render(args: &RenderArgs) -> Result<ExitCode> {
-    let pages = ui_lm_capture::summary::session_pages(&args.session)
-        .with_context(|| format!("failed to read the session {}", args.session.display()))?;
+    if let Some(path) = &args.page {
+        let text = std::fs::read_to_string(path)
+            .with_context(|| format!("failed to read {}", path.display()))?;
+        let page: ui_lm_pages::Envelope = serde_json::from_str(&text)
+            .with_context(|| format!("{} is not a page", path.display()))?;
+        std::fs::write(&args.out, ui_lm_render::render_page(&page, "page"))
+            .with_context(|| format!("failed to write {}", args.out.display()))?;
+        println!("wrote {}", args.out.display());
+        return Ok(ExitCode::SUCCESS);
+    }
+    let session = args
+        .session
+        .as_ref()
+        .context("render needs either --session or --page")?;
+    let pages = ui_lm_capture::summary::session_pages(session)
+        .with_context(|| format!("failed to read the session {}", session.display()))?;
     if pages.is_empty() {
-        bail!(
-            "the session {} holds no frames to draw",
-            args.session.display()
-        );
+        bail!("the session {} holds no frames to draw", session.display());
     }
     // A page drawn in a browser is the thing a person actually sees, so it is the one place
     // the model has to be able to reach. `render` grew a `--model` for the same reason
@@ -1326,12 +1342,11 @@ fn render(args: &RenderArgs) -> Result<ExitCode> {
     let pages = match &args.model {
         Some(path) => {
             let model = ui_lm_model::Model::load(path)?;
-            let frames = match ui_lm_frames::read_frames(&args.session) {
+            let frames = match ui_lm_frames::read_frames(session) {
                 Ok((_, frames)) => frames,
-                Err(_) => ui_lm_frames::read_orphaned_frames(&args.session)?,
+                Err(_) => ui_lm_frames::read_orphaned_frames(session)?,
             };
-            let surface = args
-                .session
+            let surface = session
                 .file_name()
                 .map(|name| name.to_string_lossy().into_owned())
                 .unwrap_or_else(|| "session".to_owned());
@@ -1358,8 +1373,7 @@ fn render(args: &RenderArgs) -> Result<ExitCode> {
         }
         None => pages,
     };
-    let title = args
-        .session
+    let title = session
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_else(|| "session".to_owned());
