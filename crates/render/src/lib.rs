@@ -752,14 +752,16 @@ fn lines_of_flow(html: &str) -> Vec<String> {
                 "div" | "header" | "nav" | "footer" | "section" | "article" | "aside" | "main"
             );
             if container
-                && [
-                    "<h1", "<h2", "<h3", "<p", "<li", "<div", "<table", "<form", "<ul", "<header",
-                    "<nav", "<footer", "<section", "<article", "<aside", "<main",
-                ]
-                .iter()
-                .any(|tag| inner.contains(tag))
+                && CHILDREN
+                    .iter()
+                    .any(|tag| inner.contains(&format!("<{tag}")))
             {
-                // Step past the open tag, not the close: everything inside still gets its own line.
+                // A container emits **the text it owns** and nothing its children own: a header holding a logo and a nav
+                // owns the logo. Reading the subtree as one line emitted the nav twice (rounds 126-128).
+                let own = own_text(inner);
+                if !own.is_empty() {
+                    found.push((start, "p", own));
+                }
                 from = open_end + 1;
                 continue;
             }
@@ -930,6 +932,52 @@ fn rest_after(tail: &str, end: usize) -> Option<char> {
     tail[end + 1..].chars().next()
 }
 
+/// The elements a container is made of. Anything else - `span`, `a`, `img` - is content, not structure.
+const CHILDREN: [&str; 20] = [
+    "h1", "h2", "h3", "h4", "p", "li", "div", "table", "form", "ul", "header", "nav", "footer",
+    "section", "article", "aside", "main", "pre", "dt", "dd",
+];
+
+/// The text a container owns: what sits at **depth zero** inside it, with every known child element skipped.
+///
+/// Not subtraction - removing children from the string left half of a nested div behind and emitted it twice (round 128).
+fn own_text(inner: &str) -> String {
+    let mut out = String::new();
+    let mut depth = 0usize;
+    let mut at = 0usize;
+    while at < inner.len() {
+        let Some(open_at) = inner[at..].find('<').map(|x| at + x) else {
+            if depth == 0 {
+                out.push_str(&inner[at..]);
+            }
+            break;
+        };
+        if depth == 0 {
+            out.push_str(&inner[at..open_at]);
+        }
+        let Some(close_at) = inner[open_at..].find('>').map(|x| open_at + x) else {
+            break;
+        };
+        let tag = inner[open_at..=close_at].to_lowercase();
+        let name: String = tag
+            .trim_start_matches('<')
+            .trim_start_matches('/')
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric())
+            .collect();
+        let known = CHILDREN.contains(&name.as_str());
+        if known {
+            if tag.starts_with("</") {
+                depth = depth.saturating_sub(1);
+            } else if !tag.ends_with("/>") {
+                depth += 1;
+            }
+        }
+        at = close_at + 1;
+    }
+    text_of_collapsed(&out).trim().to_owned()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -999,6 +1047,19 @@ mod tests {
         assert_eq!(lines[0], "Name         Mode");
         assert_eq!(lines[1], "hosts        -a----");
         assert_eq!(lines[2], "lmhosts.sam  -a----");
+    }
+
+    #[test]
+    fn a_container_keeps_its_own_text_beside_its_children() {
+        // A header holding a logo and a nav owns the logo: subtracting children from the string emitted half of a nested
+        // div twice, so the text is taken at depth zero instead (round 129).
+        let html = "<header><span class=l>Acme</span><nav><span>Docs</span></nav></header>";
+        assert_eq!(
+            lines_from_html(html),
+            vec!["Acme", "Docs"],
+            "{:?}",
+            lines_from_html(html)
+        );
     }
 
     #[test]
