@@ -133,6 +133,10 @@ $contractShapes = @(
     @{ What = "a landmark page";
        Html = "<header><span>Acme</span><nav><span>Docs</span></nav></header><main><h2>Ship</h2></main><footer><span>(c) 2026</span></footer>";
        Want = @("Acme", "Docs", "Ship", "----", "(c) 2026") }
+    # What a real page carries that nobody sees: code, styles and templates. Only the content may reach a screen (rounds 132-133).
+    @{ What = "a page with code";
+       Html = "<style>p{color:red}</style><script>var x=1;</script><template><p>Hidden.</p></template><p>Real text.</p>";
+       Want = @("Real text.") }
 )
 foreach ($shape in $contractShapes) {
     $one = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-shape-" + [guid]::NewGuid().ToString("N") + ".html")
