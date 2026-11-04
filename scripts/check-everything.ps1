@@ -71,12 +71,20 @@ $all = @(
 
 $selected = if ($Quick) { $all | Where-Object { -not $_.slow } } else { $all }
 $results = @()
+# Each check runs as a tracked child, so that a run which is interrupted can take its children with it. `&` gives no PID and the
+# orphans from killed runs were what made four checks look flaky and a 30-minute suite take an hour (rounds 166-168).
+$running = @()
 foreach ($check in $selected) {
     $script = Join-Path $PSScriptRoot $check.script
     if (-not (Test-Path $script)) { continue }
     $watch = [System.Diagnostics.Stopwatch]::StartNew()
-    $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script 2>&1
-    $code = $LASTEXITCODE
+    $log = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-check-" + [guid]::NewGuid().ToString("N") + ".log")
+    $child = Start-Process -FilePath "powershell.exe" -PassThru -NoNewWindow -Wait -ArgumentList @(
+        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $script) -RedirectStandardOutput $log
+    $running += $child.Id
+    $out = @(if (Test-Path $log) { Get-Content -LiteralPath $log -Encoding UTF8 })
+    Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue
+    $code = $child.ExitCode
     $first = ($out | Where-Object { "$_".Trim() } | Select-Object -Last 1) -join ""
     # Five checks have been red once and green the next time - race, loop, layout, validate, sizes - and every one of them
     # starts a process, opens a port or reads a file another check just wrote (round 136). A single flake must not read as a
@@ -86,8 +94,13 @@ foreach ($check in $selected) {
     if ($code -ne 0) {
         $again = $true
         Start-Sleep -Seconds 5
-        $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script 2>&1
-        $code = $LASTEXITCODE
+        $log = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-check-" + [guid]::NewGuid().ToString("N") + ".log")
+        $child = Start-Process -FilePath "powershell.exe" -PassThru -NoNewWindow -Wait -ArgumentList @(
+            "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $script) -RedirectStandardOutput $log
+        $running += $child.Id
+        $out = @(if (Test-Path $log) { Get-Content -LiteralPath $log -Encoding UTF8 })
+        Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue
+        $code = $child.ExitCode
     }
     $watch.Stop()
     $last = (($out | Where-Object { "$_".Trim() } | Select-Object -Last 1) -join "")
