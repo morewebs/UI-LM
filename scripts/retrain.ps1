@@ -116,6 +116,13 @@ foreach ($session in $trainSessions) { $arguments += @("--session", $session) }
 Write-Host "exported $((Get-Content $pairs).Count) pair(s)"
 
 # Train.
+# The pairs are the model's real input, and training is deterministic given them: two runs on one pairs file gave the same
+# digest while five retrains on five fresh recordings gave five (rounds 143-146). They are kept beside the model so a digest
+# can be re-derived months later without re-recording the world, and their own digest is printed for comparing.
+$kept = Join-Path $repo "models\page.pairs.jsonl"
+Copy-Item -LiteralPath $pairs -Destination $kept -Force
+Write-Host ("pairs kept: {0} ({1:N0} bytes, sha256 {2})" -f $kept, (Get-Item $kept).Length,
+    (Get-FileHash -LiteralPath $kept -Algorithm SHA256).Hash.Substring(0, 16))
 & python (Join-Path $repo "scripts\train_model.py") $pairs (Join-Path $repo $Model) | Write-Host
 
 # Two evaluations: a fresh batch from the training application, and one from others.

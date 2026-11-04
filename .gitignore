@@ -19,3 +19,5 @@ frame-store/
 /eval/
 # Hard cases recorded on this machine: kept locally, never published.
 cases/
+# A retrain leaves its training pairs beside the model; they are local material, not a claim about the shipped model.
+models/page.pairs.jsonl
