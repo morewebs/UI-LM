@@ -56,10 +56,9 @@ all perfect.
   holding digits in a majority of rows, in a block of its own. It is right about `ls`, `ps`, `df`, `top`, `dir` and
   formatted listings, and a table whose cells are **words** is caught only when the application underlines its headings; it admits two agent screens of three or four rows where prose aligns by accident - a boundary
   measured at three thresholds and written into `scripts/measure-tables.py`.
-- **A drawn meter cannot be read back out of the page.** Five of seven kinds round trip through the GUI and back to
-  text; `Meter` does not, because it is drawn as a bar and its number is not in a line element. `check-kinds` proves the
-  bar reaches the document and `check-html-to-tui` proves the other five rebuild - so the gap is named rather than
-  hidden: a consumer that needs the number must take it from the page, not from the rendered HTML.
+- **A drawn meter reaches the page as text and as a bar.** It was the last kind that could not round trip; it does since
+  `emit` gave the meter a line of its own and `next_row` stopped skipping the rows before a plain one. Every kind now rebuilds
+  over nine sessions and 136 lines.
 - **It is at its ceiling on this data.** Measured three ways: 60% more corpus gave +0.1% row accuracy; a
   twentieth feature was worse on every screen family; training on plain screens was three times worse.
 - **It does not generalise on its own — the assembly does.** Measured with `disagree`, which compares the model's
