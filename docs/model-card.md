@@ -17,6 +17,7 @@ scripted progress loop, a table of words, a split screen and a diff |
 | parameters | 100 |
 | inference | Rust, `crates/model`, no runtime dependencies |
 | training code | `scripts/train_model.py`, `python3 scripts/train_model.py` |
+| reproducibility | **deterministic given the pairs**: `--seed 7` and a fixed shuffle, and two runs on one pairs file gave the same digest. `scripts/retrain.ps1` now keeps its pairs beside the model, but **the pairs this model was built from were not kept**, so this exact artefact cannot be re-derived - only replaced |
 
 ## Training data
 
