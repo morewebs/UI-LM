@@ -696,7 +696,9 @@ fn decode(fragment: &str, collapse: bool) -> String {
         .replace("&gt;", ">")
         .replace("&quot;", "\"")
         .replace("&#39;", "'")
-        .replace("&amp;", "&");
+        .replace("&amp;", "&")
+        .replace("&copy;", "©")
+        .replace("&nbsp;", " ");
     if collapse {
         decoded.split_whitespace().collect::<Vec<_>>().join(" ")
     } else {
@@ -711,7 +713,8 @@ fn decode(fragment: &str, collapse: bool) -> String {
 fn lines_of_flow(html: &str) -> Vec<String> {
     let mut found: Vec<(usize, &'static str, String)> = Vec::new();
     for name in [
-        "h1", "h2", "h3", "li", "p", "pre", "div", "label", "dt", "dd", "summary",
+        "h1", "h2", "h3", "h4", "li", "p", "pre", "div", "label", "dt", "dd", "summary", "header",
+        "nav", "footer", "section", "article", "aside", "main",
     ] {
         let open = format!("<{name}");
         let close = format!("</{name}>");
@@ -742,9 +745,16 @@ fn lines_of_flow(html: &str) -> Vec<String> {
             // A `<div>` that wraps other blocks is a container, not a line. Read as one it glues the whole page into a
             // single row, and every element inside is then emitted again - which is what `example.com` did to the reader
             // the first time it met a real page (round 79).
-            if name == "div"
+            // Any element that wraps other blocks is a container, not a line: a page whose header holds a nav would
+            // otherwise emit its whole subtree as one line **and** emit each child again (rounds 79, 126-127).
+            let container = matches!(
+                name,
+                "div" | "header" | "nav" | "footer" | "section" | "article" | "aside" | "main"
+            );
+            if container
                 && [
-                    "<h1", "<h2", "<h3", "<p", "<li", "<div", "<table", "<form", "<ul",
+                    "<h1", "<h2", "<h3", "<p", "<li", "<div", "<table", "<form", "<ul", "<header",
+                    "<nav", "<footer", "<section", "<article", "<aside", "<main",
                 ]
                 .iter()
                 .any(|tag| inner.contains(tag))
@@ -989,6 +999,14 @@ mod tests {
         assert_eq!(lines[0], "Name         Mode");
         assert_eq!(lines[1], "hosts        -a----");
         assert_eq!(lines[2], "lmhosts.sam  -a----");
+    }
+
+    #[test]
+    fn landmark_elements_do_not_double_their_text() {
+        // A `header` holding a `nav` emitted its subtree and then the nav's own line: `Docs Blog` twice (rounds 126-127).
+        let html = "<header><nav><span>Docs</span></nav></header><main><h2>Ship</h2></main>";
+        let lines = lines_from_html(html);
+        assert_eq!(lines, vec!["Docs", "Ship", "----"], "{lines:?}");
     }
 
     #[test]
