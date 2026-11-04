@@ -437,7 +437,11 @@ fn escape(text: &str) -> String {
 /// It now also reads markup it did not write. A `<table>` whose cells carry no `class` becomes aligned columns, which is
 /// what a terminal would have drawn; anything else becomes one line per block element, with tags removed and entities
 /// decoded.
-pub fn lines_from_html(html: &str) -> Vec<String> {
+pub fn lines_from_html(document: &str) -> Vec<String> {
+    // A real page carries its code as text nodes: the Python documentation read as 7,718 lines, the first of which were
+    // `document.addEventListener(...)`. Script and style are not content (round 132).
+    let cleaned = strip_code(document);
+    let html = cleaned.as_str();
     // A paned document holds its panes **and** the screen they make; the screen is the one that has the column boundary
     // in it, so it is what a reader wants (round 75).
     let screen = match html.find("<div class=\"screen\">") {
@@ -978,6 +982,24 @@ fn own_text(inner: &str) -> String {
     text_of_collapsed(&out).trim().to_owned()
 }
 
+/// The document without its `<script>` and `<style>` blocks, which are code and not content.
+fn strip_code(document: &str) -> String {
+    let mut out = document.to_owned();
+    for tag in ["script", "style"] {
+        let open = format!("<{tag}");
+        let close = format!("</{tag}");
+        loop {
+            let lowered = out.to_lowercase();
+            let Some(at) = lowered.find(&open) else { break };
+            let Some(close_at) = lowered[at..].find(&close).map(|x| at + x) else {
+                break;
+            };
+            out.replace_range(at..close_at + close.len(), " ");
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1047,6 +1069,13 @@ mod tests {
         assert_eq!(lines[0], "Name         Mode");
         assert_eq!(lines[1], "hosts        -a----");
         assert_eq!(lines[2], "lmhosts.sam  -a----");
+    }
+
+    #[test]
+    fn script_and_style_are_not_content() {
+        // The Python documentation read as 7,718 lines whose first were `document.addEventListener(...)` (round 132).
+        let html = "<style>p{color:red}</style><p>Real text.</p><script>var x = 1;</script>";
+        assert_eq!(lines_from_html(html), vec!["Real text."]);
     }
 
     #[test]
