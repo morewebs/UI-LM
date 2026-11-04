@@ -25,6 +25,18 @@ if (-not (Test-Path "target\debug\ui-lm-capture.exe")) {
     exit 1
 }
 
+# A killed run leaves its children behind - `powershell.exe` per check - and eleven of them were found burning five CPU-hours
+# each, which made every later run look slow and four checks look flaky (round 166). Sweep stale children before starting, and
+# say what was swept, because a suite that measures a busy machine measures the machine.
+$stale = @(Get-Process powershell -ErrorAction SilentlyContinue | Where-Object {
+    $_.StartTime -lt (Get-Date).AddMinutes(-30)
+})
+if ($stale.Count -gt 0) {
+    $stale | ForEach-Object { try { $_.Kill() } catch { } }
+    Write-Host ("swept {0} stale shell(s) from an earlier run" -f $stale.Count)
+}
+Get-Process ui-lm-serve, ui-lm-capture -ErrorAction SilentlyContinue | ForEach-Object { try { $_.Kill() } catch { } }
+
 # Order matters only for reading: cheap and broad first, the slow recordings last.
 $all = @(
     @{ name = "gate";        script = "gate.ps1";        slow = $false },
