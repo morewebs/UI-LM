@@ -147,7 +147,8 @@ Against **105 recordings and 1,580 frames** from eleven distinct commands — tw
   evaluation sets, each against a floor — a converter that only splits paragraphs. The floors are printed by
   `scripts/check-all.ps1`, because a floor of 100% means a set cannot fail and proves nothing about the vocabulary.
 - **The page can be drawn back.** Terminal text returns every line of content on every recording measured, split screens
-  included; the rendered HTML can be turned back into the screen for five of seven kinds.
+  included; the rendered HTML can be turned back into the screen for **every** kind, over nine sessions and 136 lines, and
+  a document this project did not write reads back as a screen in twelve shapes.
 - **Fifteen hard screens** — paned agents, a floating dialog, a completion popup, a blank split — each with a score, a
   ceiling on components, and where it applies the kind it exists for or the kinds it cannot hold.
 - **Provenance is honest, and pinned.** One component in the whole corpus is marked `carried` on its first appearance;
