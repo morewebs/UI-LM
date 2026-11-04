@@ -1,0 +1,440 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://morewebs.dev/ui-lm/terminal/v0.9.1",
+  "title": "moreweb terminal page, v0.9.1",
+  "description": "One screen described as a page. Every key, type and optionality in this file was derived from the corpus - 1,639 pages - not from a single example (rounds 150-151).",
+  "type": "object",
+  "required": [
+    "version",
+    "createSurface"
+  ],
+  "properties": {
+    "version": {
+      "const": "v0.9.1"
+    },
+    "createSurface": {
+      "type": "object",
+      "required": [
+        "surfaceId",
+        "catalogId",
+        "root",
+        "components"
+      ],
+      "properties": {
+        "surfaceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "catalogId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "root": {
+          "type": "string"
+        },
+        "panes": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/component"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "component": {
+      "oneOf": [
+        {
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "component": {
+              "const": "Block"
+            },
+            "source": {
+              "enum": [
+                "seen",
+                "rule",
+                "inferred",
+                "carried"
+              ]
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "role": {
+              "type": "string"
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "spans": {
+              "type": "array",
+              "items": {
+                "type": "array"
+              }
+            },
+            "properties": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "shortcuts": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "tabs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "component",
+            "source",
+            "lines",
+            "role",
+            "rows",
+            "spans"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "component": {
+              "const": "Column"
+            },
+            "source": {
+              "enum": [
+                "seen",
+                "rule",
+                "inferred",
+                "carried"
+              ]
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "component",
+            "source",
+            "children"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "component": {
+              "const": "ToolCall"
+            },
+            "source": {
+              "enum": [
+                "seen",
+                "rule",
+                "inferred",
+                "carried"
+              ]
+            },
+            "calls": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "component",
+            "source",
+            "calls",
+            "rows"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "component": {
+              "const": "Meter"
+            },
+            "source": {
+              "enum": [
+                "seen",
+                "rule",
+                "inferred",
+                "carried"
+              ]
+            },
+            "used": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "fraction": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "label": {
+              "type": "string"
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "component",
+            "source",
+            "used",
+            "limit",
+            "text",
+            "fraction",
+            "rows"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "component": {
+              "const": "Diff"
+            },
+            "source": {
+              "enum": [
+                "seen",
+                "rule",
+                "inferred",
+                "carried"
+              ]
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "component",
+            "source",
+            "lines",
+            "rows"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "component": {
+              "const": "Thought"
+            },
+            "source": {
+              "enum": [
+                "seen",
+                "rule",
+                "inferred",
+                "carried"
+              ]
+            },
+            "text": {
+              "type": "string"
+            },
+            "seconds": {
+              "type": "number"
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "component",
+            "source",
+            "text",
+            "rows"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "component": {
+              "const": "Frame"
+            },
+            "source": {
+              "enum": [
+                "seen",
+                "rule",
+                "inferred",
+                "carried"
+              ]
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "title": {
+              "type": "string"
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "component",
+            "source",
+            "lines",
+            "title",
+            "rows"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "component": {
+              "const": "Table"
+            },
+            "source": {
+              "enum": [
+                "seen",
+                "rule",
+                "inferred",
+                "carried"
+              ]
+            },
+            "columns": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "cells": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "component",
+            "source",
+            "columns",
+            "cells",
+            "lines",
+            "rows"
+          ],
+          "type": "object"
+        }
+      ]
+    }
+  }
+}
