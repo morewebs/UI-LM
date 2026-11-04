@@ -37,5 +37,18 @@ if ($failures.Count -gt 0) {
     Write-Host "a page did not draw the screen it is defined by"
     exit 1
 }
+# A kit that omits a kind teaches a runtime nothing about it: every kind of the vocabulary must appear in at least one case
+# (round 164).
+$seen = @{}
+foreach ($case in $cases) {
+    $body = Get-Content -LiteralPath (Join-Path $case.FullName "page.json") -Raw -Encoding UTF8
+    foreach ($m in [regex]::Matches($body, '"component":\s*"(\w+)"')) { $seen[$m.Groups[1].Value] = $true }
+}
+$missingKinds = @("Block", "ToolCall", "Thought", "Meter", "Diff", "Frame", "Table" | Where-Object { -not $seen.ContainsKey($_) })
+if ($missingKinds.Count -gt 0) {
+    Write-Host ("  no conformance case holds: " + ($missingKinds -join ", "))
+    Write-Host "the kit does not show a runtime every kind"
+    exit 1
+}
 Write-Host ("every conformance page draws its screen: {0} case(s)" -f $cases.Count)
 exit 0

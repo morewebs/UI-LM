@@ -10,22 +10,29 @@
         "component": "Column",
         "source": "seen",
         "children": [
-          "block-ba119d9238d8dfc1",
-          "block-adf58150683cf264",
-          "block-8ad72f9c4aae8e1f",
-          "block-86823dbce380eca4"
+          "block-c6502db28e0a293f",
+          "block-fca528c5fd54b922",
+          "block-e72cedc2581d79f1",
+          "block-5f5303843397889f",
+          "block-c723b1e06a7fcd7d",
+          "block-1da25b9f99d9afec",
+          "block-a589cdafe7c91131",
+          "block-ac478f82d68758cd",
+          "block-2864fbca40cac89c",
+          "block-b456b74bc32d0ed9"
         ]
       },
       {
-        "id": "block-ba119d9238d8dfc1",
+        "id": "block-c6502db28e0a293f",
         "component": "Block",
         "source": "seen",
         "role": "text",
         "rows": [
           0,
-          5
+          6
         ],
         "lines": [
+          " ███████████                        ██                 ▄████  ▄██",
           " ███▀▀▀▀▀▀▀▀                        ██                 ██    ██▀",
           " ███ █████  ██████ ▄█████   ▄████▄  ██████▄  ██   ██ ████████████",
           " ███ ███▀▀  ██▀   ███▄▄▄██ ██▄▄▄███ ██   ▀██ ██   ██   ██    ██",
@@ -33,6 +40,30 @@
           " ███ ██▀    ██▀    ▀█████   ▀████▀  ██████▀   ▀████▀   ██    ██"
         ],
         "spans": [
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 65,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            }
+          ],
           [
             {
               "start": 0,
@@ -156,18 +187,20 @@
         ]
       },
       {
-        "id": "block-adf58150683cf264",
+        "id": "block-fca528c5fd54b922",
         "component": "Block",
         "source": "seen",
         "role": "panel",
         "rows": [
-          6,
-          10
+          7,
+          13
         ],
         "lines": [
           " ┌──────────────────────────────────────────────────────────────────┐",
-          " │ Your first message starts the session.                           │",
-          " │ Some models aren't available on this connection                  │",
+          " │ May use data for AI training                                     │",
+          " │ Session active                                                   │",
+          " │ 2/5 hours remaining                                              │",
+          " │ 1 day streak                                                     │",
           " └──────────────────────────────────────────────────────────────────┘"
         ],
         "spans": [
@@ -231,17 +264,17 @@
             },
             {
               "start": 3,
-              "end": 41,
+              "end": 31,
               "style": {
                 "bold": false,
                 "italic": false,
                 "underline": false,
                 "reverse": false,
-                "fg": "rgb:172,179,191"
+                "fg": "rgb:163,174,208"
               }
             },
             {
-              "start": 41,
+              "start": 31,
               "end": 68,
               "style": {
                 "bold": false,
@@ -299,7 +332,7 @@
             },
             {
               "start": 3,
-              "end": 50,
+              "end": 17,
               "style": {
                 "bold": false,
                 "italic": false,
@@ -309,7 +342,143 @@
               }
             },
             {
-              "start": 50,
+              "start": 17,
+              "end": 68,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 68,
+              "end": 69,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:83,97,117"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:83,97,117"
+              }
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 3,
+              "end": 22,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            },
+            {
+              "start": 22,
+              "end": 68,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 68,
+              "end": 69,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:83,97,117"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:83,97,117"
+              }
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 3,
+              "end": 15,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:158,252,98"
+              }
+            },
+            {
+              "start": 15,
               "end": 68,
               "style": {
                 "bold": false,
@@ -358,7 +527,676 @@
         ]
       },
       {
-        "id": "block-8ad72f9c4aae8e1f",
+        "id": "block-e72cedc2581d79f1",
+        "component": "Block",
+        "source": "seen",
+        "role": "text",
+        "rows": [
+          14,
+          16
+        ],
+        "lines": [
+          "   [10:26 AM]",
+          "   edit app.py and add a docstring at the top ⎘"
+        ],
+        "spans": [
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255",
+                "bg": "rgb:158,252,98"
+              }
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 3,
+              "end": 13,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255",
+                "bg": "rgb:158,252,98"
+              }
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 3,
+              "end": 45,
+              "style": {
+                "bold": false,
+                "italic": true,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            },
+            {
+              "start": 45,
+              "end": 47,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "block-5f5303843397889f",
+        "component": "ToolCall",
+        "source": "seen",
+        "rows": [
+          17,
+          18
+        ],
+        "calls": [
+          {
+            "status": "done",
+            "tool": "Read",
+            "target": "app.py",
+            "text": "  • Read app.py"
+          }
+        ]
+      },
+      {
+        "id": "block-c723b1e06a7fcd7d",
+        "component": "Thought",
+        "source": "seen",
+        "rows": [
+          19,
+          20
+        ],
+        "text": "  • Thinking"
+      },
+      {
+        "id": "block-1da25b9f99d9afec",
+        "component": "Block",
+        "source": "seen",
+        "role": "text",
+        "rows": [
+          20,
+          21
+        ],
+        "lines": [
+          "    Simple edit. Add a docstring at the top of app.py."
+        ],
+        "spans": [
+          [
+            {
+              "start": 0,
+              "end": 4,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 4,
+              "end": 54,
+              "style": {
+                "bold": false,
+                "italic": true,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "block-a589cdafe7c91131",
+        "component": "Block",
+        "source": "seen",
+        "role": "panel",
+        "rows": [
+          25,
+          31
+        ],
+        "lines": [
+          "╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
+          "│ quick question 1/11  □□□□□□□□□□□                                                                                   │",
+          "│ Who pays for your dev tools?                                                                                       │",
+          "│ 1 Me   2 My employer   3 Both   4 Nobody, I stick to free tools   0 Doesn't apply                                  │",
+          "│ 1–4 pick · 0 doesn't apply · esc not now (3 days)                                                                  │",
+          "╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
+        ],
+        "spans": [
+          [
+            {
+              "start": 0,
+              "end": 118,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 2,
+              "end": 23,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            },
+            {
+              "start": 23,
+              "end": 34,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:158,252,98"
+              }
+            },
+            {
+              "start": 34,
+              "end": 117,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 117,
+              "end": 118,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 2,
+              "end": 30,
+              "style": {
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            },
+            {
+              "start": 30,
+              "end": 117,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 117,
+              "end": 118,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 2,
+              "end": 83,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:241,245,249"
+              }
+            },
+            {
+              "start": 83,
+              "end": 117,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 117,
+              "end": 118,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 2,
+              "end": 51,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            },
+            {
+              "start": 51,
+              "end": 117,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 117,
+              "end": 118,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 118,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "block-ac478f82d68758cd",
+        "component": "Block",
+        "source": "seen",
+        "role": "text",
+        "rows": [
+          31,
+          32
+        ],
+        "lines": [
+          " working...                                                                                                  5s  ■ Esc"
+        ],
+        "spans": [
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 1,
+              "end": 2,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:89,109,170",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 2,
+              "end": 3,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:110,127,181",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 3,
+              "end": 4,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:131,146,192",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 4,
+              "end": 5,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:142,155,197",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 5,
+              "end": 6,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:163,174,208",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 6,
+              "end": 7,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:174,183,213",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 7,
+              "end": 8,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:195,202,224",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 8,
+              "end": 9,
+              "style": {
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:205,211,230",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 9,
+              "end": 10,
+              "style": {
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:227,230,241",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 10,
+              "end": 11,
+              "style": {
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:228,231,241",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 11,
+              "end": 109,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 109,
+              "end": 111,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:163,174,208",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 111,
+              "end": 113,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255",
+                "bg": "rgb:40,69,42"
+              }
+            },
+            {
+              "start": 113,
+              "end": 118,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:163,174,208",
+                "bg": "rgb:40,69,42"
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "block-2864fbca40cac89c",
         "component": "Block",
         "source": "seen",
         "role": "panel",
@@ -369,7 +1207,7 @@
         "lines": [
           "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
           "│                                                                                                                      │",
-          "│  ▍Enter a coding task or / for commands                                                                              │",
+          "│  ▍Add to the current task (/ for commands)                                                                           │",
           "│                                                                                                                      │",
           "╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
         ],
@@ -458,7 +1296,7 @@
             },
             {
               "start": 4,
-              "end": 41,
+              "end": 44,
               "style": {
                 "bold": false,
                 "italic": false,
@@ -468,7 +1306,7 @@
               }
             },
             {
-              "start": 41,
+              "start": 44,
               "end": 119,
               "style": {
                 "bold": false,
@@ -541,7 +1379,7 @@
         ]
       },
       {
-        "id": "block-86823dbce380eca4",
+        "id": "block-b456b74bc32d0ed9",
         "component": "Block",
         "source": "seen",
         "role": "text",
@@ -550,9 +1388,9 @@
           40
         ],
         "lines": [
-          " MiMo v2.6 Flash Fast · ~\\AppData\\Local\\Temp\\ui-lm-fb-2097695368\\repo · /model to change · Chat: New chat",
-          " ← for history · ? for help",
-          "Gi=31337,s=1,v=1,a=q,t=d,f=24;AAAA"
+          " DeepSeek V4.1 Flash 10/17 • high · ~\\AppData\\Local\\Temp\\ui-lm-fb-2097695368\\repo · /model to change · Chat: edit app.",
+          " py and add a docstring at the top",
+          " ← for history · ? for help"
         ],
         "spans": [
           [
@@ -569,7 +1407,7 @@
             },
             {
               "start": 1,
-              "end": 21,
+              "end": 33,
               "style": {
                 "bold": false,
                 "italic": false,
@@ -579,8 +1417,8 @@
               }
             },
             {
-              "start": 21,
-              "end": 72,
+              "start": 33,
+              "end": 84,
               "style": {
                 "bold": false,
                 "italic": false,
@@ -590,8 +1428,8 @@
               }
             },
             {
-              "start": 72,
-              "end": 78,
+              "start": 84,
+              "end": 90,
               "style": {
                 "bold": false,
                 "italic": false,
@@ -601,8 +1439,32 @@
               }
             },
             {
-              "start": 78,
-              "end": 105,
+              "start": 90,
+              "end": 118,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:172,179,191"
+              }
+            }
+          ],
+          [
+            {
+              "start": 0,
+              "end": 1,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "rgb:255,255,255"
+              }
+            },
+            {
+              "start": 1,
+              "end": 34,
               "style": {
                 "bold": false,
                 "italic": false,
@@ -668,8 +1530,7 @@
                 "fg": "rgb:172,179,191"
               }
             }
-          ],
-          []
+          ]
         ]
       }
     ]
