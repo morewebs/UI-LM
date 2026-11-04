@@ -195,6 +195,12 @@ the model's input](docs/adr/0001-cell-grid-as-model-input.md), [A2UI's envelope 
 catalogue](docs/adr/0002-a2ui-envelope-custom-catalogue.md), and [a table is numeric
 columns](docs/adr/0008-a-table-is-numeric-columns.md).
 
+## Writing your own runtime
+
+The format is meant to be rendered by something that is not this repository. [docs/implementing.md](docs/implementing.md) is
+the guide: what a page gives you, what a runtime owes it, and the three tests - the schema, the conformance kit, and
+`check-conformance` - that say whether you got it right.
+
 ## Picking this up
 
 [State of the project](docs/reports/2026-10-28-state-of-the-project.md) is the plain-language account. [HANDOFF.md](HANDOFF.md)
