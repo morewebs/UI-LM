@@ -290,6 +290,28 @@ reader can agree with the renderer while the product is broken, which is exactly
 block element. A shape missing from the list is a shape that reads as prose, not a shape that disappears - with one
 exception worth naming: an attribute is not text, so only `alt` and `value` are consulted.
 
+## What a document must carry back
+
+A runtime that draws a page as HTML has a second duty: **what it emits must be readable as a screen again.** Seven attributes
+carry the facts a reader cannot infer from the text, and every one of them exists because a round trip failed without it:
+
+| attribute | on | what a reader cannot infer |
+|---|---|---|
+| `data-binding` | a shortcut's control | which key does the thing - `ctrl+r`, `/dashboard` |
+| `data-cells` | a table's row | where one cell ends and the next begins |
+| `data-columns` | a table | how many columns the table has, when a row is short |
+| `data-title` | a frame | the window's title, which is drawn on its border |
+| `data-frame` | a frame | that the rows below belong to a floating window |
+| `data-layout` | a panes container | that the children are drawn side by side |
+| `data-role` | a block | which part of the application drew it |
+
+**The document also carries the screen itself.** A paned page emits the interleaved rows in a `<div class="screen">`, hidden from
+a browser with CSS, because the panes cannot be interleaved back out of two containers; and a meter emits its drawn string in a
+`<div class="line meter-line">` for the same reason. `ui-lm-capture read` prefers the first and takes the second with the rest.
+
+Nothing in the list is decoration. Each row was added after a specific failure: a shortcut that could not be pressed, a table
+that read as prose, a window whose title vanished, a split screen drawn as one column, a meter whose numbers were lost.
+
 ## What a runtime must draw
 
 A page is a description, and a runtime turns it into a GUI. The minimum a runtime owes each part of the page:
