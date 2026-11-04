@@ -54,9 +54,11 @@ comes from its own text rather than its position, so it keeps its id when it scr
 
 **TUI → GUI** is the ordinary case: record any program, describe its screens, draw the page as HTML.
 
-**GUI → TUI** is checked too: the rendered document is parsed back and compared with the terminal rendering of the same
-frame. Five of the seven kinds round trip. `Meter` does not, because it is drawn as a bar and its number is not in a line
-element — a consumer that needs the number reads it from the page, not from the HTML.
+**GUI → TUI** is checked too, in two ways. The rendered document is parsed back and compared with the terminal frame it came
+from — **nine sessions, 136 lines, every kind of the vocabulary among them**; a page holding a split screen, a meter or a diff
+turns back into the screen it was. And a document **this project did not write** reads back as a screen as well: tables, code
+blocks, lists, forms, definition lists, headings and the landmark elements a framework builds a page from. Twelve document
+shapes are checked, and a page's `<script>`, `<style>` and `<template>` are stripped first, because nobody ever saw them.
 
 ## Download
 
