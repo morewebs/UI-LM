@@ -6,9 +6,9 @@
 #
 #   powershell -File scripts/check-hard.ps1
 #
-# Exit code 0 always — these are not gates, they are a scoreboard. What must not happen is that one
-# of them silently gets *worse*, so each is compared against the figure recorded in
-# docs/reports/2026-10-28-model.md and a regression is reported loudly.
+# Exit code 1 if a case regressed: a scoreboard that cannot fail is a scoreboard nobody reads. What must not happen
+# is that one of them silently gets *worse*, so each is compared against the figure in `$expected` below (justified,
+# case by case, in docs/reports/2026-10-28-model.md), and a regression is reported loudly.
 
 param(
     [string]$Model = "models/page.json"
