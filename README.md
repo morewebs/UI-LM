@@ -142,7 +142,7 @@ powershell -File scripts/check-everything.ps1 # all 31 checks, about half an hou
 
 ## What is proven
 
-Against **115 recordings and 1,651 frames** from eleven distinct commands — two agent CLIs, `whiptail`, `vim`, `top`,
+Against **116 recordings and 1,658 frames** from eleven distinct commands — two agent CLIs, `whiptail`, `vim`, `top`,
 `df`, `man`, `less`, `git`, `cmd` and PowerShell — gathered on two machines:
 
 - **The reader and the model both describe every evaluation frame, and both are consistent with their screens.** Seven
@@ -151,7 +151,7 @@ Against **115 recordings and 1,651 frames** from eleven distinct commands — tw
 - **The page can be drawn back.** Terminal text returns every line of content on every recording measured, split screens
   included; the rendered HTML can be turned back into the screen for **every** kind, over nine sessions and 136 lines, and
   a document this project did not write reads back as a screen in twelve shapes.
-- **Eighteen hard screens** — paned agents, a floating dialog, a completion popup, a blank split — each with a score, a
+- **Nineteen hard screens** — paned agents, a floating dialog, a completion popup, a blank split — each with a score, a
   ceiling on components, and where it applies the kind it exists for or the kinds it cannot hold.
 - **Provenance is honest, and pinned at zero.** Across the corpus, every component marked `carried` has appeared in an
   earlier frame; `scripts/check-corpus.ps1` fails on a single contradiction.

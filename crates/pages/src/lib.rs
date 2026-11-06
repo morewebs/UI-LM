@@ -1090,7 +1090,7 @@ fn page_from_lines(
                         lines: text.to_vec(),
                     },
                 )
-            } else if let Some(title) = as_frame(text) {
+            } else if let Some(title) = as_frame(text, (segment.first, segment.last), lines.len()) {
                 // A floating window, ADR 0006. Its lines are the rows as drawn, so the round trip places
                 // them back onto the screen without a renderer of its own.
                 (
@@ -1865,7 +1865,7 @@ struct MeterParts {
 /// ADR 0006: a box drawn with heavy rules — `╔` on its first row, `╚` and `╝` on its last — is a window over
 /// the page rather than beside it. The corpus draws those glyphs in exactly one recording, and a rule written
 /// wider than the shape it was learnt from has cost this project points four times running.
-fn as_frame(lines: &[String]) -> Option<String> {
+fn as_frame(lines: &[String], at: (usize, usize), total: usize) -> Option<String> {
     let first = lines.first()?;
     let bottom = lines.last()?;
     // Shape one, from vim: a box ruled with heavy lines, whose border sits at the window's own left edge.
@@ -1892,13 +1892,41 @@ fn as_frame(lines: &[String]) -> Option<String> {
         return None;
     }
     let border = &first[open..close];
-    let title_start = border.find('┤')?;
-    let title_end = border.find('├')?;
-    if title_end <= title_start {
-        return None;
+    if let (Some(title_start), Some(title_end)) = (border.find('┤'), border.find('├')) {
+        if title_end > title_start {
+            let title = border[title_start + '┤'.len_utf8()..title_end].trim();
+            if !title.is_empty() {
+                return Some(title.to_owned());
+            }
+        }
     }
-    let title = border[title_start + '┤'.len_utf8()..title_end].trim();
-    (!title.is_empty()).then(|| title.to_owned())
+    // The measured rule asks for a *box*, not a pair of horizontal rules: every row between the top and bottom
+    // carries the two vertical borders in the same columns. Columns are counted in characters, not bytes, because the
+    // border itself is three bytes wide in UTF-8.
+    let open_column = first[..open].chars().count();
+    let close_column = first[..close].chars().count();
+    for row in &lines[1..lines.len().saturating_sub(1)] {
+        let chars: Vec<char> = row.chars().collect();
+        if chars.get(open_column) != Some(&'│') || chars.get(close_column) != Some(&'│') {
+            return None;
+        }
+    }
+    // Shape three, ADR 0006 extended: an untitled light box **centred in the screen**. tmux's `display-popup`
+    // draws one, and with no title in the border shapes one and two both refuse it.
+    //
+    // The title used to be the whole discriminator against Freebuff's boxed panels inside transcripts. Dropping it
+    // and keeping only the box geometry promoted 642 blocks in 24 sessions, all of them panels. Centring is the
+    // measured difference: over the corpus, **8 boxes are centred within two rows of the screen's middle, and every
+    // one is a floating window** - vim and tmux popups, whiptail dialogs - while none of the 642 panels is (rounds
+    // 175-176, `scripts/measure-frame-centring.py`). The screen's height is all the rule needs, so both builders and
+    // the model path can compute it from the same text.
+    let top = at.0 as isize;
+    let bottom_margin = total as isize - at.1 as isize;
+    let centred = (top - bottom_margin).abs() <= 2;
+    if centred {
+        return Some(String::new());
+    }
+    None
 }
 
 fn as_meter(lines: &[String]) -> Option<MeterParts> {

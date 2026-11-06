@@ -295,7 +295,7 @@ fn labeled_page(text: &[String], labels: &[String], surface: &str, allow_split: 
             u16::try_from(end).unwrap_or(u16::MAX),
         ];
 
-        let (kind, body) = body_for(settled(&label, &lines).as_str(), &lines, rows);
+        let (kind, body) = body_for(settled(&label, &lines).as_str(), &lines, rows, text.len());
         let id = crate::unique_id(block_id(&lines), &mut taken);
         children.push(id.clone());
         components.push(Component {
@@ -361,7 +361,7 @@ fn labeled_page(text: &[String], labels: &[String], surface: &str, allow_split: 
 }
 
 /// The component a run of rows becomes, given what it was called.
-fn body_for(label: &str, lines: &[String], rows: [u16; 2]) -> (String, Body) {
+fn body_for(label: &str, lines: &[String], rows: [u16; 2], total: usize) -> (String, Body) {
     let text = lines.to_vec();
     // A reasoning line says what it is: the application draws `♦ Thought for 3.0s`, and the
     // reader has always recognised it from the text rather than from a decision. The model
@@ -388,8 +388,9 @@ fn body_for(label: &str, lines: &[String], rows: [u16; 2]) -> (String, Body) {
     match label {
         // ADR 0006: a run drawn as a heavy-ruled box is a floating window, whatever the model called it. The
         // predicate is the reader's, asked here rather than restated — the same arrangement as meter and diff.
-        _ if crate::as_frame(lines).is_some() => {
-            let title = crate::as_frame(lines).unwrap_or_default();
+        _ if crate::as_frame(lines, (rows[0] as usize, rows[1] as usize), total).is_some() => {
+            let title = crate::as_frame(lines, (rows[0] as usize, rows[1] as usize), total)
+                .unwrap_or_default();
             (
                 "Frame".to_owned(),
                 Body::Frame {

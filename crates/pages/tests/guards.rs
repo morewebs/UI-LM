@@ -226,26 +226,33 @@ fn a_box_border_is_not_a_tree_branch() {
     assert_eq!(kinds(&tree).len(), 1);
 }
 #[test]
-fn a_real_bordered_popup_is_one_panel() {
-    // Recorded from tmux's `display-popup`, not drawn for this test. The window's four borders
-    // and its contents are one component; a tree-branch rule once split the bottom border off
-    // and the model fell to 90.5% against a floor of 100%.
+fn a_real_untitled_popup_is_one_frame() {
+    // Recorded from tmux's `display-popup`, not drawn for this test. The window's four borders and its contents must be
+    // **one** component: a tree-branch rule once split the bottom border off and the model fell to 90.5% against a
+    // floor of 100%. The kind has changed since the fixture was recorded - the box has no title in its border, so it
+    // was a panel; ADR 0006's centring measurement makes it a `Frame` (8 centred boxes in the corpus, all floating
+    // windows, and none of 648 panels). The intent of the test is the split, not the kind.
     let screen = include_str!("fixtures/screens/tmux-popup.txt");
     let text: Vec<String> = screen.lines().map(|line| line.to_owned()).collect();
     let labels = vec!["Block".to_owned(); text.len()];
     let page = ui_lm_pages::page_from_labels(&text, &labels, "popup");
-    let panels = page
+    let frames = page
         .create_surface
         .components
         .iter()
-        .filter(|component| {
-            matches!(&component.body, ui_lm_pages::Body::Block { role, .. } if role == "panel")
-        })
+        .filter(|component| component.component == "Frame")
         .collect::<Vec<_>>();
     let kinds = kinds(&page);
-    assert_eq!(panels.len(), 1, "one panel: {kinds:?}");
+    assert_eq!(frames.len(), 1, "one Frame: {kinds:?}");
+    let ui_lm_pages::Body::Frame { lines, .. } = &frames[0].body else {
+        panic!("a Frame carries its rows");
+    };
+    assert_eq!(
+        lines.len(),
+        6,
+        "the box and its contents are one component: {kinds:?}"
+    );
 }
-
 #[test]
 fn a_real_popup_over_panes_keeps_its_overlay() {
     // Also recorded: a popup drawn across a two-pane split. The overlay survives as a panel;
@@ -365,6 +372,54 @@ fn a_heavy_ruled_box_is_a_frame() {
         kinds.contains(&"Frame".to_owned()),
         "a heavy-ruled box must be a Frame, not a block: {:?}",
         kinds
+    );
+}
+
+#[test]
+fn an_untitled_box_centred_in_the_screen_is_a_frame() {
+    // ADR 0006, shape three. tmux 3.4's `display-popup` draws a light box with no title in its border, and shapes one
+    // and two both refuse that. Centring is the measured difference from Freebuff's boxed panels: over the corpus, 8
+    // boxes sit within two rows of the screen's middle and every one is a floating window; none of the 648 untitled
+    // boxes that are panels does.
+    let rows = [
+        "~",
+        "~",
+        "~",
+        "   ┌───────────────┐",
+        "   │  some output  │",
+        "   │  more output  │",
+        "   └───────────────┘",
+        "~",
+        "~",
+        "~",
+    ];
+    let page = page_of(&rows, "Block");
+    let kinds = kinds(&page);
+    assert!(
+        kinds.contains(&"Frame".to_owned()),
+        "an untitled box centred in the screen is a floating window: {kinds:?}"
+    );
+}
+
+#[test]
+fn an_untitled_box_near_the_top_is_still_prose() {
+    // The same box, three rows from the top of a nine-row screen: a panel in a transcript, not a window over it.
+    let rows = [
+        "   ┌───────────────┐",
+        "   │  some output  │",
+        "   └───────────────┘",
+        "~",
+        "~",
+        "~",
+        "~",
+        "~",
+        "~",
+    ];
+    let page = page_of(&rows, "Block");
+    let kinds = kinds(&page);
+    assert!(
+        !kinds.contains(&"Frame".to_owned()),
+        "an off-centre box is a panel, and calling it a Frame is the 642-block mistake: {kinds:?}"
     );
 }
 

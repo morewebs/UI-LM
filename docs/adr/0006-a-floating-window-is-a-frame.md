@@ -110,3 +110,40 @@ cannot be asked of it — the first version asked exactly that and rejected whip
 
 The counterweight was written before the code: **Freebuff's survey is a full-width sheet docked at the bottom**,
 it fails the indented-`┌` test, and it stays a `Block`. Measured on the frame that draws it.
+
+## The third shape: untitled, and centred in the screen
+
+tmux 3.4's `display-popup` draws a light box with no title in its border. It was recorded in round 49 and the page called
+it a `Block` - a panel - for a year, because the title was the only thing separating a window from Freebuff's panels:
+dropping it promoted **642 blocks in 24 sessions**.
+
+The replacement test is **vertical centring**, and it was measured before it was believed
+(`scripts/measure-frame-centring.py`):
+
+```
+untitled boxes in the corpus: 646
+centred within two rows: 6
+  eval/apps/tmux-popup frame 3: 9 row(s) above, 11 below (Frame)
+  eval/apps/tmux-popup frame 4: 9 row(s) above, 11 below (Frame)
+  eval/apps/tmux-popup frame 5: 9 row(s) above, 11 below (Frame)
+  eval/apps/tmux-popup frame 6: 9 row(s) above, 11 below (Frame)
+  eval/tui/wsl-tmux-popup frame 2: 9 row(s) above, 11 below (Frame)
+  eval/tui/wsl-tmux-popup frame 3: 9 row(s) above, 11 below (Frame)
+```
+
+Six boxes, all floating windows - tmux's popup, in two recordings. The other **640** untitled boxes are panels inside
+transcripts, and none is centred. So `as_frame` grew a third branch: an indented light box whose bottom starts in the same
+column, where the rows above the box and below it differ by at most **two**. The screen's height is all the rule needs, so
+both builders compute it from the same text; the label path passes the whole screen's length and the reader passes the
+frame's.
+
+| shape | the test | where it came from |
+|---|---|---|
+| heavy rules | `╔`…`╗` above `╚`…`╝` | vim's `popup_create` |
+| centred, titled | an indented `┌`, a `└` in the same column, and a title between `┤` and `├` | whiptail |
+| centred, untitled | the same box geometry, no title, at most two rows between the box's top and bottom margins | tmux `display-popup` |
+
+The fixture that guarded the old classification, `fixtures/screens/tmux-popup.txt`, now asserts one `Frame` instead of one
+panel. The test's intent was always that the border and its contents stay **one** component - a tree-branch rule once split
+the bottom border off and the model fell to 90.5% - and that intent is unchanged. The case is also kept as
+`cases/hard/tmux-floating-popup` with a required `Frame`, so removing the centring fails a named check.
