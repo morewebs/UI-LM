@@ -102,9 +102,11 @@ Five items from earlier handoffs are done, and saying so is cheaper than a succe
 underline is a `Table` (ADR 0009, four screens, no prose). The frontiers that remain are the ones the corpus cannot
 answer:
 
-1. **A third application for `Frame`.** The machine has none of the obvious ones: `fzf` and `dialog` are absent, and
-   `tmux display-popup` draws nothing without an attached client (the report records the attempt). Two applications and
-   three components is the thinnest evidence in the vocabulary.
+1. **A third application for `Frame` exists, and the predicate refuses it.** `tmux display-popup` draws a real floating
+   box when the recorder drives an **attached** client with `--script` (the earlier "nothing" was a detached session).
+   `as_frame` requires a title in the border, and dropping that test matches **642 boxes in 24 sessions** - Freebuff's
+   panels inside transcripts. The next question is a discriminator the predicate cannot see: whether the box floats over
+   other content. Two applications and three components is still what the reader admits.
 2. **A record that names the program a wrapper runs.** `wsl.exe -e sh /tmp/ui-lm/wt.sh` hides a whiptail dialog: the
    producer count in `scripts/measure-producers.py` is a lower bound, and the record cannot say otherwise.
 3. **Whether losing side-by-side layout matters.** A framework-shaped page reads as its blocks in document order and
@@ -144,7 +146,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
 shape, and **v0.65.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
-The corpus is **113 recordings, 1643 frames** per path, recorded from **11 distinct commands** — derived from the
+The corpus is **114 recordings, 1650 frames** per path, recorded from **11 distinct commands** — derived from the
 `command` field of every recording, which is the only definition that admits checking. Among them: Grok (the training
 application), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and
 `man`, `less`, `df`, `vim`, `top`, `git`, `cmd` and PowerShell — programs that are not agents at all.

@@ -12,7 +12,7 @@ ADR 0008). That is the split the project runs on: what a thing *is*, is learned;
 |---|---|
 | weights | `models/page.json`, 19 x 5 matrix and 5 biases, SHA-256 begins `433465EADD618E45` |
 | features | 19, read off the screen itself: tool glyphs, meter ratios, indentation, box characters, elapsed-time phrases, diff markers, and so on |
-| generalisation | **113 recordings, every one at 100%** - including five made after training: a `git clone`, a
+| generalisation | **114 recordings, every one at 100%** - including five made after training: a `git clone`, a
 scripted progress loop, a table of words, a split screen and a diff |
 | parameters | 100 |
 | inference | Rust, `crates/model`, no runtime dependencies |
@@ -32,8 +32,8 @@ stated here rather than in a footnote.
 
 | set | what it is | result |
 |---|---|---|
-| every recording here | **113 recordings, 1,643 frames** from **11 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
-| seven evaluation sets | Grok and non-Grok screens, 331 frames | 100% every set |
+| every recording here | **114 recordings, 1,650 frames** from **11 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
+| seven evaluation sets | Grok and non-Grok screens, 338 frames | 100% every set |
 | **a second agent CLI** | **21 recordings, 1111 frames, never trained on** | **100%, every component** |
 | fresh batches | recorded **after** training, 8 batches | 100% every batch, every kind it held |
 
