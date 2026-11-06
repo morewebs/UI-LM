@@ -34,7 +34,7 @@ the code constructs.
 | new screens, recorded after training, read perfectly | **every batch since training, every kind it held, nothing missed** — the per-batch numbers are in the report |
 | a split screen's panes hold their own components | both paths ask the same question before splitting; audited on model pages too |
 | a floating window is named | **`Frame`**, added in round 48 from a vim popup: the first kind added since the vocabulary settled, and the first that needed a boundary before it needed a predicate |
-| the hard recordings hold their shapes | **17 hard recordings**, twelve at 100% on score and both round trips: an agent in a pane, an agent beside a shell, two agents, and two text buffers |
+| the hard recordings hold their shapes | **17 hard recordings**, all at 100% on score and both round trips: an agent in a pane, an agent beside a shell, two agents, and two text buffers |
 | an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
 | every word the page holds reaches the browser document | 113 recordings **on both paths**, checked; markup arrives escaped |
 | every recording on this machine reads on either builder | **113 recordings, 3286 pages**, reader and model, no error |
@@ -46,11 +46,12 @@ the code constructs.
 
 ## What is not proven, or cannot be
 
-- **The training material is one agent's transcripts.** This machine has no other agent CLI — `claude`, `aider`, `codex`, `gemini`, `ollama` and `opencode` were all looked for, in WSL and on Windows, and none is installed. The claim is untested because the material does not exist here, not because it was not sought. Only software that draws *state* produces
-  the components this catalogue describes — seven other programs recorded for training produced
-  eleven screens and not one structured component. A second agent's transcripts are the only way to
-  test whether these shapes are general, and I don't have any.
-- **Every screen came from this machine**, and most were chosen by me. Eight clean batches is the
+- **The training material is one agent's transcripts.** The model was trained on Grok alone. Freebuff, an npm TUI,
+  was later installed and recorded eleven times, and the model reproduces every component at 100% on it without ever
+  being trained on it — that is the generalisation evidence, and it rests on one second application. The other agent
+  CLIs — `claude`, `aider`, `codex`, `gemini`, `ollama`, `opencode` — were looked for in WSL and on Windows and none is
+  installed, so a field of applications is not available here.
+- **Every screen came from this machine**, and most were chosen by me. Ten clean batches is the
   strongest claim available; it is not the same as a stranger's workflow.
 - **The model is at its ceiling, and that is measured three ways.** 60% more corpus: +0.1% row
   accuracy. A twentieth feature: worse on every screen family. Training on plain screens: three
@@ -58,30 +59,28 @@ the code constructs.
 - **A perfect page score is partly the assembly's work.** The model's raw labels disagree with the
   reader on 2–12% of rows, and structural guards are what keep pages exact. That's by design, and it
   took a diagnostic to see it.
-- **Some shapes are not representable — and the cost is measured.** A floating window is read as
-  a block of text: vim's help window over a buffer round tripped at **74/74 lines (100%)**, so a
-  consumer loses the *structure* of the overlay and none of its content. A tab strip is recognised
-  only when numbered. **A divider-only pane row was on this list and is no longer**: a split
-  with both panes blank round trips at **67/67 lines (100%)** with every row covered, so it is now
-  a fifth hard recording rather than a claimed limitation.
+- **Some shapes are not representable — and the cost is measured.** A tab strip is recognised only when numbered.
+  **A floating window was on this list and is no longer**: ADR 0006 makes it a `Frame`, and vim's popup is a hard
+  recording. **A divider-only pane row was on this list and is no longer**: a split with both panes blank round trips
+  at **67/67 lines (100%)** with every row covered, so it is a fifth hard recording rather than a claimed limitation.
 - **Live is not continuous.** A frame exists when the screen settles, so a fast program yields fewer
   moments than it drew.
 
 ## Where the code is
 
-Seven crates, one per job: capture, frames, pages, model, render, serve, validate. Eight check
-scripts run every claim above in about six minutes. `HANDOFF.md` is the short version for whoever
-picks this up next.
+Seven crates, one per job: capture, frames, pages, model, render, serve, validate. Thirty-one check
+scripts run every claim above; `scripts/check-everything.ps1` prints them as one table in about half an
+hour. `HANDOFF.md` is the short version for whoever picks this up next.
 
-## The three things I would do next
+## What this page used to say next, and what happened
 
-1. **Give panes a container** so a pane can hold a diff or a meter rather than a wall of text.
-   Designed in ADR 0004, costed at about half a day, waiting for a screen that demands it.
-2. **Get a second agent's transcripts** — the only path to knowing whether the component shapes are
-   general or this application's.
-3. **Stop calling it a model success and start calling it a reader success.** The honest description
-   of what works is that a small classifier plus a careful reader beats a big model alone, and the
-   reader is where the remaining value is.
+1. **Give panes a container** so a pane can hold a diff or a meter rather than a wall of text. Done: ADR 0004 shipped
+   the container, and `pane-with-tables` is a hard recording whose panes hold tables.
+2. **Get a second agent's transcripts** — the only path to knowing whether the component shapes are general. Done:
+   Freebuff, an npm TUI, was recorded eleven times and the untrained model reproduces every component at 100%.
+3. **Stop calling it a model success and start calling it a reader success.** This one is not a task and has not been
+   resolved: the model's raw labels still disagree with the reader on 2–12% of rows, and the exact pages are the
+   reader's and the guards' work. The current frontiers are the four in `HANDOFF.md`.
 
 ## What the last week added, in one paragraph
 

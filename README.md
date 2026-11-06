@@ -145,13 +145,13 @@ powershell -File scripts/check-everything.ps1 # all 31 checks, about half an hou
 Against **113 recordings and 1,643 frames** from eleven distinct commands — two agent CLIs, `whiptail`, `vim`, `top`,
 `df`, `man`, `less`, `git`, `cmd` and PowerShell — gathered on two machines:
 
-- **The reader and the model both describe every evaluation frame, and both are consistent with their screens.** Six
+- **The reader and the model both describe every evaluation frame, and both are consistent with their screens.** Seven
   evaluation sets, each against a floor — a converter that only splits paragraphs. The floors are printed by
   `scripts/check-all.ps1`, because a floor of 100% means a set cannot fail and proves nothing about the vocabulary.
 - **The page can be drawn back.** Terminal text returns every line of content on every recording measured, split screens
   included; the rendered HTML can be turned back into the screen for **every** kind, over nine sessions and 136 lines, and
   a document this project did not write reads back as a screen in twelve shapes.
-- **Fifteen hard screens** — paned agents, a floating dialog, a completion popup, a blank split — each with a score, a
+- **Seventeen hard screens** — paned agents, a floating dialog, a completion popup, a blank split — each with a score, a
   ceiling on components, and where it applies the kind it exists for or the kinds it cannot hold.
 - **Provenance is honest, and pinned at zero.** Across the corpus, every component marked `carried` has appeared in an
   earlier frame; `scripts/check-corpus.ps1` fails on a single contradiction.
