@@ -100,7 +100,7 @@ Six items from earlier handoffs are done, and saying so is cheaper than a succes
 (vim's popup, two whiptail dialogs) and now admits a third application - tmux's untitled popup, by centring (ADR 0006's
 third shape; 6 centred boxes in 646, all floating windows); a record names its program's exit (`SessionRecord::exit`);
 `Meter` has a producer that is not an agent (`git clone --progress`); interaction has a check; and a word grid with no
-underline is a `Table` (ADR 0009, four screens, no prose). The frontiers that remain are the ones the corpus cannot
+underline is a `Table` (ADR 0009, six screens across four applications, no prose). The frontiers that remain are the ones the corpus cannot
 answer:
 
 1. **A record that names the program a wrapper runs.** `wsl.exe -e sh /tmp/ui-lm/wt.sh` hides a whiptail dialog: the
@@ -138,11 +138,11 @@ somebody gets round to the documents — which is what happened for twenty-four 
   evidence, or not at all.
 ## Where it stands now
 
-**31 checks, about half an hour, every axis green**, **19 hard cases** at 100% on score, round trip and
+**31 checks, about half an hour, every axis green**, **20 hard cases** at 100% on score, round trip and
 shape, and **v0.65.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
-The corpus is **116 recordings, 1658 frames** per path, recorded from **11 distinct commands** — derived from the
+The corpus is **119 recordings, 1663 frames** per path, recorded from **12 distinct commands** — derived from the
 `command` field of every recording, which is the only definition that admits checking. Among them: Grok (the training
 application), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and
 `man`, `less`, `df`, `vim`, `top`, `git`, `cmd` and PowerShell — programs that are not agents at all.
