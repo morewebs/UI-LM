@@ -193,8 +193,9 @@ The longer account — every attempt, every rejected hypothesis, every cost — 
 Design and decisions are in the repository: [the design spec](docs/superpowers/specs/2026-10-27-ui-lm-design.md), [the
 glossary](GLOSSARY.md), [the catalogue reference](docs/catalogue/moreweb.terminal-v1.md), and the ADRs — [the cell grid is
 the model's input](docs/adr/0001-cell-grid-as-model-input.md), [A2UI's envelope with our
-catalogue](docs/adr/0002-a2ui-envelope-custom-catalogue.md), and [a table is numeric
-columns](docs/adr/0008-a-table-is-numeric-columns.md).
+catalogue](docs/adr/0002-a2ui-envelope-custom-catalogue.md), [a table is numeric
+columns](docs/adr/0008-a-table-is-numeric-columns.md), and [a table is also a grid of
+words](docs/adr/0009-a-table-is-a-grid-of-words.md).
 
 ## Writing your own runtime
 
