@@ -13,8 +13,10 @@ $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 $scriptsDir = Join-Path $repo "scripts"
 
+# The runner and this check are not captures: the runner reads children through log files, and this check's own
+# pattern contains the word `$capture` as text. Counting either would make the number it prints a little less true.
 $checks = @(Get-ChildItem -LiteralPath $scriptsDir -Filter "check-*.ps1" |
-    Where-Object { $_.Name -ne "check-everything.ps1" })
+    Where-Object { $_.Name -ne "check-everything.ps1" -and $_.Name -ne "check-encoding.ps1" })
 if ($checks.Count -lt 20) {
     Write-Host ("only {0} check(s) were found, so the scan did not see the suite" -f $checks.Count)
     exit 1
