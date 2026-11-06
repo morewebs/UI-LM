@@ -12,7 +12,7 @@ ADR 0008). That is the split the project runs on: what a thing *is*, is learned;
 |---|---|
 | weights | `models/page.json`, 19 x 5 matrix and 5 biases, SHA-256 begins `433465EADD618E45` |
 | features | 19, read off the screen itself: tool glyphs, meter ratios, indentation, box characters, elapsed-time phrases, diff markers, and so on |
-| generalisation | **119 recordings, every one at 100%** - including five made after training: a `git clone`, a
+| generalisation | **121 recordings, every one at 100%** - including five made after training: a `git clone`, a
 scripted progress loop, a table of words, a split screen and a diff |
 | parameters | 100 |
 | inference | Rust, `crates/model`, no runtime dependencies |
@@ -32,8 +32,8 @@ stated here rather than in a footnote.
 
 | set | what it is | result |
 |---|---|---|
-| every recording here | **119 recordings, 1,663 frames** from **12 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
-| seven evaluation sets | Grok and non-Grok screens, 341 frames | 100% every set |
+| every recording here | **121 recordings, 1,666 frames** from **12 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
+| seven evaluation sets | Grok and non-Grok screens, 344 frames | 100% every set |
 | **a second agent CLI** | **21 recordings, 1111 frames, never trained on** | **100%, every component** |
 | fresh batches | recorded **after** training, 8 batches | 100% every batch, every kind it held |
 
@@ -153,7 +153,7 @@ catch it:
 | a **divider** | a column of bars **not matched** by a bar on the same rows | a centred `whiptail` dialog, whose border looked like a divider | the `tmux-two-panes` and `grok-help-frame6` fixtures, plus `whiptail-menu` |
 | `Meter` | a count against a drawn limit; a percentage is not one | `top`'s `%Cpu(s)` header | the `second machine` job forbids `Meter` on a monitor |
 | a **listing** | one `Block`, never a meter, thought or tool call | a directory listing, on any machine | the same job forbids all four on a listing |
-| `Diff` | **any** addition beside **any** removal | `- buy milk` / `+ buy eggs`, which is not a patch | a test that *pins the cost* rather than forbidding it: 73 of 113 corpus diffs carry no `@@` hunk header (24 carry no header at all), so narrowing was reverted |
+| `Diff` | **any** addition beside **any** removal | `- buy milk` / `+ buy eggs`, which is not a patch | a test that *pins the cost* rather than forbidding it: 73 of 114 corpus diffs carry no `@@` hunk header (24 carry no header at all), so narrowing was reverted |
 | `Table` | two vertical strips of digits in most rows, in a block of its own | the alignment rule matched vim's help rows and scored zero on `df`; the values rule matches nineteen recordings, two of them agent prose | ADR 0008 accepted; `pane-resize` forbids a table |
 
 **Five boundaries guard against widening; one pins an accepted cost.** The difference matters: forbidding is right
