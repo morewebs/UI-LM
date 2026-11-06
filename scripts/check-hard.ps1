@@ -50,6 +50,10 @@ $expected = @{
     "pane-resize" = 100.0
     "pane-with-tables" = 100.0
     "pwsh-word-table" = 100.0
+    # The grid ADR 0009 exists for - three columns of file names, no underline and no numbers. It is committed as a
+    # hard case for the material, not for a defect: a fresh clone has none of this machine's `eval/`, and a rule whose
+    # evidence is local is a rule nobody else can check.
+    "ls-word-grid" = 100.0
     # Fixed: an advertisement panel whose border ends `╯  █` stopped being a panel once the scrollbar
     # column was not stripped, so the reader swallowed the rest of the screen into one block. Measured at
     # 99.7% before the fix and 100% after it; that is the number a regression would have to fall below.
@@ -90,6 +94,9 @@ $required = @{
     # A table of **words**, caught only by the dash underline `Format-Table` draws under its headings (round 52).
     # Without that signal the reader calls this screen a block, which is what it did for a round.
     "pwsh-word-table"        = @("Table")
+    # ADR 0009's rule: without it this screen is one `Block`, and the case exists so that removing the signal fails
+    # here rather than looking like a quieter page.
+    "ls-word-grid"           = @("Table")
     "whiptail-dialog"        = @("Frame")
     "every-kind-one-screen"  = @("Block", "ToolCall", "Diff", "Meter")
     "pane-conversation"      = @("Block", "Meter", "ToolCall")
@@ -123,6 +130,8 @@ $ceiling = @{
     "pane-resize"              = 2
     "pane-with-tables"         = 3
     "pwsh-word-table"          = 2
+    # One `Table`, and that is the judgement: a grid read as one component per row would score 100% and be wrong.
+    "ls-word-grid"             = 1
     # Both of these hold one component and that is the judgement being protected: a popup or a menu read as one
     # component per row would still score 100% and would be wrong. They were added without ceilings, which meant the
     # only thing checking them was the score (round 214).
