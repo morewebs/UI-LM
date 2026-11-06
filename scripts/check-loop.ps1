@@ -7,6 +7,7 @@
 # This check serves a recording that holds shortcuts, reads the bindings out of the served page, and posts each one back.
 # A binding the viewer cannot translate is a button that does nothing.
 
+. (Join-Path $PSScriptRoot "utf8.ps1")
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 $capture = Join-Path $repo "target\debug\ui-lm-capture.exe"

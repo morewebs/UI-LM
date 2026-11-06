@@ -4,6 +4,7 @@
 # answer with the component the reader chose. A mismatch is one of them being wrong: the predicate sliding a window where
 # the reader judges a whole block reported a table inside an agent's listing and cost two rounds to explain (round 14).
 
+. (Join-Path $PSScriptRoot "utf8.ps1")
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 $script = Join-Path $repo "scripts\measure-tables.py"

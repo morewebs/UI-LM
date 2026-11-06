@@ -7,6 +7,7 @@
 # fill, and its *text* is not in a line element at all. That is by design and is measured by `check-kinds`, which
 # proves the bar reaches the markup. An earlier round wrongly included `Frame` in this limitation: its rows are line
 
+. (Join-Path $PSScriptRoot "utf8.ps1")
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 $capture = Join-Path $repo "target\debug\ui-lm-capture.exe"

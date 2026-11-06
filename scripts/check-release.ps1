@@ -16,6 +16,7 @@ param(
     [string]$Session = ""
 )
 
+. (Join-Path $PSScriptRoot "utf8.ps1")
 $ErrorActionPreference = "Continue"
 $repo = Split-Path -Parent $PSScriptRoot
 $work = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-release-" + [guid]::NewGuid().ToString("N"))

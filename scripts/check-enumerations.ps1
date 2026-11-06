@@ -8,6 +8,7 @@
 # by `|` (a regex alternation) must name every kind the catalogue defines. Lists of one or two names are ignored, because
 # a script may legitimately care about `Table` and `Frame` alone.
 
+. (Join-Path $PSScriptRoot "utf8.ps1")
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 

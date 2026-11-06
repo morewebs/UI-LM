@@ -5,6 +5,7 @@
 
 param()
 
+. (Join-Path $PSScriptRoot "utf8.ps1")
 $ErrorActionPreference = "Continue"
 $repo = Split-Path -Parent $PSScriptRoot
 $page = Join-Path $repo "docs\reports\2026-10-28-state-of-the-project.md"

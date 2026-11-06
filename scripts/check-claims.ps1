@@ -8,6 +8,7 @@
 #   1. a document that states how many kinds exist must state the number the code has;
 #   2. a document may not call a component "rejected" or say it "does not exist" while the catalogue defines it.
 
+. (Join-Path $PSScriptRoot "utf8.ps1")
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 

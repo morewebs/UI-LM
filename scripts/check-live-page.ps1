@@ -10,6 +10,7 @@
 # Exit code 1 if the live page does not change, if either fetch is empty, or if the control does
 # not behave as a frozen page must.
 
+. (Join-Path $PSScriptRoot "utf8.ps1")
 $ErrorActionPreference = "Continue"
 $repo = Split-Path -Parent $PSScriptRoot
 $capture = Join-Path $repo "target\debug\ui-lm-capture.exe"

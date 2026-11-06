@@ -40,7 +40,7 @@ the code constructs.
 | every recording on this machine reads on either builder | **110 recordings, 3164 pages**, reader and model, no error |
 | every page a builder makes is consistent with its screen |  frames audited on **each** path, no violations |
 | the download works | **v0.65.0**, three platforms, verified by downloading it and running it |
-| the checks can fail | **29 scripts and 4 fuzz properties, each shown failing with the output kept** (`docs/checks.md`); three refuse to pass on empty material and one has a clock |
+| the checks can fail | **30 scripts and 4 fuzz properties, each shown failing with the output kept** (`docs/checks.md`); three refuse to pass on empty material and one has a clock |
 | the viewer keeps up | typing, redraws, half-written files, cleared screens — each checked |
 | exporting a session is cheap | 4.4 ms and 3.9 KB per page, linear to 1,510 pages, capped by a check |
 
@@ -138,7 +138,7 @@ One command answers "is this tree sound", and takes about eight minutes:
 powershell -File scripts/check-everything.ps1
 ```
 
-It runs 26 checks and prints one table. With `-Quick` it skips the five that record new material
+It runs 29 checks and prints one table. With `-Quick` it skips the five that record new material
 and answers in under a minute — that is the loop for working; the full run is the loop for shipping.
 With `-Tag v0.11.1` it also downloads that release and proves the archive does what this document says.
 

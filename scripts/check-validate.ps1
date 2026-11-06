@@ -11,6 +11,7 @@
 #
 # Exit code 1 if the validator reports a mismatch on a matching dump, or misses a wrong cell.
 
+. (Join-Path $PSScriptRoot "utf8.ps1")
 $ErrorActionPreference = "Continue"
 $repo = Split-Path -Parent $PSScriptRoot
 $capture = Join-Path $repo "target\debug\ui-lm-capture.exe"

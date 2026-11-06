@@ -7,6 +7,7 @@
 # It is a separate file because an earlier attempt to graft it into `check-html` passed a mutation it should have
 # caught - the block never ran, and an unproven check is worse than none (round 235).
 
+. (Join-Path $PSScriptRoot "utf8.ps1")
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 $capture = Join-Path $repo "target\debug\ui-lm-capture.exe"

@@ -11,6 +11,7 @@
 
 param()
 
+. (Join-Path $PSScriptRoot "utf8.ps1")
 $ErrorActionPreference = "Continue"
 $repo = Split-Path -Parent $PSScriptRoot
 $capture = Join-Path $repo "target\debug\ui-lm-capture.exe"

@@ -2,6 +2,7 @@
 #
 # This is the kit a third party needs: the schema says what a page is (check-schema), and this says what a page means. Each case
 # is a directory holding `page.json` and the `screen.txt` it must draw (round 159).
+. (Join-Path $PSScriptRoot "utf8.ps1")
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 $capture = Join-Path $repo "target\debug\ui-lm-capture.exe"

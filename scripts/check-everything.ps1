@@ -25,6 +25,14 @@ if (-not (Test-Path "target\debug\ui-lm-capture.exe")) {
     exit 1
 }
 
+# The other half of the orphan fix (rounds 166-168). Assigning this process to a job whose members are killed when its
+# last handle closes means an interrupted run takes its checks down with it, however it is interrupted. The sweep below
+# stays as belt and braces, and is what still finds children from runs that predate this.
+. (Join-Path $PSScriptRoot "job-object.ps1")
+if (Enter-KillOnCloseJob) {
+    Write-Host "  this run's checks are members of a job that dies with it"
+}
+
 # A killed run leaves its children behind - `powershell.exe` per check - and eleven of them were found burning five CPU-hours
 # each, which made every later run look slow and four checks look flaky (round 166). Sweep stale children before starting, and
 # say what was swept, because a suite that measures a busy machine measures the machine.
@@ -54,6 +62,7 @@ $all = @(
 @{ name = "sizes";       script = "check-sizes.ps1"; slow = $false },
 @{ name = "scrub";       script = "check-scrub.ps1"; slow = $false },
 @{ name = "corrupt";     script = "check-corrupt.ps1"; slow = $false },
+@{ name = "orphans";     script = "check-orphans.ps1"; slow = $false },
 @{ name = "readme";      script = "check-readme.ps1"; slow = $false },
     @{ name = "docs";        script = "check-docs.ps1"; slow = $false },
     @{ name = "claims";      script = "check-claims.ps1"; slow = $false },
