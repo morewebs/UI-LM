@@ -1883,12 +1883,17 @@ fn as_frame(lines: &[String], at: (usize, usize), total: usize) -> Option<String
     if open == 0 {
         return None;
     }
+    // Columns are counted in characters, not bytes: the border is three bytes wide in UTF-8, and two rows whose
+    // prefixes hold different multibyte text would compare unequal even when their borders line up on the screen.
+    let open_column = first[..open].chars().count();
     let close = open + first[open..].find('┐')?;
+    let close_column = first[..close].chars().count();
     // "Centred" is measured by alignment, not by width: a row is right-trimmed, so "does it reach the last
     // column" cannot be asked of it. The box's bottom must start in the same column its top does, and that
     // column must not be zero — which is what tells a floating window from a panel docked to the edge.
     let foot = bottom.find('└')?;
-    if foot != open || !bottom.contains('┘') {
+    let foot_column = bottom[..foot].chars().count();
+    if foot_column != open_column || !bottom.contains('┘') {
         return None;
     }
     let border = &first[open..close];
@@ -1903,8 +1908,6 @@ fn as_frame(lines: &[String], at: (usize, usize), total: usize) -> Option<String
     // The measured rule asks for a *box*, not a pair of horizontal rules: every row between the top and bottom
     // carries the two vertical borders in the same columns. Columns are counted in characters, not bytes, because the
     // border itself is three bytes wide in UTF-8.
-    let open_column = first[..open].chars().count();
-    let close_column = first[..close].chars().count();
     for row in &lines[1..lines.len().saturating_sub(1)] {
         let chars: Vec<char> = row.chars().collect();
         if chars.get(open_column) != Some(&'│') || chars.get(close_column) != Some(&'│') {
