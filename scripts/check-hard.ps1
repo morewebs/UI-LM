@@ -60,6 +60,10 @@ $expected = @{
     # The word-grid rule's second committed producer: PowerShell's `Format-Wide` draws three columns of names with no
     # underline and no numbers, a shape no other application here emits.
     "pwsh-wide-grid" = 100.0
+    # A floating popup that is **not** centred - tmux's `display-popup -y 65%`. It is a box with no title, like the
+    # Frame case above, and the only thing that keeps it a panel is the centring test. Removing that test is the
+    # 642-block mistake; this case is the counterweight.
+    "tmux-offcentre-popup" = 100.0
     # Fixed: an advertisement panel whose border ends `╯  █` stopped being a panel once the scrollbar
     # column was not stripped, so the reader swallowed the rest of the screen into one block. Measured at
     # 99.7% before the fix and 100% after it; that is the number a regression would have to fall below.
@@ -80,6 +84,9 @@ $expected = @{
 # borderless completion popup, and a rule that starts accepting it should fail here rather than look like progress.
 $forbidden = @{
     "vim-completion-popup" = @("Frame")
+    # The other half of ADR 0006's boundary: a box that floats but is not centred is a panel, and a rule that admits
+    # every untitled box would call this one a Frame.
+    "tmux-offcentre-popup"  = @("Frame")
     # Two screens of shell output and nothing else. `Meter`, `Thought`, `ToolCall`, `Diff` and `Frame` are things agents
     # draw; a reader that invents one of them here has stopped reading the screen (round 216). Its score and ceiling
     # would both survive that: two blocks of made-up kinds agree with themselves perfectly.
@@ -144,6 +151,7 @@ $ceiling = @{
     # Three components: the shell prompt, the popup, and tmux's status line.
     "tmux-floating-popup"      = 3
     "pwsh-wide-grid"           = 1
+    "tmux-offcentre-popup"     = 2
     # Both of these hold one component and that is the judgement being protected: a popup or a menu read as one
     # component per row would still score 100% and would be wrong. They were added without ceilings, which meant the
     # only thing checking them was the score (round 214).

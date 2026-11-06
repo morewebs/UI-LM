@@ -12,7 +12,7 @@ ADR 0008). That is the split the project runs on: what a thing *is*, is learned;
 |---|---|
 | weights | `models/page.json`, 19 x 5 matrix and 5 biases, SHA-256 begins `433465EADD618E45` |
 | features | 19, read off the screen itself: tool glyphs, meter ratios, indentation, box characters, elapsed-time phrases, diff markers, and so on |
-| generalisation | **121 recordings, every one at 100%** - including five made after training: a `git clone`, a
+| generalisation | **122 recordings, every one at 100%** - including five made after training: a `git clone`, a
 scripted progress loop, a table of words, a split screen and a diff |
 | parameters | 100 |
 | inference | Rust, `crates/model`, no runtime dependencies |
@@ -32,7 +32,7 @@ stated here rather than in a footnote.
 
 | set | what it is | result |
 |---|---|---|
-| every recording here | **121 recordings, 1,666 frames** from **12 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
+| every recording here | **122 recordings, 1,675 frames** from **12 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
 | seven evaluation sets | Grok and non-Grok screens, 344 frames | 100% every set |
 | **a second agent CLI** | **21 recordings, 1111 frames, never trained on** | **100%, every component** |
 | fresh batches | recorded **after** training, 8 batches | 100% every batch, every kind it held |
@@ -53,10 +53,11 @@ all perfect.
 
 - **It cannot grow by finding another kind.** It labels five; the seventh kind, `Table`, was added by a rule the model never touches (ADR 0008), and a sixth *label* would be a change
   to the page format, the reader, both renderers and the checks — see `docs/adding-a-component.md`.
-- **A table is a run of numbers, and it is read by values.** `Table` is the seventh kind (ADR 0008): two vertical strips
-  holding digits in a majority of rows, in a block of its own. It is right about `ls`, `ps`, `df`, `top`, `dir` and
-  formatted listings, and a table whose cells are **words** is caught only when the application underlines its headings; it admits two agent screens of three or four rows where prose aligns by accident - a boundary
-  measured at three thresholds and written into `scripts/measure-tables.py`.
+- **A table is a run of numbers, a grid of words, or an underlined heading.** `Table` is the seventh kind: two vertical
+  strips holding digits in a majority of rows, in a block of its own (ADR 0008); a heading the application underlines;
+  or - ADR 0009 - a grid of single words at fixed columns, which is what `ls -C`, `pip list`, PowerShell's `Format-Wide`,
+  `column` and `pr` draw. The values rule admits two agent screens of three or four rows where prose aligns by accident -
+  a boundary measured at three thresholds and written into `scripts/measure-tables.py`.
 - **A drawn meter reaches the page as text and as a bar.** It was the last kind that could not round trip; it does since
   `emit` gave the meter a line of its own and `next_row` stopped skipping the rows before a plain one. Every kind now rebuilds
   over nine sessions and 136 lines.
@@ -127,12 +128,11 @@ And the disagreements are not spread evenly — they have one shape, measured by
   property of the per-frame API, not of the weights, and it would be fixed by giving `Model::page` the frames before
   it — the same threading the reader already does.
 
-- **`Frame` has one producer, and has been confirmed on two machines.** A titled box with corners that floats inside
-  the screen: `whiptail` draws one in three modes, and the same dialog recorded on a GitHub runner reads as
-  `Frame=1` there too — the check installs `whiptail` to make that question askable. The declines are as tested as
-  the accepts: `vim`'s completion popup (a float without a border) and Freebuff's composer (a border touching the
-  edge) are both `Block`. **One producer, four examples, three applications, two machines** — a kind the corpus
-  supports, thinly, and says so.
+- **`Frame` has three shapes and three applications.** A heavy-ruled box (vim's `popup_create`), a titled single-ruled
+  box (whiptail's dialogs, confirmed on a GitHub runner too), and an untitled box centred in the screen (tmux 3.4's
+  `display-popup`, driven with the recorder's key script). Thirteen components across the three. The declines are as
+  tested as the accepts: `vim`'s completion popup (a float without a border), Freebuff's composer (a border touching
+  the edge), and a popup drawn off-centre are all `Block`.
 
 - **A budget glued into one token is *declined*, and the cost is measured.** `0/5 hours remaining`, drawn inside the
   second agent's quota panel, is not read as a meter. Accepting it was measured on
@@ -149,7 +149,7 @@ catch it:
 
 | boundary | the rule | the counterexample | the guard |
 |---|---|---|---|
-| `Frame` | a **titled box with corners**, not touching the screen's edge | vim's completion popup (borderless) and Freebuff's composer (a box touching the edge), both read as `Block` | `check-hard` forbids `Frame` on `vim-completion-popup`, and forbids `Meter`/`Thought`/`ToolCall`/`Diff`/`Frame` on the two shell-only cases `pane-resize` and `agent-beside-shell` |
+| `Frame` | a box with corners, indented from the screen's edge, either **titled** or **centred within two rows of the screen's middle** | vim's completion popup (borderless), Freebuff's composer (a box touching the edge) and a tmux popup drawn off-centre, all read as `Block` | `check-hard` forbids `Frame` on `vim-completion-popup` and `tmux-offcentre-popup`, and forbids `Meter`/`Thought`/`ToolCall`/`Diff`/`Frame` on the two shell-only cases `pane-resize` and `agent-beside-shell` |
 | a **divider** | a column of bars **not matched** by a bar on the same rows | a centred `whiptail` dialog, whose border looked like a divider | the `tmux-two-panes` and `grok-help-frame6` fixtures, plus `whiptail-menu` |
 | `Meter` | a count against a drawn limit; a percentage is not one | `top`'s `%Cpu(s)` header | the `second machine` job forbids `Meter` on a monitor |
 | a **listing** | one `Block`, never a meter, thought or tool call | a directory listing, on any machine | the same job forbids all four on a listing |

@@ -147,3 +147,20 @@ The fixture that guarded the old classification, `fixtures/screens/tmux-popup.tx
 panel. The test's intent was always that the border and its contents stay **one** component - a tree-branch rule once split
 the bottom border off and the model fell to 90.5% - and that intent is unchanged. The case is also kept as
 `cases/hard/tmux-floating-popup` with a required `Frame`, so removing the centring fails a named check.
+
+## The boundary the centring rule draws
+
+A box can float and not be centred - tmux's `display-popup -x 10 -y 65%` draws one near the bottom, its own block with
+blank rows above it. The rule refuses it: it is a `Block`, a panel, and that is the price of admitting the centred shape
+without admitting Freebuff's 640 panels. The recording is `cases/hard/tmux-offcentre-popup` with a **forbidden** `Frame`,
+the mirror of `vim-completion-popup`'s borderless popup: one guards the title's absence, this one guards the centring.
+
+Widening the tolerance to forty rows proved the guard:
+
+```
+  tmux-offcentre-popup   holds a Frame, and this screen is the counterexample for it
+a known-hard screen got worse; that is a regression, not a gap
+```
+
+A window deliberately drawn off-centre is not described as a floating window by this reader. The rule is a measurement,
+not a definition of what floats; the limitation is stated where the rule is.
