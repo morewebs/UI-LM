@@ -179,10 +179,12 @@ refused was refused by counting something.
    What it cannot see is a page whose content arrives **without any of those shapes**: a document built entirely from
    `<div class="row">` and CSS, which is what most modern sites are. The question is not whether the reader can be taught
    every framework - it cannot - but what it should say when it recognises nothing, which today is one line per block.
-2. **`Meter` has two producers, one of them third-party.** An agent's quota line and `git clone --progress` -
-   `Receiving objects: 100% (15006/15006)` - both read as the kind, and the rule now admits a parenthesised fraction
-   because 8 corpus lines carry that shape against 2,391 bare slashes that are nearly all dates. **Next step:** the same
-   question for `Diff`'s one producer, and for `Frame`, which the corpus holds three of.
+2. **Producers are counted, and the count is a lower bound.** `scripts/measure-producers.py` reads every session's
+   `command` and, where the wrapper names one, the inner program after `wsl.exe -e`. `Diff` has four commands (git,
+   Freebuff under `cmd.exe`, a Python script, a shell script); `Frame` has two applications - vim's floating popup and
+   whiptail's dialogs - but one command field (`wsl.exe`), because `sh /tmp/ui-lm/wt.sh` hides the program under the
+   shell. **Next step:** a record that names the program a wrapper runs, or an honest habit of reading every producer
+   count as a lower bound.
 
 **The provenance contradiction is fixed.** `pages()` decides `carried` from the memory as it was **before** the frame,
 not from the set the loop is filling: two identical blocks in one frame are both `seen`, because neither was on screen
