@@ -115,6 +115,36 @@ if ($shapeLines.Count -ne $want.Count) {
 } else {
     Write-Host ("a wrapper div and a form read back as {0} line(s), in order" -f $shapeLines.Count)
 
+# A page built from layout divs and CSS, the shape a framework emits: no semantic tags, no table, every row a flex
+# container. The reader follows the document's own block structure - inline spans join on a line, each block element is
+# its own line - and does not invent rows from CSS. This is the answer to "what does the reader say when it recognises
+# nothing": the text in document order, neither a failure nor a structure it cannot see (round 172). The check holds
+# that answer, so a later reader cannot turn it into an invention or into silence without a failure.
+$frameworkPath = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-framework-" + [guid]::NewGuid().ToString("N") + ".html")
+Set-Content -LiteralPath $frameworkPath -Encoding UTF8 -Value @"
+<!doctype html><html><head><style>.flex{display:flex}.flex-1{flex:1}</style></head><body>
+<div class="min-h-screen flex flex-col">
+  <div class="flex items-center justify-between"><span class="text-xl">Dashboard</span><span class="text-sm">Settings</span></div>
+  <div class="flex"><div class="flex-1">Name</div><div class="flex-1">Status</div><div class="flex-1">Uptime</div></div>
+  <div class="flex"><div class="flex-1">api</div><div class="flex-1">running</div><div class="flex-1">4d 2h</div></div>
+  <div class="flex"><div class="flex-1">worker</div><div class="flex-1">stopped</div><div class="flex-1">-</div></div>
+</div>
+</body></html>
+"@
+$previousRead = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+$frameworkLines = @(& $capture read --html $frameworkPath 2>&1 | ForEach-Object { "$_" })
+$ErrorActionPreference = $previousRead
+Remove-Item -LiteralPath $frameworkPath -Force -ErrorAction SilentlyContinue
+$wantFramework = @("Dashboard Settings", "Name", "Status", "Uptime", "api", "running", "4d 2h", "worker", "stopped", "-")
+if ($frameworkLines.Count -ne $wantFramework.Count) {
+    $failures += ("a framework-shaped page read back as {0} line(s), not {1}: {2}" -f $frameworkLines.Count, $wantFramework.Count, ($frameworkLines -join " | "))
+} elseif (($frameworkLines -join "`n") -ne ($wantFramework -join "`n")) {
+    $failures += ("a framework-shaped page did not read as its blocks in order: " + ($frameworkLines -join " | "))
+} else {
+    Write-Host ("a framework-shaped page reads back as {0} line(s): its blocks in document order, and no invented rows" -f $frameworkLines.Count)
+}
+
 # Every row of the catalogue's "A page may arrive from anywhere" table, read one document at a time (round 91).
 $contractShapes = @(
     @{ What = "a table";      Html = "<table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table>"; Want = @("A  B", "1  2") },

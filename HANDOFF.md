@@ -198,10 +198,13 @@ The two earlier attempts failed because they also lost the restore step; the sma
    document. v0.45.0 cut each cell at the end of the dashes (`hosts` stored as `host`); the cell now runs to the next
    column, which is what the values rule already did. **Next step:** a word table the application does not underline,
    which neither signal can see, and which the corpus does not hold.
-2. **The reader's silence.** Nine document shapes are checked and all nine read back; what is unmeasured is
-   what the reader does with a page built from `div` and CSS, where it recognises no shape at all. **Next
-   step:** a fixture of a real framework-rendered page, and a decision about whether one line per block is
-   an honest answer or a silent failure.
+2. **The reader's silence is measured, and the answer is "the document's own blocks, in order".** A page built from
+   layout divs and CSS - the shape a framework emits - reads back as its text in document order: inline spans join on
+   a line, each block element is its own line. No rows are invented from CSS, and nothing is dropped.
+   `check-html-to-tui` holds a framework-shaped fixture and its ten lines, so the answer cannot change silently. A
+   real page from a sibling project on this machine (a server-rendered template, not a live app) read as 21 lines,
+   template syntax included. **Next step:** whether losing side-by-side layout is acceptable to a consumer, and a
+   capture of an application's rendered DOM rather than a template.
 
-**None of the three is a defect in the code that ships.** They are the frontiers: what the reader has not been shown,
+**None of these is a defect in the code that ships.** They are the frontiers: what the reader has not been shown,
 what the catalogue has refused, and what the vocabulary cannot yet be asked twice.
