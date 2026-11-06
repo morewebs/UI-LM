@@ -36,8 +36,9 @@ Recorded for this question (`eval/apps/ls-grid-*`) and measured over the whole c
 | `pip-list` | 31 | 2 | `pip list` |
 | `pwsh-wide` | 8 | 3 | PowerShell's `Format-Wide` |
 | `column-grid` | 4 | 2 | util-linux's `column -t` |
+| `pr-grid` | 4 | 2 | util-linux's `pr -t -2` |
 
-Six screens, four applications, and **no prose block matches**: not vim's help, not an agent's listing, nothing. The
+Seven screens, five applications, and **no prose block matches**: not vim's help, not an agent's listing, nothing. The
 cell test is what makes the difference — the alignment rule matches 18 rows of one vim help screen, this rule zero.
 
 ## Consequences

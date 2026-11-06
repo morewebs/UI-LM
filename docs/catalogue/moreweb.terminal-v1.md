@@ -311,7 +311,7 @@ carry the facts a reader cannot infer from the text, and every one of them exist
 | `data-binding` | a shortcut's control | which key does the thing - `ctrl+r`, `/dashboard` |
 | `data-cells` | a table's row | where one cell ends and the next begins |
 | `data-columns` | a table | how many columns the table has, when a row is short |
-| `data-title` | a frame | the window's title, which is drawn on its border |
+| `data-title` | a frame | the window's title, which is drawn on its border; **empty** when the window draws none |
 | `data-frame` | a frame | that the rows below belong to a floating window |
 | `data-layout` | a panes container | that the children are drawn side by side |
 | `data-role` | a block | which part of the application drew it |
@@ -338,7 +338,7 @@ A page is a description, and a runtime turns it into a GUI. The minimum a runtim
 | `ToolCall` | one row per call, with the tool and its target |
 | `Thought` | the summary line, not invented reasoning |
 | `Meter` | the drawn bar, with the numbers it carries |
-| `Frame` | a floating element, positioned over the page and titled |
+| `Frame` | a floating element, positioned over the page; titled when the window draws a title, untitled otherwise |
 | `Surface.panes` | the components laid out side by side, in pane order |
 
 Two rules follow from the fields' meanings rather than their shapes:
@@ -347,6 +347,10 @@ Two rules follow from the fields' meanings rather than their shapes:
   `Ctrl+R` is `0x12`. `ui-lm-serve` does exactly this at `POST /keys?binding=`.
 - **A name is not a value.** `properties` are fields, not prose lines; `shortcuts` are commands, not text. A runtime that
   draws them as text has thrown away the only reason the page carries them.
+
+A `Frame` is drawn in three shapes the reader can see - a box ruled with heavy lines, a light box with its title set into
+the top border, and a light box with no title that is centred in the screen. The title is often empty for the third; a runtime
+should draw the floating element and not invent a caption.
 
 **Everything else is the runtime's business** - colour, spacing, whether a `Table` becomes a real `<table>`, whether a
 `Frame` is a dialog element - and none of it is in the page, which is what lets the same page render as HTML, as terminal

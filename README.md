@@ -168,7 +168,7 @@ Against **121 recordings and 1,666 frames** from twelve distinct commands — tw
 - **A table's values rule has two false positives.** It matches nineteen of the corpus's 113 recordings, and two of
   them are agent screens of three or four rows where prose aligns by accident. The kind requires a block of its own to
   keep them out, and the boundary is measured in `scripts/measure-tables.py`. The word-grid rule (ADR 0009) matches
-  four screens and no prose.
+  seven screens across five applications, and no prose.
 - **`Meter` has producers that are not agents.** An agent's budget line and `git clone --progress` both read as the
   kind; a drawn progress bar is deliberately not one.
 

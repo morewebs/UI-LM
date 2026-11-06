@@ -94,19 +94,27 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
   score further than four recording batches did. When a new tool appears, the model cannot see it
   until its verb is in `crates/model/src/features.rs` and `scripts/train_model.py` together.
 
-## What is actually next
+## What is next, and what would reopen the closed questions
 
-Six items from earlier handoffs are done, and saying so is cheaper than a successor rediscovering it: `Frame` exists
+Seven items from earlier handoffs are done, and saying so is cheaper than a successor rediscovering it: `Frame` exists
 (vim's popup, two whiptail dialogs) and now admits a third application - tmux's untitled popup, by centring (ADR 0006's
 third shape; 6 centred boxes in 646, all floating windows); a record names its program's exit (`SessionRecord::exit`);
-`Meter` has a producer that is not an agent (`git clone --progress`); interaction has a check; and a word grid with no
-underline is a `Table` (ADR 0009, six screens across four applications, no prose). The frontiers that remain are the ones the corpus cannot
-answer:
+`Meter` has a producer that is not an agent (`git clone --progress`); interaction has a check; a word grid with no
+underline is a `Table` (ADR 0009, seven screens across five applications, no prose); and the reader's answer to a
+framework-shaped page is measured and held by a fixture.
 
-1. **A record that names the program a wrapper runs.** `wsl.exe -e sh /tmp/ui-lm/wt.sh` hides a whiptail dialog: the
-   producer count in `scripts/measure-producers.py` is a lower bound, and the record cannot say otherwise.
-2. **Whether losing side-by-side layout matters.** A framework-shaped page reads as its blocks in document order and
-   loses the CSS layout; the check holds that answer, but no consumer has said whether it is enough.
+Two questions are closed **by decision**, and each says what would reopen it:
+
+1. **A record names the program a wrapper runs: no.** `wsl.exe -e sh /tmp/ui-lm/wt.sh` hides a whiptail dialog, and the
+   record can only measure the command it spawned. A `label` field would put an assertion beside the measurements the
+   rest of the record is made of; the producer count stays a lower bound, printed with the wrapper (`wsl->sh`). Reopen
+   if a consumer needs the name badly enough to accept a claimed one.
+2. **Whether losing side-by-side layout matters: no consumer has asked.** A framework-shaped page reads as its blocks
+   in document order and loses the CSS layout, and a page cannot carry a layout without a layout engine. Reopen with a
+   consumer that needs columns.
+
+What remains is material and release: `check-fresh` batches, another application for a thin kind, and the next release -
+all of which need either the machine or a decision that is not this document's to make.
 
 ## What was the second item, and is now done
 
