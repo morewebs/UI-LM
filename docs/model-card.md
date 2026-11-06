@@ -35,7 +35,7 @@ stated here rather than in a footnote.
 | every recording here | **122 recordings, 1,675 frames** from **12 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
 | seven evaluation sets | Grok and non-Grok screens, 344 frames | 100% every set |
 | **a second agent CLI** | **21 recordings, 1111 frames, never trained on** | **100%, every component** |
-| fresh batches | recorded **after** training, 8 batches | 100% every batch, every kind it held |
+| fresh batches | recorded **after** training, **10 batches** | 100% every batch, every kind it held |
 
 **The floor matters as much as the score.** `score` also reports a text-only converter that splits
 paragraphs; a set where the floor is already 100% cannot distinguish the model from that converter, and
@@ -95,9 +95,10 @@ And the disagreements are not spread evenly — they have one shape, measured by
   learned a second application. **What generalises is the assembly, and the vocabulary it asks the reader for.**
 - **Its raw labels disagree with the reader on 2.6% to 60% of rows, set by set.** Structural guards are what keep pages
   exact; the model is one voice in an assembly, not an oracle.
-- **`Meter` has one observed producer.** Agents print a budget — use against a limit — because that is what
-  they manage. Progress bars, monitors and file copies print percentages and counts instead, and `as_meter`
-  refuses to invent a limit from a percentage. The kind is real; the applications that draw it are few.
+- **`Meter` has producers that are not agents, and two accepted shapes.** An agent prints a budget (`25K / 500K`)
+  because a budget is what it manages; `git clone --progress` prints `Receiving objects: 100% (15006/15006)`. The rule
+  admits a spaced slash and a parenthesised fraction, and refuses a bare `N/M` because 2,391 corpus lines carry it and
+  nearly all are dates. A drawn progress bar with no limit is deliberately not a meter.
 - **The model's raw labels are weakest exactly where the pages look easiest.** Measured with `disagree` over every
   evaluation set (round 211):
 
