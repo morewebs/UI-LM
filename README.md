@@ -137,7 +137,7 @@ ui-lm-capture frames --session sessions/example                             # on
 ui-lm-capture compare --left a --right b                                    # two recordings, side by side
 ui-lm-capture audit -- sessions/                                            # pages that contradict their screens
 powershell -File scripts/check-all.ps1        # every evaluation set, both directions
-powershell -File scripts/check-everything.ps1 # all 30 checks, about 22 minutes
+powershell -File scripts/check-everything.ps1 # all 30 checks, about half an hour
 ```
 
 ## What is proven

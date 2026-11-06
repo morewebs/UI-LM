@@ -4,8 +4,8 @@
 # file would hide that. But "is this tree sound?" is a single question, and answering it by running
 # eleven scripts one at a time is how a person stops running them.
 #
-#   powershell -File scripts/check-everything.ps1           # everything, about seven minutes
-#   powershell -File scripts/check-everything.ps1 -Quick    # skip the two slowest, about a minute
+#   powershell -File scripts/check-everything.ps1           # everything, about half an hour
+#   powershell -File scripts/check-everything.ps1 -Quick    # skip the nine slowest, about fifteen minutes
 #   powershell -File scripts/check-everything.ps1 -Tag v0.8.0   # also check that release's download
 #
 # Exit code 1 if any check fails. Every check runs even after one fails, because a table of one

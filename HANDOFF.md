@@ -18,8 +18,7 @@ screen decides how it *looks* and how a component is shaped.
 
 | | |
 |---|---|
-| `crates/capture` | records a program on a pty, and the CLI: `record summarize audit page score tui self-check fields disagree provenance baseline dataset render frames compare version` | `read`
-ui-lm-capture read --html <FILE>    # the screen an HTML document describes
+| `crates/capture` | records a program on a pty, and the CLI: `record summarize audit page score tui self-check fields disagree provenance baseline dataset render frames compare version read` — `ui-lm-capture read --html <FILE>` gives the screen an HTML document describes |
 | `crates/frames` | the recording format — run-length cells with character and style |
 | `crates/pages` | the reader: screen → page, the A2UI envelope, the catalogue, `compare` |
 | `crates/model` | nineteen features, the weights, inference in Rust |
@@ -33,12 +32,12 @@ ui-lm-capture read --html <FILE>    # the screen an HTML document describes
 | `docs/reports/2026-10-28-model.md` | the full record: every number, every attempt, every failed hypothesis |
 | `docs/implementing.md` | **the guide for a runtime this project did not write**: what a page gives you, what a runtime owes it, and the three tests that say whether you got it right |
 | `docs/catalogue/moreweb.terminal-v1.schema.json` | the format, decided: derived from 1,639 pages, validated by `check-schema` |
-| `docs/conformance/` | four stored pages and the screen each must draw, held by `check-conformance` |
+| `docs/conformance/` | six stored pages and the screen each must draw, held by `check-conformance` |
 
 ## How to verify anything
 
 ```powershell
-powershell -File scripts/check-everything.ps1    # every check below, one table, ~9 minutes
+powershell -File scripts/check-everything.ps1    # every check below, one table, about half an hour
 powershell -File scripts/check-all.ps1           # every set, both directions, provenance
 powershell -File scripts/check-fresh.ps1         # record new material and score it blind
 powershell -File scripts/check-interaction.ps1   # typing into the live view reaches the program
@@ -57,7 +56,7 @@ powershell -File scripts/check-corrupt.ps1       # damaged recordings are skippe
 powershell -File scripts/check-readme.ps1        # every command and script the documents name exists
 powershell -File scripts/check-docs.ps1          # the documents' numbers match the tree
 
-# All seven, in order, about six minutes. The audit is the evidence; nothing below is a claim
+# The seven below, in order. The audit is the evidence; nothing below is a claim
 # that has not been through it.
 foreach ($s in "check-all","check-interaction","check-race","check-live-page","check-render-scale","check-release","check-fresh") {
     powershell -NoProfile -File "scripts/$s.ps1"
@@ -78,7 +77,7 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 | provenance is honest | 12,512 components, 10,465 carried, **0 contradictions** |
 | the reader and the label path agree | every evaluation set at 100%, and every hard case on score, round trip and shape |
 | the model generalises off its training application | trained on Grok alone; **591 frames of Freebuff at 100%** — Block 4652, ToolCall 158, Thought 385, Diff 54 |
-| the download works | **v0.19.0** verified by downloading, unzipping, and running `version` and `score` on a real session |
+| the download works | **v0.65.0** verified by downloading, unzipping, and running `version` and `score` on a real session |
 ## Fragile spots, and why they are written this way
 
 - **Assembly guards are deliberately narrow.** `crates/pages/src/labeled.rs` demotes labels the
@@ -95,22 +94,23 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
   score further than four recording batches did. When a new tool appears, the model cannot see it
   until its verb is in `crates/model/src/features.rs` and `scripts/train_model.py` together.
 
-## The three things I would do next
+## What is actually next
 
-1. **A third full-screen application with a floating window or a dialog.** vim and tmux both put
-   panes in a plain rectangle; the design's trigger for a `Frame` component has not fired yet.
-2. **A recording should say how its program ended.** Round 76 spent a round concluding that a pager "draws
-   nothing here" when `less` had exited with status 1 because its input file was missing — the evidence was in
-   the terminal and nowhere in the record. Add `exit: Option<i32>` to `SessionRecord`, thread it through
-   `SessionWriter::finish`, and pass it at the recorder's call site; **four construction sites** build a record
-   (recorder, one test in `crates/frames`, one in `crates/validate`) and two attempts have failed by missing
-   two of them or by moving the wait block with line arithmetic. Do it with a compiler in the loop, not by
-   index.
-3. **A `Meter` from something that is not an agent CLI.** Agents print a budget (`25K / 500K`) because a
-   budget is what they manage; file copies and monitors print percentages, and `as_meter` will not invent a
-   limit from one. A build tool with a step count, or a watcher with a quota, is what this needs.
-4. **Interaction.** Nothing here tests a screen mid-redraw or a keystroke arriving during a
-   redraw; `serve` forwards input but no test asserts what happens when it does.
+Four items from earlier handoffs are done, and saying so is cheaper than a successor rediscovering it: `Frame` exists
+(vim's popup, two whiptail dialogs); a record names its program's exit (`SessionRecord::exit`, stamped by `record_exit`);
+`Meter` has a producer that is not an agent (`git clone --progress`); and interaction has a check. The frontiers that
+remain are the ones the corpus cannot answer:
+
+1. **A third application for `Frame`.** The machine has none of the obvious ones: `fzf` and `dialog` are absent, and
+   `tmux display-popup` draws nothing without an attached client (the report records the attempt). Two applications and
+   three components is the thinnest evidence in the vocabulary.
+2. **A word table the application does not underline.** The values rule catches numeric columns and the dash underline
+   catches word tables; a grid of words with neither signal is invisible, and the corpus holds none. An `ls -C` grid is
+   the nearest material on this machine and was never recorded.
+3. **A record that names the program a wrapper runs.** `wsl.exe -e sh /tmp/ui-lm/wt.sh` hides a whiptail dialog: the
+   producer count in `scripts/measure-producers.py` is a lower bound, and the record cannot say otherwise.
+4. **Whether losing side-by-side layout matters.** A framework-shaped page reads as its blocks in document order and
+   loses the CSS layout; the check holds that answer, but no consumer has said whether it is enough.
 
 ## What was the second item, and is now done
 
@@ -142,11 +142,11 @@ somebody gets round to the documents — which is what happened for twenty-four 
   evidence, or not at all.
 ## Where it stands now
 
-**30 checks, about 22 minutes, every axis green**, **17 hard cases** at 100% on score, round trip and
+**30 checks, about half an hour, every axis green**, **17 hard cases** at 100% on score, round trip and
 shape, and **v0.65.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
-The corpus is **110 recordings, 1637 frames** per path, recorded from **11 distinct commands** — derived from the
+The corpus is **110 recordings, 1639 frames** per path, recorded from **11 distinct commands** — derived from the
 `command` field of every recording, which is the only definition that admits checking. Among them: Grok (the training
 application), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and
 `man`, `less`, `df`, `vim`, `top`, `git`, `cmd` and PowerShell — programs that are not agents at all.
@@ -173,18 +173,17 @@ Each of these was tried, measured, and reverted. The reason matters more than th
 before the other could follow was reverted; every change that added an inert field first landed; and every kind
 refused was refused by counting something.
 
-### The two things worth doing next
+### Two questions this section used to ask, and their answers
 
-1. **A page that is not text.** The reader now turns a document from anywhere into a screen, and nine shapes are checked.
-   What it cannot see is a page whose content arrives **without any of those shapes**: a document built entirely from
-   `<div class="row">` and CSS, which is what most modern sites are. The question is not whether the reader can be taught
-   every framework - it cannot - but what it should say when it recognises nothing, which today is one line per block.
+1. **A page that is not text.** A framework-shaped page - layout divs, CSS classes, no semantic tags - reads back as its
+   text in document order: inline spans join on a line, each block element is its own line, and no rows are invented
+   from CSS. That is the answer to "what does it say when it recognises nothing", and `check-html-to-tui` holds it with
+   a ten-line fixture. The cost is named: side-by-side layout becomes a column.
 2. **Producers are counted, and the count is a lower bound.** `scripts/measure-producers.py` reads every session's
    `command` and, where the wrapper names one, the inner program after `wsl.exe -e`. `Diff` has four commands (git,
    Freebuff under `cmd.exe`, a Python script, a shell script); `Frame` has two applications - vim's floating popup and
    whiptail's dialogs - but one command field (`wsl.exe`), because `sh /tmp/ui-lm/wt.sh` hides the program under the
-   shell. **Next step:** a record that names the program a wrapper runs, or an honest habit of reading every producer
-   count as a lower bound.
+   shell. The limit is named rather than hidden: a producer count from the record is a lower bound.
 
 **The provenance contradiction is fixed.** `pages()` decides `carried` from the memory as it was **before** the frame,
 not from the set the loop is filling: two identical blocks in one frame are both `seen`, because neither was on screen
