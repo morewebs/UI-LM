@@ -940,7 +940,12 @@ pub fn pages(frames: &[Frame], surface_id: &str) -> Vec<Envelope> {
                 }
                 _ => component.id.clone(),
             };
-            let carried = !appeared.insert(base);
+            // The decision comes from the memory **as it was before this frame**, not from the set this loop is
+            // filling: two identical blocks in one frame are both `seen`, because neither was on screen earlier.
+            // Testing the set the loop mutates made the second look like a repeat of the first, which is the one
+            // contradiction pinned in `two-agents-one-screen` (rounds 229-230).
+            let carried = before.contains(&base);
+            appeared.insert(base);
             component.source = if carried {
                 Provenance::Carried
             } else {
@@ -2972,6 +2977,31 @@ mod tests {
             Provenance::Seen,
             "a block that only exists in the later frame cannot have been carried"
         );
+    }
+
+    #[test]
+    fn two_identical_blocks_in_one_frame_are_both_seen() {
+        // Frame 4 of `two-agents-one-screen` holds two blocks with the same text. The memory is keyed by the base id,
+        // so the first one's insert made the second look like a repeat **within the same frame**, and the checker,
+        // which counts a repeat only from an earlier frame, called it a contradiction. One was pinned for thirteen
+        // rounds because earlier fixes also broke the accumulation; this test is the smallest shape of that frame.
+        let only = frame_of(&["same", "", "same"], 12);
+        let described = pages(&[only], "s");
+        let sources: Vec<Provenance> = described[0]
+            .create_surface
+            .components
+            .iter()
+            .filter(|component| {
+                matches!(&component.body, Body::Block { lines, .. } if lines[0] == "same")
+            })
+            .map(|component| component.source)
+            .collect();
+        assert_eq!(
+            sources.len(),
+            2,
+            "the frame must hold two identical blocks for this to test anything: {described:?}"
+        );
+        assert_eq!(sources, vec![Provenance::Seen, Provenance::Seen]);
     }
 
     #[test]

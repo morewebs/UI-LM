@@ -153,8 +153,8 @@ Against **105 recordings and 1,580 frames** from eleven distinct commands — tw
   a document this project did not write reads back as a screen in twelve shapes.
 - **Fifteen hard screens** — paned agents, a floating dialog, a completion popup, a blank split — each with a score, a
   ceiling on components, and where it applies the kind it exists for or the kinds it cannot hold.
-- **Provenance is honest, and pinned.** One component in the whole corpus is marked `carried` on its first appearance;
-  the number and its cause are in `scripts/check-corpus.ps1`.
+- **Provenance is honest, and pinned at zero.** Across the corpus, every component marked `carried` has appeared in an
+  earlier frame; `scripts/check-corpus.ps1` fails on a single contradiction.
 
 ## What is not proven, and is not claimed
 

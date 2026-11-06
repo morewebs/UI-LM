@@ -154,26 +154,24 @@ if (Test-Path $card) {
 }
 Write-Host ("the pinned diff count holds: {0} of {1} carry no @@ header" -f $noHunk, $diffs)
 
-# Provenance contradictions are a known, explained cost, not a zero: the builder decides `carried` by hashing the raw
-# rows, padding included, and a pane whose width changes rewrites every row's trailing spaces — so forty-seven
-# components in paned recordings are marked carried when the builder met their words **in the same frame** — a
-# left pane and a right pane holding identical text (round 190 found sixty-three such frames). The checker now counts
-# a repeat only from an *earlier* frame, which is what the builder means by carried, and the builder is the one that
-# disagrees. Pinned rather than patched: the fix is a frame index inside the builder, which is a change to a core
-# function that deserves its own round.
+# Provenance contradictions are zero, and the ceiling is zero. The builder decides `carried` by asking whether a base id
+# was in the memory **before this frame**; testing the set the loop was filling made two identical blocks in one frame
+# look like a repeat, and one component in `two-agents-one-screen` was pinned for thirteen rounds (rounds 229-230). The
+# count is 12,512 components with every carried one having appeared in an earlier frame. A single contradiction is now a
+# regression rather than an explained cost.
 $provenanceErrors = 0
 $readerProvenance = & $capture provenance --session $sessions[0].FullName 2>$null
 $args = @("provenance")
 foreach ($session in $sessions) { $args += @("--session", $session.FullName) }
 $provenanceLine = (& $capture @args 2>$null | Select-Object -Last 1) -join ""
 if ($provenanceLine -match "(\d+) contradiction\(s\)") { $provenanceErrors = [int]$Matches[1] }
-$provenanceCeiling = 1
+$provenanceCeiling = 0
 if ($provenanceErrors -gt $provenanceCeiling) {
     Write-Host ("  the corpus holds {0} provenance contradiction(s); the pinned ceiling is {1}" -f $provenanceErrors, $provenanceCeiling)
     Write-Host "more pages contradict themselves than this project has accounted for"
     exit 1
 }
-Write-Host ("provenance contradictions: {0} of a pinned {1} (paned recordings; one component per corpus is marked carried on its first appearance - the last case of the memory being written by intent rather than emission, round 229)" -f $provenanceErrors, $provenanceCeiling)
+Write-Host ("provenance contradictions: {0} of a pinned {1} (every component marked carried has appeared in an earlier frame)" -f $provenanceErrors, $provenanceCeiling)
 
 # Every kind the catalogue claims must have enough material to be more than an anecdote. `Frame` was found to have
 # two components in the whole corpus (round 136) and a third arrived only when a centred dialog was recorded; a kind

@@ -75,7 +75,7 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 | a screen's text becomes a page holding blocks, tool calls, meters, thoughts, diffs, frames and panes | **seven kinds**, 779 frames assembled at 100% given the reader's own answers |
 | a page draws back every line of content | **0 sessions below 100%**, split screens and resized dividers included, on both reader and model pages |
 | the page carries the screen's styling | 5,957 components compared field by field, **0 differing** |
-| provenance is honest | 5,957 components, 5,008 carried, **0 contradictions** |
+| provenance is honest | 12,512 components, 10,465 carried, **0 contradictions** |
 | the reader and the label path agree | every evaluation set at 100%, and every hard case on score, round trip and shape |
 | the model generalises off its training application | trained on Grok alone; **591 frames of Freebuff at 100%** — Block 4652, ToolCall 158, Thought 385, Diff 54 |
 | the download works | **v0.19.0** verified by downloading, unzipping, and running `version` and `score` on a real session |
@@ -184,21 +184,21 @@ refused was refused by counting something.
    because 8 corpus lines carry that shape against 2,391 bare slashes that are nearly all dates. **Next step:** the same
    question for `Diff`'s one producer, and for `Frame`, which the corpus holds three of.
 
-## Three open threads, each with its next step
+**The provenance contradiction is fixed.** `pages()` decides `carried` from the memory as it was **before** the frame,
+not from the set the loop is filling: two identical blocks in one frame are both `seen`, because neither was on screen
+earlier. The corpus measures **12,512 components, 10,465 carried, 0 contradictions**, and `check-corpus` now pins zero.
+The two earlier attempts failed because they also lost the restore step; the smallest test of the shape is
+`two_identical_blocks_in_one_frame_are_both_seen` in `crates/pages/src/lib.rs`.
 
-1. **One provenance contradiction stands, and it is understood.** Two components share a base hash in one frame of
-   `two-agents-one-screen`; the second is marked `carried` because the first inserted the base while the loop was still
-   walking. Pinned at 1 in `check-corpus` with that sentence beside it. Two attempts at the fix — deciding from a
-   pre-frame snapshot and building a second memory beside the loop — both produced 12070 contradictions and were
-   reverted. **Next step:** print `appeared.len()` at the *end* of the marking loop as well as its start (the start is
-   already printed under `UI_LM_DEBUG_APPEARED=1`), because the flow looks correct and the failures are not explained.
-2. **`Table` shipped, and both signals are measured.** Values catch numeric columns; a dash underline catches a word
+## Two open threads, each with its next step
+
+1. **`Table` shipped, and both signals are measured.** Values catch numeric columns; a dash underline catches a word
    table (`cases/hard/pwsh-word-table`, required). A table inside a pane is `cases/hard/pane-with-tables`. The heading and
    the dash row are cell rows too - skipping them made the audit fail and left four lines of `pwsh-table` out of the
    document. v0.45.0 cut each cell at the end of the dashes (`hosts` stored as `host`); the cell now runs to the next
    column, which is what the values rule already did. **Next step:** a word table the application does not underline,
    which neither signal can see, and which the corpus does not hold.
-3. **The reader's silence.** Nine document shapes are checked and all nine read back; what is unmeasured is
+2. **The reader's silence.** Nine document shapes are checked and all nine read back; what is unmeasured is
    what the reader does with a page built from `div` and CSS, where it recognises no shape at all. **Next
    step:** a fixture of a real framework-rendered page, and a decision about whether one line per block is
    an honest answer or a silent failure.
