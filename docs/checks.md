@@ -4,7 +4,7 @@ A check that has never failed is a check of unknown strength. This is the ledger
 `scripts/`, what it protects, and the failure that was produced to prove it can fail.
 
 **Every row quotes a message the check actually printed when it was broken on purpose.**
-31 scripts were each made to fail, and the output kept — five of them re-proven in the last week
+32 scripts were each made to fail, and the output kept — five of them re-proven in the last week
 because their first proof had been remembered rather than recorded.
 
 ## A number inside a check is a claim
@@ -48,6 +48,7 @@ Swept afterwards: the four checks that wait on the viewer use five seconds and n
 | `check-agents` | the second Agent CLI reads perfectly, untrained — and its material holds structure | with the recordings moved away: "no second-agent recordings on this machine, so nothing was exercised"; with a prose-only recording swapped in: "every component was one kind (Block), so the set tests nothing"; with a lowered ceiling: "busiest frame holds 10 components, the ceiling is 3"; and blinding a predicate printed "no Thought component anywhere in the set, and the set exists for it", the same for Diff |
 | `check-corrupt` | damaged recordings are skipped, not fatal | rewording the skip message printed "nothing said the frame was skipped" |
 | `check-orphans` | a killed runner takes its children with it — killed on purpose, then the same runner without the job object to prove the experiment can see survival | disabling the job's `KILL_ON_JOB_CLOSE` flag printed "a killed runner left its child running" |
+| `check-encoding` | every check sets its decoding before the first native capture — the suite's own regression guard | deleting the dot-source from `check-html` printed "check-html.ps1: captures a native command and never loads scripts/utf8.ps1, and moving it after the first capture printed "check-html.ps1: loads scripts/utf8.ps1 after its first capture" |
 | `check-readme` | the README describes every command the binary has | replacing a command's name in the README printed "the README never mentions: disagree" |
 | `check-docs` | the documents' numbers match the tree | the page said v0.10.0 while v0.13.0 was tagged: "the state page names a release that is not the newest one"; and a spelled count printed "spells 'eighteen checks' - counts belong in digits here" ; and every forbidden guard is named in the boundary table, proven by renaming the borderless popup, which printed "the boundary table does not name the guard on vim-completion-popup" ; and the training count on the model card matches the weights, proven by quoting 500 instead of 434, which printed "the model card quotes a training set that is not in the model file" ; and the model card's feature and parameter counts match the weights, proven by claiming 250 parameters, which printed "the model card describes a different model from the one in the repository" ; and the handoff names the newest release, proven by naming v0.19.0 instead, which printed "the handoff names an older release than the newest tag" ; and all three describing documents are checked for the corpus counts, proven by the handoff quoting 88 recordings, which printed "HANDOFF.md says 88 recordings, the corpus holds 97" |
 | `check-race` | the viewer survives redraws and half-written files | flipping the blank-screen test printed "the viewer served the blank screen a program left behind instead of the last one with content" ; the child redraws every 400 ms so the screen is quiet long enough to be framed, after a loaded suite produced one frame and the guard refused |
@@ -68,7 +69,7 @@ And four properties that run under `cargo test`, each proven by mutation:
 
 ## The rule underneath them: nothing is judged from nothing
 
-**Twelve of the thirty checks refuse to pass on empty material.** The count was written as three for a week,
+**Thirteen of the thirty-one checks refuse to pass on empty material.** The count was written as three for a week,
 which is what a rule kept in prose rather than in code is worth — it was true when it was written and nobody
 counted again. Each guard prints its own sentence:
 
@@ -81,6 +82,7 @@ counted again. Each guard prints its own sentence:
 - `check-hard` — the hard cases are not on this machine
 - `check-corrupt` — there is no recording to damage
 - `check-orphans` — the runner never started its child, or the child was gone before the kill
+- `check-encoding` — fewer than twenty checks were found, or fewer than ten capture a native command
 - `check-scrub` — no recording with a path was found
 - `check-docs` — there is no state page, or no corpus to count
 - `check-readme` — there is no README, or the handoff no longer lists the commands

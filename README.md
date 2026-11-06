@@ -137,7 +137,7 @@ ui-lm-capture frames --session sessions/example                             # on
 ui-lm-capture compare --left a --right b                                    # two recordings, side by side
 ui-lm-capture audit -- sessions/                                            # pages that contradict their screens
 powershell -File scripts/check-all.ps1        # every evaluation set, both directions
-powershell -File scripts/check-everything.ps1 # all 30 checks, about half an hour
+powershell -File scripts/check-everything.ps1 # all 31 checks, about half an hour
 ```
 
 ## What is proven
@@ -188,7 +188,7 @@ The longer account — every attempt, every rejected hypothesis, every cost — 
 | `crates/capture` | pty recording and the CLI |
 | `crates/render` | page → HTML, page → terminal text |
 | `crates/serve` | the live view, and typing back into the program |
-| `scripts/` | 30 checks, the trainer, and the measurement scripts |
+| `scripts/` | 31 checks, the trainer, and the measurement scripts |
 
 Design and decisions are in the repository: [the design spec](docs/superpowers/specs/2026-10-27-ui-lm-design.md), [the
 glossary](GLOSSARY.md), [the catalogue reference](docs/catalogue/moreweb.terminal-v1.md), and the ADRs — [the cell grid is

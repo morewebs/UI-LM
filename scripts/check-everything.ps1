@@ -63,6 +63,7 @@ $all = @(
 @{ name = "scrub";       script = "check-scrub.ps1"; slow = $false },
 @{ name = "corrupt";     script = "check-corrupt.ps1"; slow = $false },
 @{ name = "orphans";     script = "check-orphans.ps1"; slow = $false },
+@{ name = "encoding";    script = "check-encoding.ps1"; slow = $false },
 @{ name = "readme";      script = "check-readme.ps1"; slow = $false },
     @{ name = "docs";        script = "check-docs.ps1"; slow = $false },
     @{ name = "claims";      script = "check-claims.ps1"; slow = $false },
