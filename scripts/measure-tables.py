@@ -4,7 +4,8 @@ The ADR quoted numbers for two rounds that nobody could reproduce: the rule was 
 boundaries" and nothing said what a boundary was, which rows counted, or how a run was measured. This file is the
 missing half â€” the predicate in code, next to the decision it supports.
 
-Two predicates are measured here, and they disagree completely:
+Two predicates are measured here, and they disagree completely - and a third, ADR 0009's word grid, is included only
+in the `--disagreements` comparison below, because it is the one that ships:
 
 **The alignment rule** (rejected): three or more consecutive rows with the same number of cells, cells separated by two
 or more spaces, at the same character offsets in every row. It matches `vim`'s help rows and scores zero on `df`.
@@ -232,6 +233,53 @@ def underlined(rows):
     return len(runs) >= 2 and all(ch in "- " for ch in underline.strip())
 
 
+WORD = re.compile(r"^[A-Za-z0-9._+\[\]-]+$")
+
+
+def word_cells(text):
+    """The cells of a grid row and where each starts; None when a cell is not a single word."""
+    text = text.rstrip()
+    starts, cells = [], []
+    index = 0
+    while index < len(text):
+        if text[index] == " ":
+            index += 1
+            continue
+        start = index
+        while index < len(text) and not (text[index] == " " and text[index:index + 2] == "  "):
+            index += 1
+        cell = text[start:index]
+        if not cell or not WORD.match(cell):
+            return None
+        starts.append(start)
+        cells.append(cell)
+    return starts, cells
+
+
+def word_grid(rows):
+    """The third signal (ADR 0009): a grid of single words at fixed columns, no dash row and no digits needed."""
+    if len(rows) < 3:
+        return False
+    if sum(1 for row in rows if "  " in row) * 2 <= len(rows):
+        return False
+    shape = None
+    for row in rows:
+        if "---" in row:
+            return False
+        parsed = word_cells(row)
+        if parsed is None:
+            return False
+        starts, cells = parsed
+        if len(cells) < 2:
+            return False
+        current = (tuple(starts), len(cells))
+        if shape is None:
+            shape = current
+        elif shape != current:
+            return False
+    return shape is not None
+
+
 def disagreements():
     """Every component the predicate would promote but the reader left alone, and the reverse.
 
@@ -249,7 +297,7 @@ def disagreements():
                         for line in (component.get("lines") or [])]
                 # The ADR says a table is a *block of its own*, so the whole component is one run - not the
                 # longest blank-line separated stretch inside it, which is what `numeric_strips` reports.
-                matches = whole_block_strips(rows) >= 2 or underlined(rows)
+                matches = whole_block_strips(rows) >= 2 or underlined(rows) or word_grid(rows)
                 is_table = component["component"] == "Table"
                 if matches and not is_table:
                     missed.append((session, component["id"]))

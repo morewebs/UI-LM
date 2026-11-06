@@ -142,7 +142,7 @@ powershell -File scripts/check-everything.ps1 # all 30 checks, about half an hou
 
 ## What is proven
 
-Against **105 recordings and 1,580 frames** from eleven distinct commands — two agent CLIs, `whiptail`, `vim`, `top`,
+Against **113 recordings and 1,643 frames** from eleven distinct commands — two agent CLIs, `whiptail`, `vim`, `top`,
 `df`, `man`, `less`, `git`, `cmd` and PowerShell — gathered on two machines:
 
 - **The reader and the model both describe every evaluation frame, and both are consistent with their screens.** Six
@@ -165,11 +165,12 @@ Against **105 recordings and 1,580 frames** from eleven distinct commands — tw
   training are the strongest claim available, and it is a modest one.
 - **A live view is not continuous.** A frame exists at a settled screen, so a fast program yields fewer moments than it
   drew.
-- **A table's rule has two false positives.** The values rule matches nineteen of the corpus's 105 recordings, and
-  two of them are agent screens of three or four rows where prose aligns by accident. The kind requires a block of
-  its own to keep them out, and the boundary is measured in `scripts/measure-tables.py`.
-- **`Meter` has one observed producer.** Every meter in the corpus comes from an agent printing a budget; a drawn
-  progress bar is deliberately not one.
+- **A table's values rule has two false positives.** It matches nineteen of the corpus's 113 recordings, and two of
+  them are agent screens of three or four rows where prose aligns by accident. The kind requires a block of its own to
+  keep them out, and the boundary is measured in `scripts/measure-tables.py`. The word-grid rule (ADR 0009) matches
+  four screens and no prose.
+- **`Meter` has producers that are not agents.** An agent's budget line and `git clone --progress` both read as the
+  kind; a drawn progress bar is deliberately not one.
 
 The longer account — every attempt, every rejected hypothesis, every cost — is in
 [docs/reports/2026-10-28-model.md](docs/reports/2026-10-28-model.md).

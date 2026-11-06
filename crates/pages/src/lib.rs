@@ -2980,6 +2980,59 @@ mod tests {
     }
 
     #[test]
+    fn a_grid_of_single_words_is_a_table() {
+        // `ls -C` and `pip list` draw this, and until ADR 0009 the reader called the whole screen one block.
+        let lines = vec![
+            "NF                 networkctl".to_owned(),
+            "X11                newgrp".to_owned(),
+            "addpart            nl".to_owned(),
+        ];
+        let (columns, cells) = as_word_grid(&lines).expect("a grid of words is a table");
+        assert_eq!(columns, vec![0, 19]);
+        assert_eq!(cells[0], vec!["NF", "networkctl"]);
+        assert_eq!(cells[2], vec!["addpart", "nl"]);
+    }
+
+    #[test]
+    fn a_grid_with_a_sentence_in_a_cell_is_prose() {
+        // Vim's help rows are columns too; the rejected alignment rule matched them. A cell with spaces is a sentence,
+        // not a grid cell, and must keep the block as prose.
+        let lines = vec![
+            "|:edit|          edit a file".to_owned(),
+            "|:write|         write the buffer".to_owned(),
+            "|:quit|          leave".to_owned(),
+        ];
+        assert!(as_word_grid(&lines).is_none());
+    }
+
+    #[test]
+    fn a_grid_must_share_its_columns_and_hold_three_rows() {
+        let ragged = vec![
+            "alpha    beta".to_owned(),
+            "gamma      delta".to_owned(),
+            "one      two".to_owned(),
+        ];
+        assert!(
+            as_word_grid(&ragged).is_none(),
+            "columns that move are not a grid"
+        );
+        let short = vec!["alpha    beta".to_owned(), "gamma    delta".to_owned()];
+        assert!(
+            as_word_grid(&short).is_none(),
+            "two rows is not enough to call a table"
+        );
+        let dashed = vec![
+            "Name            Mode".to_owned(),
+            "----            ----".to_owned(),
+            "hosts           -a----".to_owned(),
+        ];
+        assert!(
+            as_word_grid(&dashed).is_none(),
+            "a dash row belongs to the underlined signal"
+        );
+    }
+
+    #[test]
     fn two_identical_blocks_in_one_frame_are_both_seen() {
         // Frame 4 of `two-agents-one-screen` holds two blocks with the same text. The memory is keyed by the base id,
         // so the first one's insert made the second look like a repeat **within the same frame**, and the checker,
@@ -3772,6 +3825,12 @@ pub fn as_table(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)> {
     if let Some(table) = as_underlined_table(lines) {
         return Some(table);
     }
+    // The third signal, ADR 0009: a grid of single words at fixed columns - `ls -C`, `pip list`. The values rule
+    // cannot see these, and ADR 0007's alignment rule was rejected because it also matched vim's help rows; the cell
+    // is what separates a grid from a help page, so the cell is what this rule tests.
+    if let Some(table) = as_word_grid(lines) {
+        return Some(table);
+    }
     let with_digit = lines
         .iter()
         .filter(|line| line.chars().any(|c| c.is_ascii_digit()))
@@ -3826,4 +3885,83 @@ pub fn as_table(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)> {
         cells.push(line_cells);
     }
     Some((columns, cells))
+}
+
+/// A grid of single words at fixed columns, with no dash row and no digits to make the values rule fire (ADR 0009).
+///
+/// `ls -C` draws file names in two or more columns; `pip list` draws a package and its version. Both read as one
+/// `Block` until this rule. ADR 0007's alignment rule matched these too, but it also matched vim's help rows, and that
+/// is why it was rejected: the difference is the **cell**. A grid's cell is one word; a help row's cell is a sentence.
+/// So the rule asks for two or more cells on a majority of rows, every cell a single word, and every row at the same
+/// character offsets - and it refuses a block carrying a dash underline, which the signal above owns.
+///
+/// Measured before it was believed: three `ls -C` screens and one package listing match in the corpus, and no prose
+/// block does (`scripts/measure-word-grids.py`). The cheap gate is the same shape as the values rule's digit count:
+/// prose rarely carries a run of two spaces in a majority of its rows, so prose pays one scan and no allocations.
+fn as_word_grid(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)> {
+    if lines.len() < 3 {
+        return None;
+    }
+    let spaced = lines.iter().filter(|line| line.contains("  ")).count();
+    if spaced * 2 <= lines.len() {
+        return None;
+    }
+    let mut shape: Option<(Vec<usize>, usize)> = None;
+    let mut cells: Vec<Vec<String>> = Vec::with_capacity(lines.len());
+    for line in lines {
+        // The dash row belongs to the signal above; a grid does not carry one.
+        if line.contains("---") {
+            return None;
+        }
+        let (starts, row) = word_cells(line)?;
+        if row.len() < 2 {
+            return None;
+        }
+        let expected = shape.get_or_insert_with(|| (starts.clone(), row.len()));
+        if expected.0 != starts || expected.1 != row.len() {
+            return None;
+        }
+        cells.push(row.into_iter().map(|cell| cell.to_owned()).collect());
+    }
+    let (starts, _) = shape?;
+    if starts.len() < 2 {
+        return None;
+    }
+    let columns: Vec<u16> = starts
+        .iter()
+        .map(|start| u16::try_from(*start).unwrap_or(u16::MAX))
+        .collect();
+    Some((columns, cells))
+}
+
+/// The cells of a grid row, with where each starts: runs of two or more spaces separate them, and every cell must be
+/// a single word. A row with a multi-word cell, a tab, or an empty edge is not a grid row.
+fn word_cells(line: &str) -> Option<(Vec<usize>, Vec<&str>)> {
+    let mut starts = Vec::new();
+    let mut row = Vec::new();
+    let mut index = 0;
+    let text = line.trim_end();
+    let bytes = text.as_bytes();
+    while index < bytes.len() {
+        if bytes[index] == b' ' {
+            index += 1;
+            continue;
+        }
+        let start = index;
+        while index < bytes.len() && !(bytes[index] == b' ' && bytes.get(index + 1) == Some(&b' '))
+        {
+            index += 1;
+        }
+        let cell = &text[start..index];
+        let word = !cell.is_empty()
+            && cell.chars().all(|c| {
+                c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '+' | '[' | ']' | '-')
+            });
+        if !word {
+            return None;
+        }
+        starts.push(start);
+        row.push(cell);
+    }
+    Some((starts, row))
 }

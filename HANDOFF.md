@@ -96,20 +96,18 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 
 ## What is actually next
 
-Four items from earlier handoffs are done, and saying so is cheaper than a successor rediscovering it: `Frame` exists
+Five items from earlier handoffs are done, and saying so is cheaper than a successor rediscovering it: `Frame` exists
 (vim's popup, two whiptail dialogs); a record names its program's exit (`SessionRecord::exit`, stamped by `record_exit`);
-`Meter` has a producer that is not an agent (`git clone --progress`); and interaction has a check. The frontiers that
-remain are the ones the corpus cannot answer:
+`Meter` has a producer that is not an agent (`git clone --progress`); interaction has a check; and a word grid with no
+underline is a `Table` (ADR 0009, four screens, no prose). The frontiers that remain are the ones the corpus cannot
+answer:
 
 1. **A third application for `Frame`.** The machine has none of the obvious ones: `fzf` and `dialog` are absent, and
    `tmux display-popup` draws nothing without an attached client (the report records the attempt). Two applications and
    three components is the thinnest evidence in the vocabulary.
-2. **A word table the application does not underline.** The values rule catches numeric columns and the dash underline
-   catches word tables; a grid of words with neither signal is invisible, and the corpus holds none. An `ls -C` grid is
-   the nearest material on this machine and was never recorded.
-3. **A record that names the program a wrapper runs.** `wsl.exe -e sh /tmp/ui-lm/wt.sh` hides a whiptail dialog: the
+2. **A record that names the program a wrapper runs.** `wsl.exe -e sh /tmp/ui-lm/wt.sh` hides a whiptail dialog: the
    producer count in `scripts/measure-producers.py` is a lower bound, and the record cannot say otherwise.
-4. **Whether losing side-by-side layout matters.** A framework-shaped page reads as its blocks in document order and
+3. **Whether losing side-by-side layout matters.** A framework-shaped page reads as its blocks in document order and
    loses the CSS layout; the check holds that answer, but no consumer has said whether it is enough.
 
 ## What was the second item, and is now done
@@ -146,7 +144,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
 shape, and **v0.65.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
-The corpus is **110 recordings, 1639 frames** per path, recorded from **11 distinct commands** — derived from the
+The corpus is **113 recordings, 1643 frames** per path, recorded from **11 distinct commands** — derived from the
 `command` field of every recording, which is the only definition that admits checking. Among them: Grok (the training
 application), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and
 `man`, `less`, `df`, `vim`, `top`, `git`, `cmd` and PowerShell — programs that are not agents at all.
