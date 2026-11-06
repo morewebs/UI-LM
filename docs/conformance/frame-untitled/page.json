@@ -1,0 +1,120 @@
+{
+  "version": "v0.9.1",
+  "createSurface": {
+    "surfaceId": "tmux-floating-popup",
+    "catalogId": "moreweb.terminal/v1",
+    "root": "root",
+    "components": [
+      {
+        "id": "root",
+        "component": "Column",
+        "source": "seen",
+        "children": [
+          "block-48fa25acfccb9660",
+          "block-fb453d6afa3c4444",
+          "block-d722517b90b89f0b"
+        ]
+      },
+      {
+        "id": "block-48fa25acfccb9660",
+        "component": "Block",
+        "source": "seen",
+        "role": "text",
+        "rows": [
+          0,
+          1
+        ],
+        "lines": [
+          "moreweb@DESKTOP-H6G9MSV:/mnt/c/Users/moreweb/Documents/Workspaces/moreweb/Projects/UI-LM$"
+        ],
+        "spans": [
+          [
+            {
+              "start": 0,
+              "end": 23,
+              "style": {
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "indexed:10"
+              }
+            },
+            {
+              "start": 24,
+              "end": 88,
+              "style": {
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "indexed:12"
+              }
+            }
+          ]
+        ]
+      },
+      {
+        "id": "block-fb453d6afa3c4444",
+        "component": "Frame",
+        "source": "seen",
+        "title": "",
+        "rows": [
+          9,
+          29
+        ],
+        "lines": [
+          "                             ┌──────────────────────────────────────────────────────────┐",
+          "                             │aa-enabled                          ngettext              │",
+          "                             │aa-exec                             nice                  │",
+          "                             │aa-features-abi                     nisdomainname         │",
+          "                             │add-apt-repository                  nl                    │",
+          "                             │addpart                             nm                    │",
+          "                             │addr2line                           nohup                 │",
+          "                             │apport-bug                          nproc                 │",
+          "                             │apport-cli                          nroff                 │",
+          "                             │apport-collect                      nsenter               │",
+          "                             │apport-unpack                       nstat                 │",
+          "                             │appstreamcli                        numfmt                │",
+          "                             │apropos                             objcopy               │",
+          "                             │apt                                 objdump               │",
+          "                             │apt-add-repository                  od                    │",
+          "                             │apt-cache                           oem-getlogs           │",
+          "                             │apt-cdrom                           openssl               │",
+          "                             │apt-config                          openvt                │",
+          "                             │^B:                                                       │",
+          "                             └──────────────────────────────────────────────────────────┘"
+        ]
+      },
+      {
+        "id": "block-d722517b90b89f0b",
+        "component": "Block",
+        "source": "seen",
+        "role": "text",
+        "rows": [
+          39,
+          40
+        ],
+        "lines": [
+          "[pop] 0:bash*                                                                          \"DESKTOP-H6G9MSV\" 20:21 06-Nov-26"
+        ],
+        "spans": [
+          [
+            {
+              "start": 0,
+              "end": 120,
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "reverse": false,
+                "fg": "indexed:0",
+                "bg": "indexed:2"
+              }
+            }
+          ]
+        ]
+      }
+    ]
+  }
+}

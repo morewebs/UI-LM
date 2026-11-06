@@ -1,0 +1,22 @@
+moreweb@DESKTOP-H6G9MSV:/mnt/c/Users/moreweb/Documents/Workspaces/moreweb/Projects/UI-LM$
+                             ┌──────────────────────────────────────────────────────────┐
+                             │aa-enabled                          ngettext              │
+                             │aa-exec                             nice                  │
+                             │aa-features-abi                     nisdomainname         │
+                             │add-apt-repository                  nl                    │
+                             │addpart                             nm                    │
+                             │addr2line                           nohup                 │
+                             │apport-bug                          nproc                 │
+                             │apport-cli                          nroff                 │
+                             │apport-collect                      nsenter               │
+                             │apport-unpack                       nstat                 │
+                             │appstreamcli                        numfmt                │
+                             │apropos                             objcopy               │
+                             │apt                                 objdump               │
+                             │apt-add-repository                  od                    │
+                             │apt-cache                           oem-getlogs           │
+                             │apt-cdrom                           openssl               │
+                             │apt-config                          openvt                │
+                             │^B:                                                       │
+                             └──────────────────────────────────────────────────────────┘
+[pop] 0:bash*                                                                          "DESKTOP-H6G9MSV" 20:21 06-Nov-26

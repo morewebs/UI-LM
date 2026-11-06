@@ -36,7 +36,7 @@ binding a page offers is accepted by the viewer.
 
 | test | what it proves |
 |---|---|
-| [the conformance kit](./conformance/) | six stored pages, and the screen each must draw |
+| [the conformance kit](./conformance/) | eight stored pages, and the screen each must draw |
 | [the schema](./catalogue/moreweb.terminal-v1.schema.json) | your page *is* a page before you try to draw it |
 | `check-conformance` | a page that stops drawing its screen names the line that changed |
 

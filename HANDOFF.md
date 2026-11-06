@@ -32,7 +32,7 @@ screen decides how it *looks* and how a component is shaped.
 | `docs/reports/2026-10-28-model.md` | the full record: every number, every attempt, every failed hypothesis |
 | `docs/implementing.md` | **the guide for a runtime this project did not write**: what a page gives you, what a runtime owes it, and the three tests that say whether you got it right |
 | `docs/catalogue/moreweb.terminal-v1.schema.json` | the format, decided: derived from 1,639 pages, validated by `check-schema` |
-| `docs/conformance/` | six stored pages and the screen each must draw, held by `check-conformance` |
+| `docs/conformance/` | eight stored pages and the screen each must draw, held by `check-conformance` |
 
 ## How to verify anything
 

@@ -1,0 +1,84 @@
+{
+  "version": "v0.9.1",
+  "createSurface": {
+    "surfaceId": "pwsh-wide-grid",
+    "catalogId": "moreweb.terminal/v1",
+    "root": "root",
+    "components": [
+      {
+        "id": "root",
+        "component": "Column",
+        "source": "seen",
+        "children": [
+          "block-e76ed5741b9a037b"
+        ]
+      },
+      {
+        "id": "block-e76ed5741b9a037b",
+        "component": "Table",
+        "source": "seen",
+        "rows": [
+          2,
+          10
+        ],
+        "columns": [
+          0,
+          40,
+          80
+        ],
+        "cells": [
+          [
+            "adb",
+            "AggregatorHost",
+            "ApplicationFrameHost"
+          ],
+          [
+            "audiodg",
+            "bash",
+            "bash"
+          ],
+          [
+            "bash",
+            "bash",
+            "bash"
+          ],
+          [
+            "bash",
+            "bash",
+            "bash"
+          ],
+          [
+            "bash",
+            "bash",
+            "bash"
+          ],
+          [
+            "bash",
+            "bash",
+            "bash"
+          ],
+          [
+            "bash",
+            "bash",
+            "bash"
+          ],
+          [
+            "bash",
+            "bash",
+            "bash"
+          ]
+        ],
+        "lines": [
+          "adb                                     AggregatorHost                          ApplicationFrameHost",
+          "audiodg                                 bash                                    bash",
+          "bash                                    bash                                    bash",
+          "bash                                    bash                                    bash",
+          "bash                                    bash                                    bash",
+          "bash                                    bash                                    bash",
+          "bash                                    bash                                    bash",
+          "bash                                    bash                                    bash"
+        ]
+      }
+    ]
+  }
+}

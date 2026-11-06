@@ -1,0 +1,8 @@
+adb                                     AggregatorHost                          ApplicationFrameHost
+audiodg                                 bash                                    bash
+bash                                    bash                                    bash
+bash                                    bash                                    bash
+bash                                    bash                                    bash
+bash                                    bash                                    bash
+bash                                    bash                                    bash
+bash                                    bash                                    bash
