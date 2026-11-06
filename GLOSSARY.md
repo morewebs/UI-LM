@@ -150,6 +150,10 @@ with `+++` and `---` headers.
 _Avoid_: patch, change
 
 **Frame**:
-A floating window: a box drawn *over* the page rather than beside it, named by the words on its top border. Two shapes so far: heavy rules (vim) and a centred titled box (whiptail); a full-width sheet docked at the edge is not one.
+A floating window: a box drawn *over* the page rather than beside it. Three shapes so far: heavy rules (vim), a centred box with its title in the top border (whiptail), and a centred box with no title at all (tmux's `display-popup`, which is why a page's title can be empty). A full-width sheet docked at the edge is not one, and neither is a box drawn off-centre.
 Its rows are the screen's own, so it draws back unchanged.
 _Avoid_: modal, dialog box, overlay
+
+**Table**:
+A block of aligned columns: values in columns (ADR 0008), headings the application underlined, or a grid of single words at fixed columns (ADR 0009 - `ls -C`, `pip list`, `Format-Wide`, `column`, `pr`). A streak of prose that happens to align is not one, and neither is a single column of words.
+_Avoid_: grid, spreadsheet
