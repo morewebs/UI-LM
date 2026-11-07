@@ -516,6 +516,37 @@ if ($notRun.Count -gt 0 -or $notListed.Count -gt 0) {
 }
 Write-Host ("the ledger and the runner agree: {0} check(s) listed, {1} run here, {2} run elsewhere" -f $ledgerChecks.Count, $runnerChecks.Count, $runsElsewhere.Count)
 
+# The implementing guide claims that everything in it is checked. Its shape count was not: the guide said ten while the
+# catalogue's table held twelve, and nothing failed. A document that counts things is a thing that must be counted.
+$cataloguePath = Join-Path $repo "docs\catalogue\moreweb.terminal-v1.md"
+$guidePath = Join-Path $repo "docs\implementing.md"
+if ((Test-Path $cataloguePath) -and (Test-Path $guidePath)) {
+    $catalogueText = Get-Content -LiteralPath $cataloguePath -Raw -Encoding UTF8
+    $section = [regex]::Match($catalogueText, '## A page may arrive from anywhere([\s\S]*?)
+
+\*\*')
+    if (-not $section.Success) { Write-Host "the catalogue no longer holds the document-shape table, so nothing was compared"; exit 1 }
+    $rows = @([regex]::Matches($section.Groups[1].Value, '(?m)^\| (?!the document holds|---)(.+)') |
+        ForEach-Object { $_.Groups[1].Value.Trim() } | Select-Object -Unique)
+    $shapes = $rows.Count
+    $guideText = Get-Content -LiteralPath $guidePath -Raw -Encoding UTF8
+    if ($guideText -match '(\w+) document shapes') {
+        $words = @{ "one"=1; "two"=2; "three"=3; "four"=4; "five"=5; "six"=6; "seven"=7; "eight"=8; "nine"=9; "ten"=10;
+                    "eleven"=11; "twelve"=12; "thirteen"=13; "fourteen"=14; "fifteen"=15 }
+        $word = $Matches[1].ToLower()
+        $claimed = if ($words.ContainsKey($word)) { $words[$word] } elseif ($word -match '^\d+$') { [int]$word } else { -1 }
+        if ($claimed -ne $shapes) {
+            Write-Host ("  the guide says {0} document shapes; the catalogue holds {1}" -f $Matches[1], $shapes)
+            Write-Host "the guide counts the shapes wrongly"
+            exit 1
+        }
+        Write-Host ("the guide's shape count matches the catalogue: {0}" -f $shapes)
+    } else {
+        Write-Host "the guide no longer says how many document shapes there are, so nothing was compared"
+        exit 1
+    }
+}
+
 # The handoff opens its summary with how many checks exist. That number was written by hand and said twenty-one for a
 # round after `check-kinds` made it twenty-two, so it is derived here like every other count in the front pages.
 $handoffPath = Join-Path $repo "HANDOFF.md"

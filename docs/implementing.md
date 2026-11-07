@@ -22,7 +22,7 @@ Those two commands are the reference implementation of what follows.
 ## What your runtime owes the page
 
 **Draw it.** [The catalogue's "What a runtime must draw"](./catalogue/moreweb.terminal-v1.md#what-a-runtime-must-draw) has a row per
-part of a page, and the ten document shapes in "A page may arrive from anywhere" say what a document you did not write becomes.
+part of a page, and the twelve document shapes in "A page may arrive from anywhere" say what a document you did not write becomes.
 `check-kinds` and `check-html-to-tui` hold this project to it.
 
 **Carry the facts a reader cannot infer.** Seven `data-*` attributes and two hidden views - the full list is in "What a document
