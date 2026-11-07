@@ -70,6 +70,26 @@ foreach ($relative in $documents) {
     }
 }
 
+# A glossary that says "seven kinds" and defines six matches every count check and still leaves one kind a stranger cannot
+# look up: `Table` was missing for as long as the kind existed. The section must define each kind with a bold entry.
+$glossary = Join-Path $repo "GLOSSARY.md"
+if (Test-Path $glossary) {
+    $text = Get-Content -LiteralPath $glossary -Raw -Encoding UTF8
+    $section = [regex]::Match($text, '## The \w+ kinds([\s\S]*?)(
+## |\z)')
+    if (-not $section.Success) {
+        Write-Host "the glossary no longer holds a kinds section, so nothing was compared"
+        exit 1
+    }
+    $undefined = @($kinds | Where-Object { $section.Groups[1].Value -notmatch ('\*\*' + [regex]::Escape($_) + '\*\*') })
+    if ($undefined.Count -gt 0) {
+        Write-Host ("  the glossary's kinds section does not define: " + ($undefined -join ", "))
+        Write-Host "the glossary counts the kinds without defining them all"
+        exit 1
+    }
+    Write-Host ("the glossary defines every kind: {0}" -f $kinds.Count)
+}
+
 if ($checked -lt 3) {
     Write-Host ("only " + $checked + " document(s) were read, so the claims were not really checked")
     exit 1
