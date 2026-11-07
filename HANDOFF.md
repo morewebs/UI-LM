@@ -62,7 +62,7 @@ powershell -File scripts/check-docs.ps1          # the documents' numbers match 
 foreach ($s in "check-all","check-interaction","check-race","check-live-page","check-render-scale","check-release","check-fresh") {
     powershell -NoProfile -File "scripts/$s.ps1"
 }
-cargo test --workspace                           # 221 tests
+cargo test --workspace                           # 282 tests
 ```
 
 `check-all` fails if any set drops below 100%, if the label path stops rebuilding the reader's
