@@ -75,7 +75,7 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 | a screen's text becomes a page holding blocks, tool calls, meters, thoughts, diffs, frames, tables and panes | **seven kinds**, 779 frames assembled at 100% given the reader's own answers |
 | a page draws back every line of content | **0 sessions below 100%**, split screens and resized dividers included, on both reader and model pages |
 | the page carries the screen's styling | 5,957 components compared field by field, **0 differing** |
-| provenance is honest | 12,512 components, 10,465 carried, **0 contradictions** |
+| provenance is honest | 12,595 components, 10,504 carried, **0 contradictions** |
 | the reader and the label path agree | every evaluation set at 100%, and every hard case on score, round trip and shape |
 | the model generalises off its training application | trained on Grok alone; **591 frames of Freebuff at 100%** — Block 4652, ToolCall 158, Thought 385, Diff 54 |
 | the download works | **v0.65.0** verified by downloading, unzipping, and running `version` and `score` on a real session |
@@ -101,7 +101,8 @@ Seven items from earlier handoffs are done, and saying so is cheaper than a succ
 (vim's popup, two whiptail dialogs) and now admits a third application - tmux's untitled popup, by centring (ADR 0006's
 third shape; 6 centred boxes in 646, all floating windows); a record names its program's exit (`SessionRecord::exit`);
 `Meter` has a producer that is not an agent (`git clone --progress`); interaction has a check; a word grid with no
-underline is a `Table` (ADR 0009, seven screens across five applications, no prose); and the reader's answer to a
+underline is a `Table` (ADR 0009, seven screens across five applications, no prose, and a listing whose last row
+stops short is still a grid); and the reader's answer to a
 framework-shaped page is measured and held by a fixture.
 
 Two questions are closed **by decision**, and each says what would reopen it:
@@ -147,11 +148,11 @@ somebody gets round to the documents — which is what happened for twenty-four 
   evidence, or not at all.
 ## Where it stands now
 
-**31 checks, about half an hour, every axis green**, **22 hard cases** at 100% on score, round trip and
+**31 checks, about half an hour, every axis green**, **23 hard cases** at 100% on score, round trip and
 shape, and **v0.65.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
-The corpus is **123 recordings, 1684 frames** per path, recorded from **12 distinct commands** — derived from the
+The corpus is **124 recordings, 1685 frames** per path, recorded from **12 distinct commands** — derived from the
 `command` field of every recording, which is the only definition that admits checking. Among them: Grok (the training
 application), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and
 `man`, `less`, `df`, `vim`, `top`, `git`, `cmd` and PowerShell — programs that are not agents at all.
@@ -192,7 +193,7 @@ refused was refused by counting something.
 
 **The provenance contradiction is fixed.** `pages()` decides `carried` from the memory as it was **before** the frame,
 not from the set the loop is filling: two identical blocks in one frame are both `seen`, because neither was on screen
-earlier. The corpus measures **12,512 components, 10,465 carried, 0 contradictions**, and `check-corpus` now pins zero.
+earlier. The corpus measures **12,595 components, 10,504 carried, 0 contradictions**, and `check-corpus` now pins zero.
 The two earlier attempts failed because they also lost the restore step; the smallest test of the shape is
 `two_identical_blocks_in_one_frame_are_both_seen` in `crates/pages/src/lib.rs`.
 

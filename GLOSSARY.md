@@ -155,5 +155,5 @@ Its rows are the screen's own, so it draws back unchanged.
 _Avoid_: modal, dialog box, overlay
 
 **Table**:
-A block of aligned columns: values in columns (ADR 0008), headings the application underlined, or a grid of single words at fixed columns (ADR 0009 - `ls -C`, `pip list`, `Format-Wide`, `column`, `pr`). A streak of prose that happens to align is not one, and neither is a single column of words.
+A block of aligned columns: values in columns (ADR 0008), headings the application underlined, or a grid of single words at fixed columns, whose rows may stop short, down to one name (ADR 0009 - `ls -C`, `pip list`, `Format-Wide`, `column`, `pr`). A streak of prose that happens to align is not one, and neither is a single column of words.
 _Avoid_: grid, spreadsheet

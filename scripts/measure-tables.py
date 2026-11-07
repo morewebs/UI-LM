@@ -257,27 +257,33 @@ def word_cells(text):
 
 
 def word_grid(rows):
-    """The third signal (ADR 0009): a grid of single words at fixed columns, no dash row and no digits needed."""
+    """The third signal (ADR 0009): a grid of single words at fixed columns, no dash row and no digits needed.
+
+    A grid's rows need not be equally long. `ls -C` fills columns top-down, so the last row stops where the
+    shortest column does: five names across and a final row of four is one grid, and a width where the last column
+    holds a single name leaves one cell. Demanding a rectangle made every untruncated listing prose. Every row must
+    *start* its cells on the grid's columns - a row that skips one holds a different set of columns - and the grid
+    itself still needs two columns, so a single column of words is not a table.
+    """
     if len(rows) < 3:
         return False
     if sum(1 for row in rows if "  " in row) * 2 <= len(rows):
         return False
-    shape = None
+    parsed = []
     for row in rows:
         if "---" in row:
             return False
-        parsed = word_cells(row)
-        if parsed is None:
+        cells = word_cells(row)
+        if cells is None:
             return False
-        starts, cells = parsed
-        if len(cells) < 2:
+        starts, words = cells
+        if not words:
             return False
-        current = (tuple(starts), len(cells))
-        if shape is None:
-            shape = current
-        elif shape != current:
-            return False
-    return shape is not None
+        parsed.append(starts)
+    longest = max(parsed, key=len)
+    if len(longest) < 2:
+        return False
+    return all(longest[:len(row)] == row for row in parsed)
 
 
 def disagreements():

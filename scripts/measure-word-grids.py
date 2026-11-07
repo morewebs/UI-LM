@@ -6,8 +6,10 @@ whether a rule can see the grid **without** seeing vim's help rows, which ADR 00
 for. This file is the measurement, not the decision.
 
 The candidate rule: three or more consecutive non-blank rows, each split into two or more cells by two or more spaces,
-at the same character offsets, where every cell is a single word (`[A-Za-z0-9._+-]+`) and no row holds a dash underline.
-It is narrower than ADR 0007's rule in one way only: it refuses prose as a cell.
+where every cell is a single word (`[A-Za-z0-9._+-]+`), no row holds a dash underline, and every row starts its cells on
+the grid's columns. A row may hold fewer cells than the grid is wide, down to one - `ls -C` fills columns top-down, so
+its last row stops where the shortest column does - but it may not skip a column, and the grid needs two columns. It is narrower than ADR 0007's rule in one way
+only: it refuses prose as a cell.
 
 Run from the repository root:
 
@@ -55,15 +57,25 @@ def offsets(text):
 
 
 def grid_run(lines):
-    """The longest run of rows that satisfies the candidate, and the rows themselves."""
+    """The longest run of rows that satisfies the candidate, and the rows themselves.
+
+    A row may hold fewer cells than the grid is wide, down to one: `ls -C` fills columns top-down, so its last row
+    stops where the shortest column does. What a row may not do is skip a column - its cells must start on the
+    grid's columns - and the grid itself must still have two, which is the same rule the reader applies
+    (`as_word_grid`).
+    """
     best = 0
     best_rows = []
     run = []
     run_rows = []
 
+    def valid(shapes):
+        longest = max(shapes, key=len)
+        return len(longest) >= 2 and all(longest[:len(shape)] == shape for shape in shapes)
+
     def close():
         nonlocal best, best_rows
-        if len(run) >= 3 and len(run) > best:
+        if len(run) >= 3 and len(run) > best and valid(run):
             best = len(run)
             best_rows = list(run_rows)
 
@@ -74,16 +86,15 @@ def grid_run(lines):
             continue
         row = cells(text)
         shape = offsets(text)
-        if len(row) < 2 or not all(WORD.match(cell) for cell in row):
+        if not row or not all(WORD.match(cell) for cell in row):
             close()
             run, run_rows = [], []
             continue
-        if run and run[-1] == shape:
-            run.append(shape)
-            run_rows.append(text)
-        else:
-            close()
-            run, run_rows = [shape], [text]
+        run.append(shape)
+        run_rows.append(text)
+        while run and not valid(run):
+            run.pop(0)
+            run_rows.pop(0)
     close()
     return best, best_rows
 

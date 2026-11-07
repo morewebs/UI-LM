@@ -54,6 +54,12 @@ $expected = @{
     # hard case for the material, not for a defect: a fresh clone has none of this machine's `eval/`, and a rule whose
     # evidence is local is a rule nobody else can check.
     "ls-word-grid" = 100.0
+    # The untruncated `ls -C` at 60 columns: a column-major listing's last row stops where the shortest column does,
+    # and here the last column holds a single name. The rule demanded a rectangle, then two cells in every row - so
+    # every grid it accepted was a listing that happened to end on a full row. ADR 0009's ragged-row allowance and
+    # its one-cell row are what turn this screen into one `Table`, and each is needed: either one removed, and the
+    # screen is a `Block` again (round 245).
+    "ls-ragged-grid" = 100.0
     # The third application for `Frame`: tmux 3.4's untitled popup, captured by driving an attached client. Its box has
     # no title, so it was a panel until ADR 0006's centring rule (round 176).
     "tmux-floating-popup" = 100.0
@@ -122,6 +128,9 @@ $required = @{
     # ADR 0009's rule: without it this screen is one `Block`, and the case exists so that removing the signal fails
     # here rather than looking like a quieter page.
     "ls-word-grid"           = @("Table")
+    # The ragged half: a row may hold only the leading cells of the grid. Without the allowance this screen is one
+    # `Block` while `ls-word-grid` stays a table, so the two cases hold both halves of the rule.
+    "ls-ragged-grid"         = @("Table")
     # The case exists for the untitled, centred shape; removing the centring turns it back into a panel.
     "tmux-floating-popup"    = @("Frame")
     # The titled form: the scene exists so that a caption the reader stops extracting fails by name.
@@ -162,6 +171,8 @@ $ceiling = @{
     "pwsh-word-table"          = 2
     # One `Table`, and that is the judgement: a grid read as one component per row would score 100% and be wrong.
     "ls-word-grid"             = 1
+    # One `Table`, like every grid here: a row-per-component reading would score 100% and be wrong.
+    "ls-ragged-grid"           = 1
     # Three components: the shell prompt, the popup, and tmux's status line.
     "tmux-floating-popup"      = 3
     "pwsh-wide-grid"           = 1

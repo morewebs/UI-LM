@@ -3090,6 +3090,64 @@ mod tests {
     }
 
     #[test]
+    fn a_grid_whose_last_row_is_short_is_still_a_table() {
+        // Real `ls -C` fills columns top-down, so the last row stops early: this is one screen of /usr/lib, five
+        // columns and a final row holding four names. The rule demanded a rectangle, so an untruncated listing read
+        // as one `Block` - every grid it accepted was a listing that happened to end on a full row, or the hard
+        // case's `head`ed one, cut off at one. The shared offsets are the signal; a row that holds only the leading
+        // cells is still a row of that grid.
+        let lines = vec![
+            "X11                dbus-1.0          init                 openssh      software-properties".to_owned(),
+            "apparmor           dhcpcd            kernel               openvpn      ssl".to_owned(),
+            "apt                dpkg              landscape            os-release   sysctl.d".to_owned(),
+            "cpp                groff             networkd-dispatcher  snapd".to_owned(),
+        ];
+        let (columns, cells) = as_word_grid(&lines).expect("a column-major listing is a grid");
+        assert_eq!(columns, vec![0, 19, 37, 58, 71]);
+        assert_eq!(
+            cells[3],
+            vec!["cpp", "groff", "networkd-dispatcher", "snapd"]
+        );
+    }
+
+    #[test]
+    fn a_grid_row_that_skips_a_column_is_not_a_grid_row() {
+        // A short last row is a column running out; a hole in the middle is a different set of columns, and the
+        // difference is the whole rule. `delta` starts at 0 and `epsilon` at 17, where the first row has `beta` at 9
+        // and `gamma` at 17 - a prefix of the shape would be (0, 9), so this row does not belong to the grid.
+        let lines = vec![
+            "alpha    beta    gamma".to_owned(),
+            "delta            epsilon".to_owned(),
+            "zeta     eta     theta".to_owned(),
+        ];
+        assert!(as_word_grid(&lines).is_none());
+    }
+
+    #[test]
+    fn a_grid_whose_last_row_holds_one_name_is_still_a_table() {
+        // At 60 columns `ls -C /usr/lib` ends with one name in its last row: the last column held a single entry.
+        // Requiring two cells in every row made this one `Block` even after short rows were allowed - the minimum
+        // is about the *grid*, which has two columns, not about every row of it.
+        let lines = vec![
+            "X11                  lsb".to_owned(),
+            "apparmor             man-db".to_owned(),
+            "apt                  mime".to_owned(),
+            "locale".to_owned(),
+        ];
+        let (columns, cells) = as_word_grid(&lines).expect("a one-cell last row is still a row");
+        assert_eq!(columns, vec![0, 21]);
+        assert_eq!(cells[3], vec!["locale"]);
+    }
+
+    #[test]
+    fn a_single_column_of_words_is_not_a_table() {
+        // The minimum lives on the grid: a block whose every row holds one word is a column of words, which the
+        // glossary says is not a table. (The double-space majority guard refuses it before the width check does.)
+        let lines = vec!["alpha".to_owned(), "beta".to_owned(), "gamma".to_owned()];
+        assert!(as_word_grid(&lines).is_none());
+    }
+
+    #[test]
     fn two_identical_blocks_in_one_frame_are_both_seen() {
         // Frame 4 of `two-agents-one-screen` holds two blocks with the same text. The memory is keyed by the base id,
         // so the first one's insert made the second look like a repeat **within the same frame**, and the checker,
@@ -3884,7 +3942,8 @@ pub fn as_table(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)> {
     }
     // The third signal, ADR 0009: a grid of single words at fixed columns - `ls -C`, `pip list`. The values rule
     // cannot see these, and ADR 0007's alignment rule was rejected because it also matched vim's help rows; the cell
-    // is what separates a grid from a help page, so the cell is what this rule tests.
+    // is what separates a grid from a help page, so the cell is what this rule tests. A row may end early where a
+    // column runs out - a column-major listing's last row does - but it may not skip a column.
     if let Some(table) = as_word_grid(lines) {
         return Some(table);
     }
@@ -3963,32 +4022,40 @@ fn as_word_grid(lines: &[String]) -> Option<(Vec<u16>, Vec<Vec<String>>)> {
     if spaced * 2 <= lines.len() {
         return None;
     }
-    let mut shape: Option<(Vec<usize>, usize)> = None;
-    let mut cells: Vec<Vec<String>> = Vec::with_capacity(lines.len());
+    let mut cells: Vec<(Vec<usize>, Vec<String>)> = Vec::with_capacity(lines.len());
     for line in lines {
         // The dash row belongs to the signal above; a grid does not carry one.
         if line.contains("---") {
             return None;
         }
         let (starts, row) = word_cells(line)?;
-        if row.len() < 2 {
+        if row.is_empty() {
             return None;
         }
-        let expected = shape.get_or_insert_with(|| (starts.clone(), row.len()));
-        if expected.0 != starts || expected.1 != row.len() {
-            return None;
-        }
-        cells.push(row.into_iter().map(|cell| cell.to_owned()).collect());
+        cells.push((
+            starts,
+            row.into_iter().map(|cell| cell.to_owned()).collect(),
+        ));
     }
-    let (starts, _) = shape?;
+    // A grid's rows need not be equally long. `ls -C` fills columns top-down, so its last row stops where the
+    // shortest column does: five names across and a final row of four is one grid, and a width where the last
+    // column holds a single name leaves one cell. Demanding a rectangle made every untruncated listing prose.
+    // What a row must do is *start* its cells where the grid's columns are; a row that skips a column holds a
+    // different set of columns and is refused, and the grid itself still needs two columns.
+    let width = cells.iter().map(|(starts, _)| starts.len()).max()?;
+    let (starts, _) = cells.iter().find(|(row, _)| row.len() == width)?;
+    let starts = starts.clone();
     if starts.len() < 2 {
+        return None;
+    }
+    if cells.iter().any(|(row, _)| starts[..row.len()] != row[..]) {
         return None;
     }
     let columns: Vec<u16> = starts
         .iter()
         .map(|start| u16::try_from(*start).unwrap_or(u16::MAX))
         .collect();
-    Some((columns, cells))
+    Some((columns, cells.into_iter().map(|(_, cells)| cells).collect()))
 }
 
 /// The cells of a grid row, with where each starts: runs of two or more spaces separate them, and every cell must be

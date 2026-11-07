@@ -12,7 +12,7 @@ ADR 0008). That is the split the project runs on: what a thing *is*, is learned;
 |---|---|
 | weights | `models/page.json`, 19 x 5 matrix and 5 biases, SHA-256 begins `433465EADD618E45` |
 | features | 19, read off the screen itself: tool glyphs, meter ratios, indentation, box characters, elapsed-time phrases, diff markers, and so on |
-| generalisation | **123 recordings, every one at 100%** - including five made after training: a `git clone`, a
+| generalisation | **124 recordings, every one at 100%** - including five made after training: a `git clone`, a
 scripted progress loop, a table of words, a split screen and a diff |
 | parameters | 100 |
 | inference | Rust, `crates/model`, no runtime dependencies |
@@ -32,7 +32,7 @@ stated here rather than in a footnote.
 
 | set | what it is | result |
 |---|---|---|
-| every recording here | **123 recordings, 1,684 frames** from **12 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
+| every recording here | **124 recordings, 1,685 frames** from **12 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
 | seven evaluation sets | Grok and non-Grok screens, 344 frames | 100% every set |
 | **a second agent CLI** | **21 recordings, 1111 frames, never trained on** | **100%, every component** |
 | fresh batches | recorded **after** training, **16 batches** | 100% every batch, every kind it held |
@@ -56,7 +56,7 @@ all perfect.
 - **A table is a run of numbers, a grid of words, or an underlined heading.** `Table` is the seventh kind: two vertical
   strips holding digits in a majority of rows, in a block of its own (ADR 0008); a heading the application underlines;
   or - ADR 0009 - a grid of single words at fixed columns, which is what `ls -C`, `pip list`, PowerShell's `Format-Wide`,
-  `column` and `pr` draw. The values rule admits two agent screens of three or four rows where prose aligns by accident -
+  `column` and `pr` draw. A grid's rows may stop short, down to one name, because a column-major listing does; a row may not skip a column, and the grid still needs two. The values rule admits two agent screens of three or four rows where prose aligns by accident -
   a boundary measured at three thresholds and written into `scripts/measure-tables.py`.
 - **A drawn meter reaches the page as text and as a bar.** It was the last kind that could not round trip; it does since
   `emit` gave the meter a line of its own and `next_row` stopped skipping the rows before a plain one. Every kind now rebuilds
