@@ -586,6 +586,17 @@ was recorded to see what a two-pane model does with a screen that is not two pan
 | the round trip | **30/30 lines, 100%** |
 
 The split lands on a divider and the page keeps every line, so the loss is structure, not text: the page cannot say the
-screen had three columns. Making the model N-way touches `as_panes`'s return, both renderers, the comparison and the
-checks, and one screen is less evidence than this ADR's own rule asks for. Reopen with a consumer that needs the third
-pane, or with three recordings where the two-pane reading loses something a reader depends on.
+screen had three columns. A **stacked** split - one pane above the other, which both tmux and vim draw - was recorded
+the same evening, and it reads as one pane of three blocks in document order, the rule row inside the middle block:
+
+| | |
+|---|---|
+| the screen | `top-pane` above a row of rules above `bottom-pane` |
+| the page | **one pane, three `Block`s**; the rule row sits inside the middle block |
+| the round trip | **4/4 lines, 100%** |
+
+The blocks fall in the right places, so the text is right; what the page cannot say is that the screen held two
+independent panes rather than one. Making the model N-way, or two-dimensional, touches `as_panes`'s return, both
+renderers, the comparison and the checks, and one screen each is less evidence than this ADR's own rule asks for.
+Reopen with a consumer that needs the third pane or the stacked one, or with three recordings where the two-pane
+reading loses something a reader depends on.
