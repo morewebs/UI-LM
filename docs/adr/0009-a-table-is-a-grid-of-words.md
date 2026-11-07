@@ -64,7 +64,9 @@ Seven screens recorded for the question, at widths where the row stops early:
 | `ls /usr/lib` piped to `column -c 120` | 14 | 5 | 4 cells | a row-major fill ends short too |
 
 Every one satisfies the widened rule and none is a rectangle; every one read as one `Block` before the change and as one
-`Table` after it. The whole corpus was re-rendered before and after both widenings: **1,684 pages, byte-identical** —
+`Table` after it. A wider sweep says the same: `ls -C` over `/usr/lib`, `/usr/bin`, `/etc` and `/usr/share` at every
+width from 40 to 200 columns - **80 listings** - holds no width where a listing with two or more columns fails the rule.
+The widths that fail are the single-column ones, which are not grids. The whole corpus was re-rendered before and after both widenings: **1,684 pages, byte-identical** —
 no component the rule already saw moved, and no prose block became a table. The cell test is untouched: a help row's
 cell is still a sentence. The one-cell shape has a test of its own, and a block whose every row holds one word is still
 refused — that is a column, not a grid.
@@ -83,6 +85,11 @@ refused — that is a column, not a grid.
   or two cells in every row, each turns it back into a `Block` and fails `check-hard` by name.
 - The rule has a cheap gate: a grid needs two or more cells in its widest row, so it needs a run of two spaces in a
   majority of rows. Prose pays one scan and no allocations, which is the budget ADR 0008's pre-filter already protects.
+- **Three rows is the floor for every table signal.** A two-row grid - `column -c` over a handful of names, an `ls -C`
+  of a three-file directory - is not a `Table`, and neither is a two-row table of values. Widening only the word grid
+  was measured: the predicate over the corpus admits the same ten blocks with a two-row minimum as with three, so the
+  floor costs nothing on this material, and it is the floor the values rule already asks. Reopen with three screens
+  where the two-row reading is the useful one.
 
 ## Alternatives rejected
 
