@@ -184,3 +184,12 @@ fixed:
 | whiptail | `┌────┤ Confirm ├────┐` | `Confirm` |
 | tmux, titled | `┌─Title Here────────┐` | `Title Here` |
 | tmux, untitled | `┌───────────────────┐` | `""` |
+
+The titled tmux popup is `cases/hard/tmux-titled-popup`, and `check-hard` now asserts the title on real material: a
+caption that silently becomes empty leaves the kind looking right while the page loses a fact. Discarding the caption
+while keeping the kind printed:
+
+```
+  tmux-titled-popup      no Frame titled 'Title Here', and this case exists for it
+```
+

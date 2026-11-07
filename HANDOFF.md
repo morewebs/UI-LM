@@ -146,11 +146,11 @@ somebody gets round to the documents — which is what happened for twenty-four 
   evidence, or not at all.
 ## Where it stands now
 
-**31 checks, about half an hour, every axis green**, **21 hard cases** at 100% on score, round trip and
+**31 checks, about half an hour, every axis green**, **22 hard cases** at 100% on score, round trip and
 shape, and **v0.65.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
-The corpus is **122 recordings, 1675 frames** per path, recorded from **12 distinct commands** — derived from the
+The corpus is **123 recordings, 1684 frames** per path, recorded from **12 distinct commands** — derived from the
 `command` field of every recording, which is the only definition that admits checking. Among them: Grok (the training
 application), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and
 `man`, `less`, `df`, `vim`, `top`, `git`, `cmd` and PowerShell — programs that are not agents at all.

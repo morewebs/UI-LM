@@ -12,7 +12,7 @@ ADR 0008). That is the split the project runs on: what a thing *is*, is learned;
 |---|---|
 | weights | `models/page.json`, 19 x 5 matrix and 5 biases, SHA-256 begins `433465EADD618E45` |
 | features | 19, read off the screen itself: tool glyphs, meter ratios, indentation, box characters, elapsed-time phrases, diff markers, and so on |
-| generalisation | **122 recordings, every one at 100%** - including five made after training: a `git clone`, a
+| generalisation | **123 recordings, every one at 100%** - including five made after training: a `git clone`, a
 scripted progress loop, a table of words, a split screen and a diff |
 | parameters | 100 |
 | inference | Rust, `crates/model`, no runtime dependencies |
@@ -32,7 +32,7 @@ stated here rather than in a footnote.
 
 | set | what it is | result |
 |---|---|---|
-| every recording here | **122 recordings, 1,675 frames** from **12 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
+| every recording here | **123 recordings, 1,684 frames** from **12 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
 | seven evaluation sets | Grok and non-Grok screens, 344 frames | 100% every set |
 | **a second agent CLI** | **21 recordings, 1111 frames, never trained on** | **100%, every component** |
 | fresh batches | recorded **after** training, **10 batches** | 100% every batch, every kind it held |
@@ -131,7 +131,7 @@ And the disagreements are not spread evenly — they have one shape, measured by
 
 - **`Frame` has three shapes and three applications.** A heavy-ruled box (vim's `popup_create`), a single-ruled box
   whose caption sits in the top border - whiptail's `┤…├` form or tmux's `─Title─` run - and an untitled box centred in
-  the screen (tmux 3.4's `display-popup`, driven with the recorder's key script). Thirteen components across the three. The declines are as
+  the screen (tmux 3.4's `display-popup`, driven with the recorder's key script). Sixteen components across the three. The declines are as
   tested as the accepts: `vim`'s completion popup (a float without a border), Freebuff's composer (a border touching
   the edge), and a popup drawn off-centre are all `Block`.
 

@@ -64,6 +64,9 @@ $expected = @{
     # Frame case above, and the only thing that keeps it a panel is the centring test. Removing that test is the
     # 642-block mistake; this case is the counterweight.
     "tmux-offcentre-popup" = 100.0
+    # The third application's titled form: tmux writes `┌─Title Here────┐`, and the caption rule reads the run between
+    # the rules. The title is asserted below, not just the kind.
+    "tmux-titled-popup" = 100.0
     # Fixed: an advertisement panel whose border ends `╯  █` stopped being a panel once the scrollbar
     # column was not stripped, so the reader swallowed the rest of the screen into one block. Measured at
     # 99.7% before the fix and 100% after it; that is the number a regression would have to fall below.
@@ -94,6 +97,15 @@ $forbidden = @{
     "agent-beside-shell"   = @("Diff", "Frame")
 }
 
+# A `Frame`'s title is data, and a caption that silently becomes empty leaves the kind looking right while the page loses
+# a fact. The shapes are held by unit tests in `crates/pages`; these entries hold the titles on real material.
+$titles = @{
+    "vim-floating-popup"  = "Confirm"
+    "whiptail-dialog"     = "Confirm"
+    "whiptail-menu"       = "Pick a file"
+    "tmux-titled-popup"   = "Title Here"
+}
+
 $required = @{
     # Each entry is a kind the case exists for. Breaking the predicate that produces it must fail this check,
     # and `docs/checks.md` records the message each break produced.
@@ -112,6 +124,8 @@ $required = @{
     "ls-word-grid"           = @("Table")
     # The case exists for the untitled, centred shape; removing the centring turns it back into a panel.
     "tmux-floating-popup"    = @("Frame")
+    # The titled form: the scene exists so that a caption the reader stops extracting fails by name.
+    "tmux-titled-popup"      = @("Frame")
     "pwsh-wide-grid"         = @("Table")
     "whiptail-dialog"        = @("Frame")
     "every-kind-one-screen"  = @("Block", "ToolCall", "Diff", "Meter")
@@ -152,6 +166,7 @@ $ceiling = @{
     "tmux-floating-popup"      = 3
     "pwsh-wide-grid"           = 1
     "tmux-offcentre-popup"     = 2
+    "tmux-titled-popup"        = 3
     # Both of these hold one component and that is the judgement being protected: a popup or a menu read as one
     # component per row would still score 100% and would be wrong. They were added without ceilings, which meant the
     # only thing checking them was the score (round 214).
@@ -163,7 +178,7 @@ $regressed = 0
 # word-table case was written into `$required` while the recording sat in `eval/apps`, and the check went green without
 # ever looking at it (round 53). Every table's keys must name a case, and every case must have an expectation.
 $present = @(Get-ChildItem -LiteralPath $cases -Directory | ForEach-Object { $_.Name })
-$known = @($expected.Keys) + @($required.Keys) + @($forbidden.Keys) + @($ceiling.Keys)
+$known = @($expected.Keys) + @($required.Keys) + @($forbidden.Keys) + @($ceiling.Keys) + @($titles.Keys)
 $orphans = @($known | Select-Object -Unique | Where-Object { $present -notcontains $_ })
 $unscored = @($present | Where-Object { -not $expected.ContainsKey($_) })
 if ($orphans.Count -gt 0 -or $unscored.Count -gt 0) {
@@ -186,12 +201,20 @@ foreach ($case in (Get-ChildItem -LiteralPath $cases -Directory)) {
     # The busiest frame, against the recorded ceiling.
     $busiest = 0
     $kinds = @{}
+    $seenTitles = @{}
     foreach ($raw in (& $capture page --session $case.FullName --all 2>$null)) {
         $page = $raw | ConvertFrom-Json -ErrorAction SilentlyContinue
         if (-not $page) { continue }
         $count = @($page.createSurface.components | Where-Object { $_.component -ne "Column" }).Count
         if ($count -gt $busiest) { $busiest = $count }
-        foreach ($component in $page.createSurface.components) { $kinds[$component.component] = $true }
+        foreach ($component in $page.createSurface.components) {
+            $kinds[$component.component] = $true
+            if ($component.component -eq "Frame") { $seenTitles["$($component.title)"] = $true }
+        }
+    }
+    if ($titles.ContainsKey($case.Name) -and -not $seenTitles.ContainsKey($titles[$case.Name])) {
+        Write-Host ("  {0,-22} no Frame titled '{1}', and this case exists for it" -f $case.Name, $titles[$case.Name])
+        $regressed++
     }
     if ($required.ContainsKey($case.Name)) {
         foreach ($kind in $required[$case.Name]) {
