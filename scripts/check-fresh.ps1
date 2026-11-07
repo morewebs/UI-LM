@@ -53,6 +53,73 @@ if ($line) {
 }
 if (-not $sessions) { Write-Host "no recordings were kept; the check did not run"; exit 1 }
 
+# --- the kinds a batch must hold ---------------------------------------------------------------
+# What a fresh batch can score is what it recorded. Without an agent CLI on PATH the standard scenarios
+# draw only Block and Meter, so a rule broken by *new* output survives: check-hard's cases are fixed
+# recordings. These probes record one screen for each kind a program draws without an agent, into the
+# same batch, so the score runs on them. A probe that does not draw its kind fails - a batch that
+# silently lost its material is the failure this check exists to make impossible.
+$probeFailures = @()
+$probeWork = Join-Path ([System.IO.Path]::GetTempPath()) ("ui-lm-probe-" + [guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Force -Path $probeWork | Out-Null
+
+function Add-Probe {
+    param([string]$Name, [string]$Kind, [int]$Rows, [int]$Cols, [int]$Stop, [string[]]$Arguments)
+    $out = Join-Path $sessions $Name
+    if (Test-Path $out) { Remove-Item -LiteralPath $out -Recurse -Force }
+    & $capture record --rows $Rows --cols $Cols --out $out --stop-after $Stop -- @Arguments *> $null
+    if (-not (Test-Path (Join-Path $out "session.json"))) {
+        $script:probeFailures += ("{0}: the recorder wrote nothing" -f $Name)
+        return
+    }
+    $frame = (((& $capture frames --session $out 2>&1 | Select-Object -Last 1) -join " ") -replace "\s{2,}", " ").Trim()
+    if ($frame -notmatch ($Kind + "=[0-9]")) {
+        $script:probeFailures += ("{0}: the last frame holds no {1} - it says '{2}'" -f $Name, $Kind, $frame)
+        return
+    }
+    $trip = (((& $capture tui --session $out --all 2>&1 | Select-Object -Last 1) -join "")).Trim()
+    if ($trip -notmatch [regex]::Escape("(100.0%)")) {
+        $script:probeFailures += ("{0}: the page draws back at '{1}', and every frame here must round trip" -f $Name, $trip)
+    }
+}
+
+$git = Get-Command git -ErrorAction SilentlyContinue
+if ($git) {
+    $probeRepo = Join-Path $probeWork "repo"
+    New-Item -ItemType Directory -Force -Path $probeRepo | Out-Null
+    & git -C $probeRepo init -q 2>&1 | Out-Null
+    & git -C $probeRepo config user.email probe@example.com
+    & git -C $probeRepo config user.name probe
+    Set-Content -LiteralPath (Join-Path $probeRepo "notes.txt") -Value "alpha`nbeta`n" -Encoding ASCII
+    & git -C $probeRepo add -A 2>&1 | Out-Null
+    & git -C $probeRepo commit -qm "init" 2>&1 | Out-Null
+    Set-Content -LiteralPath (Join-Path $probeRepo "notes.txt") -Value "alpha`nBETA`n" -Encoding ASCII
+    Add-Probe -Name "probe-diff" -Kind "Diff" -Rows 24 -Cols 90 -Stop 2500 -Arguments @("git", "-C", $probeRepo, "-c", "color.ui=always", "diff")
+} else {
+    Write-Host "  no git, so the Diff probe was skipped"
+}
+
+if (Get-Command wsl.exe -ErrorAction SilentlyContinue) {
+    # A cold WSL start can outlast a short stop deadline and record a blank screen with no exit status;
+    # warming the VM first makes the probe about the listing rather than about the machine.
+    & wsl.exe -e true 2>$null | Out-Null
+    Add-Probe -Name "probe-grid" -Kind "Table" -Rows 40 -Cols 120 -Stop 6000 -Arguments @("wsl.exe", "-e", "ls", "-C", "/usr/lib")
+    if (((& wsl.exe -e sh -c "command -v whiptail" 2>$null) -join "").Trim()) {
+        Add-Probe -Name "probe-dialog" -Kind "Frame" -Rows 24 -Cols 80 -Stop 4000 -Arguments @("wsl.exe", "-e", "sh", "-c", "whiptail --title 'Probe' --yesno 'A frame?' 12 50 2>/dev/null; sleep 1")
+    } else {
+        Write-Host "  no whiptail in wsl, so the Frame probe was skipped"
+    }
+} else {
+    Write-Host "  no wsl.exe, so the Table and Frame probes were skipped"
+}
+Remove-Item -LiteralPath $probeWork -Recurse -Force -ErrorAction SilentlyContinue
+if ($probeFailures.Count -gt 0) {
+    $probeFailures | ForEach-Object { Write-Host ("  " + $_) }
+    Write-Host "a probe did not draw the kind it exists for"
+    Write-Host "the batch is kept at $sessions"
+    exit 1
+}
+
 $score = @("score", "--model", $model)
 foreach ($session in (Get-ChildItem -LiteralPath $sessions -Directory)) { $score += @("--session", $session.FullName) }
 $result = & $capture @score

@@ -28,7 +28,7 @@ screen decides how it *looks* and how a component is shaped.
 | `crates/validate` | compares a recording against an application's own draw buffer |
 | `scripts/train_model.py` | training; writes `models/page.json` |
 | `scripts/check-all.ps1` | every evaluation set, both directions, provenance — one exit code |
-| `scripts/check-fresh.ps1` | records new material and scores it blind; the only check that finds new defects |
+| `scripts/check-fresh.ps1` | records new material and scores it blind; the only check that finds new defects, and it records one screen for each kind that needs no agent so a batch cannot lose them silently |
 | `scripts/retrain.ps1` | record → export → train → evaluate in one run |
 | `docs/reports/2026-10-28-model.md` | the full record: every number, every attempt, every failed hypothesis |
 | `docs/implementing.md` | **the guide for a runtime this project did not write**: what a page gives you, what a runtime owes it, and the three tests that say whether you got it right |
