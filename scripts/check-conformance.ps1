@@ -48,6 +48,17 @@ foreach ($case in $cases) {
     & $capture render --page $page --out $html 2>&1 | Out-Null
     if (-not (Test-Path $html)) { $failures += ("{0}: the document renderer wrote nothing" -f $case.Name); continue }
     $back = (@(& $capture read --html $html 2>&1) -join "`n")
+    # The stored `page.html` is an example a reader may open; if it drifts from what the renderer writes, the example
+    # teaches an old document. Line endings are normalised because a checkout may rewrite them.
+    $storedDoc = Join-Path $case.FullName "page.html"
+    if (Test-Path $storedDoc) {
+        $freshText = ((Get-Content -LiteralPath $html -Raw -Encoding UTF8) -replace "`r`n", "`n")
+        $storedText = ((Get-Content -LiteralPath $storedDoc -Raw -Encoding UTF8) -replace "`r`n", "`n")
+        # `-cne`: PowerShell's `-ne` is case-insensitive, and a class name's case is part of the document.
+        if ($freshText -cne $storedText) {
+            $failures += ("{0}: the stored page.html differs from a fresh render" -f $case.Name)
+        }
+    }
     Remove-Item -LiteralPath $html -Force -ErrorAction SilentlyContinue
     $expected = (Get-Content -LiteralPath $wantDoc -Raw -Encoding UTF8).TrimEnd("`n")
     if ($back.TrimEnd("`n") -ne $expected) {
