@@ -164,3 +164,23 @@ a known-hard screen got worse; that is a regression, not a gap
 
 A window deliberately drawn off-centre is not described as a floating window by this reader. The rule is a measurement,
 not a definition of what floats; the limitation is stated where the rule is.
+
+## A third title form: the run between the rules
+
+tmux's `display-popup -T "Title Here"` writes its caption *into* the border as `┌─Title Here─────┐`, with none of
+whiptail's `┤…├` delimiters. The box was already a `Frame` by the centring rule; without a caption rule the page's
+`title` was empty while the words sat in its rows, which is the kind of silent loss the guide warns a runtime author
+about.
+
+The caption is the border's text with the box drawing removed. Two mistakes were caught before it shipped: the first
+version forgot to exclude the left corner and gave an untitled box the title `┌`, which made an off-centre panel a
+`Frame` and failed three guard tests in one run; the second filtered only the rule `─` and read the `┬` of a boxed table
+(`unseen-listing` draws `┌────┬────┐`) as a title, taking the corpus from 13 Frames to 15. A top border carrying `┬` or
+`┼` is a table inside a border, not a window, and the caption filter now removes the whole box-drawing block. With that
+fixed:
+
+| screen | the border | the title |
+|---|---|---|
+| whiptail | `┌────┤ Confirm ├────┐` | `Confirm` |
+| tmux, titled | `┌─Title Here────────┐` | `Title Here` |
+| tmux, untitled | `┌───────────────────┐` | `""` |

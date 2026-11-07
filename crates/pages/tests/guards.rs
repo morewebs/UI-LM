@@ -402,6 +402,57 @@ fn an_untitled_box_centred_in_the_screen_is_a_frame() {
 }
 
 #[test]
+fn a_box_with_an_internal_column_is_not_a_frame() {
+    // `unseen-listing` draws a table inside a border: `┌────┬────┐`. The caption rule's first version read the `┬` as
+    // a title and the box became a Frame; a grid is not a window over the page.
+    let rows = [
+        "~",
+        "~",
+        "     ┌──────────┬──────────┐",
+        "     │ alpha    │ beta     │",
+        "     └──────────┴──────────┘",
+        "~",
+        "~",
+        "~",
+    ];
+    let page = page_of(&rows, "Block");
+    let kinds = kinds(&page);
+    assert!(
+        !kinds.contains(&"Frame".to_owned()),
+        "a boxed table is not a floating window: {kinds:?}"
+    );
+}
+
+#[test]
+fn a_title_drawn_between_the_rules_is_read() {
+    // tmux writes its caption into the border as `┌─Title Here────┐`, with no whiptail `┤…├` delimiters. The caption
+    // is the run that is not the rule character; without this the page would carry an empty title while the words sat
+    // in its rows (round 177).
+    let rows = [
+        "~",
+        "~",
+        "   ┌─Title Here───────────────────┐",
+        "   │  some output                 │",
+        "   │  more output                 │",
+        "   └──────────────────────────────┘",
+        "~",
+        "~",
+        "~",
+    ];
+    let page = page_of(&rows, "Block");
+    let frame = page
+        .create_surface
+        .components
+        .iter()
+        .find(|component| component.component == "Frame")
+        .unwrap_or_else(|| panic!("a titled box must be a Frame: {:?}", kinds(&page)));
+    let ui_lm_pages::Body::Frame { title, .. } = &frame.body else {
+        panic!("a Frame carries its title");
+    };
+    assert_eq!(title, "Title Here");
+}
+
+#[test]
 fn an_untitled_box_near_the_top_is_still_prose() {
     // The same box, three rows from the top of a nine-row screen: a panel in a transcript, not a window over it.
     let rows = [

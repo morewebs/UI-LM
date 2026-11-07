@@ -129,9 +129,9 @@ And the disagreements are not spread evenly — they have one shape, measured by
   property of the per-frame API, not of the weights, and it would be fixed by giving `Model::page` the frames before
   it — the same threading the reader already does.
 
-- **`Frame` has three shapes and three applications.** A heavy-ruled box (vim's `popup_create`), a titled single-ruled
-  box (whiptail's dialogs, confirmed on a GitHub runner too), and an untitled box centred in the screen (tmux 3.4's
-  `display-popup`, driven with the recorder's key script). Thirteen components across the three. The declines are as
+- **`Frame` has three shapes and three applications.** A heavy-ruled box (vim's `popup_create`), a single-ruled box
+  whose caption sits in the top border - whiptail's `┤…├` form or tmux's `─Title─` run - and an untitled box centred in
+  the screen (tmux 3.4's `display-popup`, driven with the recorder's key script). Thirteen components across the three. The declines are as
   tested as the accepts: `vim`'s completion popup (a float without a border), Freebuff's composer (a border touching
   the edge), and a popup drawn off-centre are all `Block`.
 
@@ -150,7 +150,7 @@ catch it:
 
 | boundary | the rule | the counterexample | the guard |
 |---|---|---|---|
-| `Frame` | a box with corners, indented from the screen's edge, either **titled** or **centred within two rows of the screen's middle** | vim's completion popup (borderless), Freebuff's composer (a box touching the edge) and a tmux popup drawn off-centre, all read as `Block` | `check-hard` forbids `Frame` on `vim-completion-popup` and `tmux-offcentre-popup`, and forbids `Meter`/`Thought`/`ToolCall`/`Diff`/`Frame` on the two shell-only cases `pane-resize` and `agent-beside-shell` |
+| `Frame` | a box with corners, indented from the screen's edge, either **titled** or **centred within two rows of the screen's middle** | vim's completion popup (borderless), Freebuff's composer (a box touching the edge), a tmux popup drawn off-centre, and a boxed table (`┌────┬────┐`), all read as `Block` | `check-hard` forbids `Frame` on `vim-completion-popup` and `tmux-offcentre-popup`; unit tests hold the borderless, off-centre and boxed-table shapes; and `check-hard` forbids `Meter`/`Thought`/`ToolCall`/`Diff`/`Frame` on the two shell-only cases `pane-resize` and `agent-beside-shell` |
 | a **divider** | a column of bars **not matched** by a bar on the same rows | a centred `whiptail` dialog, whose border looked like a divider | the `tmux-two-panes` and `grok-help-frame6` fixtures, plus `whiptail-menu` |
 | `Meter` | a count against a drawn limit; a percentage is not one | `top`'s `%Cpu(s)` header | the `second machine` job forbids `Meter` on a monitor |
 | a **listing** | one `Block`, never a meter, thought or tool call | a directory listing, on any machine | the same job forbids all four on a listing |

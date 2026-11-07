@@ -1896,7 +1896,8 @@ fn as_frame(lines: &[String], at: (usize, usize), total: usize) -> Option<String
     if foot_column != open_column || !bottom.contains('┘') {
         return None;
     }
-    let border = &first[open..close];
+    // The corners are not part of the border text: start after `┌` and end before `┐`.
+    let border = &first[open + '┌'.len_utf8()..close];
     if let (Some(title_start), Some(title_end)) = (border.find('┤'), border.find('├')) {
         if title_end > title_start {
             let title = border[title_start + '┤'.len_utf8()..title_end].trim();
@@ -1904,6 +1905,22 @@ fn as_frame(lines: &[String], at: (usize, usize), total: usize) -> Option<String
                 return Some(title.to_owned());
             }
         }
+    }
+    // A box whose top border carries an internal column - `┌────┬────┐` - is a table drawn inside a border, not a
+    // window over the page. `unseen-listing` draws one, and the caption rule's first version read the `┬` as a title.
+    if border.contains('┬') || border.contains('┼') {
+        return None;
+    }
+    // A title drawn into the border without whiptail's delimiters: tmux writes `┌─Title Here────┐`, where the caption
+    // is the run between the rules. Every box-drawing character is border, not text; a border that is all drawing
+    // leaves nothing, which is the untitled shape below.
+    let caption: String = border
+        .chars()
+        .filter(|c| !(0x2500..=0x257F).contains(&(*c as u32)))
+        .collect();
+    let caption = caption.trim();
+    if !caption.is_empty() {
+        return Some(caption.to_owned());
     }
     // The measured rule asks for a *box*, not a pair of horizontal rules: every row between the top and bottom
     // carries the two vertical borders in the same columns. Columns are counted in characters, not bytes, because the
