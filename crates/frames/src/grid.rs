@@ -232,6 +232,22 @@ mod vt_tests {
     }
 
     #[test]
+    fn a_combining_mark_is_dropped_and_the_base_character_stays() {
+        // A cell is one character. A decomposed accent - `e` followed by U+0301 - reaches the grid as a cell whose
+        // contents are two code points, and the cell keeps the base: the page carries `e`, not `é`. The composed
+        // form is one code point and survives, which is why the catalogue calls this a cost and not a rule about
+        // accents.
+        let g = feed("e\u{0301}x".as_bytes(), 1, 4);
+        assert_eq!(g[0][0].ch, 'e');
+        assert_eq!(g[0][1].ch, 'x', "the mark does not take a cell of its own");
+        let g = feed("\u{e9}x".as_bytes(), 1, 4);
+        assert_eq!(
+            g[0][0].ch, '\u{e9}',
+            "the composed form is one code point and survives"
+        );
+    }
+
+    #[test]
     fn a_coloured_wide_glyph_leaves_its_continuation_column_unstyled() {
         // Measured, not assumed (K5, 2026-10-27): ratatui stores a wide glyph's
         // continuation cell as `symbol=""` with `fg=Reset, bg=Reset` — the head

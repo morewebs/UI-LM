@@ -111,6 +111,12 @@ Recorded from a whiptail dialog whose title is `标题`: the page's line is `标
 `标 题`, and the round trip is exact - the screen draws back because the space is where the second cell
 was. `a_wide_glyph_keeps_the_space_of_its_second_cell` in `crates/pages` holds it.
 
+The same cell rule drops what cannot be a cell of its own. A **combining mark** - a decomposed accent,
+`e` followed by U+0301 - is not a character in the grid, so the page carries the base alone: `e`, not
+`é`. The composed form is one code point and arrives whole. A runtime that must keep the mark cannot
+recover it from the page; it was never a cell. `a_combining_mark_is_dropped_and_the_base_character_stays`
+in `crates/frames` holds it.
+
 ### `ToolCall` — what the program read, ran or edited
 
 ```json
