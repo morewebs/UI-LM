@@ -65,7 +65,8 @@ Seven screens recorded for the question, at widths where the row stops early:
 
 Every one satisfies the widened rule and none is a rectangle; every one read as one `Block` before the change and as one
 `Table` after it. A wider sweep says the same: `ls -C` over `/usr/lib`, `/usr/bin`, `/etc` and `/usr/share` at every
-width from 40 to 200 columns - **80 listings** - holds no width where a listing with two or more columns fails the rule.
+width from 40 to 200 columns - **84 listings**, 21 widths over four directories - holds no width where a listing with
+two or more columns fails the rule.
 The widths that fail are the single-column ones, which are not grids. The whole corpus was re-rendered before and after both widenings: **1,684 pages, byte-identical** —
 no component the rule already saw moved, and no prose block became a table. The cell test is untouched: a help row's
 cell is still a sentence. The one-cell shape has a test of its own, and a block whose every row holds one word is still
