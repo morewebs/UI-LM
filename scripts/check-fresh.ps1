@@ -8,6 +8,10 @@
 #   powershell -File scripts/check-fresh.ps1              # record a batch and score it
 #   powershell -File scripts/check-fresh.ps1 -Keep        # keep the recordings
 #
+# The batch also records one screen for each kind a program draws without an agent - a diff, a word grid and a dialog -
+# and a probe that does not draw its kind fails the check. A batch without that material cannot find a defect in those
+# rules, and a batch that lost it silently is the failure this check exists to make impossible.
+#
 # Exit code is 1 when anything falls short, so it can gate a release.
 
 param(
