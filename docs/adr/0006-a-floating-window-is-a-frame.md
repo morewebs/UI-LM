@@ -198,3 +198,18 @@ while keeping the kind printed:
   tmux-titled-popup      no Frame titled 'Title Here', and this case exists for it
 ```
 
+
+## Four more dialogs, and their captions
+
+The caption rule was measured on two forms - whiptail's `┤…├` and tmux's `─·─` run. Whiptail's other dialogs were
+recorded to see whether the predicate travelled, and it does:
+
+| dialog | drawn title | page |
+|---|---|---|
+| `--msgbox` | `Notice` | one `Frame`, title `Notice` |
+| `--gauge` | `Working` | one `Frame`, title `Working`; the bar inside belongs to the box |
+| `--checklist` | `Pick` | one `Frame`, title `Pick` |
+| `--inputbox` | `Name` | one `Frame`, title `Name` |
+
+Every one round trips every line of its screen. A `--infobox` draws no border and erases itself when it exits, so the
+recording holds nothing at all - the recorder's honest answer, not a `Frame` with no name.
