@@ -115,6 +115,11 @@ Two questions are closed **by decision**, and each says what would reopen it:
    in document order and loses the CSS layout, and a page cannot carry a layout without a layout engine. Reopen with a
    consumer that needs columns.
 
+Measured since, and recorded where a successor will look: the pane model is **two panes, side by side**, so a third
+pane reads as two and a stacked split reads as blocks in document order - both content-exact, both with reopening
+conditions (ADR 0004's addendum); a page's line is a row of **cells**, so a wide glyph keeps a space for its second cell
+and a combining mark is dropped - stated in the catalogue, with tests in `crates/pages` and `crates/frames`.
+
 What remains is material and release: `check-fresh` batches, another application for a thin kind, and the next release -
 all of which need either the machine or a decision that is not this document's to make.
 
