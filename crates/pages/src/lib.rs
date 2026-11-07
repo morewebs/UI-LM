@@ -1866,6 +1866,10 @@ struct MeterParts {
 /// the page rather than beside it. The corpus draws those glyphs in exactly one recording, and a rule written
 /// wider than the shape it was learnt from has cost this project points four times running.
 fn as_frame(lines: &[String], at: (usize, usize), total: usize) -> Option<String> {
+    // A window has content between its rules: a two-row top-and-bottom is a divider drawing, not a box.
+    if lines.len() < 3 {
+        return None;
+    }
     let first = lines.first()?;
     let bottom = lines.last()?;
     // Shape one, from vim: a box ruled with heavy lines, whose border sits at the window's own left edge.
@@ -1942,6 +1946,11 @@ fn as_frame(lines: &[String], at: (usize, usize), total: usize) -> Option<String
     // the model path can compute it from the same text.
     let top = at.0 as isize;
     let bottom_margin = total as isize - at.1 as isize;
+    // A window floats **within** the screen: a box whose top border is the screen's first row, or whose bottom is its
+    // last, is docked to the edge, and the untitled shape does not admit it.
+    if top <= 0 || bottom_margin <= 0 {
+        return None;
+    }
     let centred = (top - bottom_margin).abs() <= 2;
     if centred {
         return Some(String::new());

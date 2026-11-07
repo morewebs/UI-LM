@@ -185,6 +185,11 @@ fixed:
 | tmux, titled | `┌─Title Here────────┐` | `Title Here` |
 | tmux, untitled | `┌───────────────────┐` | `""` |
 
+Two boundary guards complete the shape. A window has content **between** its rules: a two-row top-and-bottom is a
+divider drawing, not a box. And it floats **within** the screen: a box whose top border is the screen's first row, or
+whose bottom is its last, is docked, and the untitled shape refuses it. Neither costs anything in the corpus; both are
+held by unit tests.
+
 The titled tmux popup is `cases/hard/tmux-titled-popup`, and `check-hard` now asserts the title on real material: a
 caption that silently becomes empty leaves the kind looking right while the page loses a fact. Discarding the caption
 while keeping the kind printed:

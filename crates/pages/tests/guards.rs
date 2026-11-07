@@ -424,6 +424,40 @@ fn a_box_with_an_internal_column_is_not_a_frame() {
 }
 
 #[test]
+fn a_two_row_box_and_a_docked_box_are_not_frames() {
+    // A window has content between its rules and floats within the screen. The two-row box is a divider drawing; the
+    // box touching the bottom of the screen is docked to the edge. Neither is a floating window.
+    let two_rows = [
+        "~",
+        "~",
+        "   ┌───────────────┐",
+        "   └───────────────┘",
+        "~",
+        "~",
+    ];
+    let page = page_of(&two_rows, "Block");
+    let two_row_kinds = kinds(&page);
+    assert!(
+        !two_row_kinds.contains(&"Frame".to_owned()),
+        "a two-row box is not a window: {two_row_kinds:?}"
+    );
+
+    let docked = [
+        "~",
+        "   ┌───────────────┐",
+        "   │  some output  │",
+        "   │  more output  │",
+        "   └───────────────┘",
+    ];
+    let page = page_of(&docked, "Block");
+    let docked_kinds = kinds(&page);
+    assert!(
+        !docked_kinds.contains(&"Frame".to_owned()),
+        "a box whose bottom is the screen's last row is docked: {docked_kinds:?}"
+    );
+}
+
+#[test]
 fn a_title_drawn_between_the_rules_is_read() {
     // tmux writes its caption into the border as `┌─Title Here────┐`, with no whiptail `┤…├` delimiters. The caption
     // is the run that is not the rule character; without this the page would carry an empty title while the words sat
