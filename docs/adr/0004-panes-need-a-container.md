@@ -572,3 +572,20 @@ when it was written).
 The cost, for the record: twelve rounds of attempts, seven of them reverted, before the change landed
 in five consecutive green steps — page level, renderer, gates chosen from tables, label path, segmenter
 rule. **Every revert came from changing two things at once.**
+
+
+## Addendum: a third pane, and why the model stays two
+
+A tmux session split into three panes - 60, 29 and 29 columns, carrying `alpha-left`, `beta-middle` and `gamma-right` -
+was recorded to see what a two-pane model does with a screen that is not two panes:
+
+| | |
+|---|---|
+| the screen | `alpha-left ... │beta-middle ... │gamma-right` |
+| the page | **two panes**: the left holds the first two panes' text with both dividers in it, the right holds `gamma-right` |
+| the round trip | **30/30 lines, 100%** |
+
+The split lands on a divider and the page keeps every line, so the loss is structure, not text: the page cannot say the
+screen had three columns. Making the model N-way touches `as_panes`'s return, both renderers, the comparison and the
+checks, and one screen is less evidence than this ADR's own rule asks for. Reopen with a consumer that needs the third
+pane, or with three recordings where the two-pane reading loses something a reader depends on.
