@@ -233,6 +233,30 @@ long the reasoning took and keeps the reasoning itself collapsed. The page there
 the summary and **not** the hidden text — the spec's folding rule applied literally, since a
 folded block's content is not on the page and so is not in the IR. `seconds` is absent when
 a line does not report a duration.
+### `Frame` — a floating window
+
+```json
+{
+  "id": "block-…",
+  "component": "Frame",
+  "source": "seen",
+  "title": "Confirm",
+  "rows": [7, 17],
+  "lines": [
+    "               ┌──────────────────┤ Confirm ├───────────────────┐",
+    "               │ Delete the build folder?                       │",
+    "               └────────────────────────────────────────────────┘"
+  ]
+}
+```
+
+A box drawn *over* the page rather than beside it. Three shapes are recognised: a box ruled with heavy lines (vim's
+`popup_create`), a single-ruled box with its caption in the top border (whiptail's `┤…├` or tmux's `─Title─`), and an
+untitled box centred in the screen. `title` is the caption read from the border and is **empty** when the window draws
+none; `lines` are the rows exactly as drawn, so the round trip places them back without a renderer of its own. A
+full-width sheet docked to the edge, a box drawn off-centre, and a boxed table are not frames. ADR 0006, extended by the
+centring rule.
+
 ## Why the command list is not a `Table`
 
 A recorded `/help` overlay draws a command list — rows of `New Session … Ctrl+N`, grouped

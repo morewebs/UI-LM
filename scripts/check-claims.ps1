@@ -83,6 +83,20 @@ foreach ($relative in $documents) {
     }
 }
 
+# Every component the catalogue defines needs a section a reader can find: `Frame` was in the schema and in the draw
+# contract and had no section, so the field it added - an empty title - was nowhere in the reference.
+$cataloguePath = Join-Path $repo "docs\catalogue\moreweb.terminal-v1.md"
+if (Test-Path $cataloguePath) {
+    $catalogueText = Get-Content -LiteralPath $cataloguePath -Raw -Encoding UTF8
+    $undefined = @(@("Column") + $kinds | Where-Object { $catalogueText -notmatch ('### `' + [regex]::Escape($_) + '`') })
+    if ($undefined.Count -gt 0) {
+        Write-Host ("  the catalogue has no section for: " + ($undefined -join ", "))
+        Write-Host "the catalogue does not define every component it names"
+        exit 1
+    }
+    Write-Host ("the catalogue defines every component: {0}" -f (@($kinds).Count + 1))
+}
+
 # The catalogue's draw contract says what a runtime owes each part of a page; a kind missing from that table is a kind
 # the guide never tells a stranger to draw. `check-kinds` proves the renderer draws all seven; this proves the table says so.
 $catalogue = Join-Path $repo "docs\catalogue\moreweb.terminal-v1.md"
