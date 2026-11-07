@@ -3148,6 +3148,61 @@ mod tests {
     }
 
     #[test]
+    fn a_wide_glyph_keeps_the_space_of_its_second_cell() {
+        // A page's line is a row of cells, not a run of text. A two-cell glyph puts its character in the first cell
+        // and nothing in the second, and the page carries the second as a space - so `lines` stays padded to the
+        // screen's columns and a table's column offsets still point at cells. The cost is named in the catalogue: a
+        // CJK row's text reads with a space after every glyph, and a search for the run fails.
+        let mut frame = Frame::empty(3, 8);
+        let style = Style::default();
+        frame.runs = vec![
+            ui_lm_frames::CellRun {
+                row: 0,
+                col: 0,
+                len: 1,
+                ch: '你',
+                style: style.clone(),
+                wide_tail: false,
+            },
+            ui_lm_frames::CellRun {
+                row: 0,
+                col: 1,
+                len: 1,
+                ch: ' ',
+                style: style.clone(),
+                wide_tail: true,
+            },
+            ui_lm_frames::CellRun {
+                row: 0,
+                col: 2,
+                len: 1,
+                ch: '好',
+                style: style.clone(),
+                wide_tail: false,
+            },
+            ui_lm_frames::CellRun {
+                row: 0,
+                col: 3,
+                len: 1,
+                ch: ' ',
+                style: style.clone(),
+                wide_tail: true,
+            },
+        ];
+        let page = page_from_frame(&frame, "s");
+        let lines = page
+            .create_surface
+            .components
+            .iter()
+            .find_map(|component| match &component.body {
+                Body::Block { lines, .. } => Some(lines.clone()),
+                _ => None,
+            })
+            .expect("one block holds the text");
+        assert_eq!(lines[0], "你 好");
+    }
+
+    #[test]
     fn two_identical_blocks_in_one_frame_are_both_seen() {
         // Frame 4 of `two-agents-one-screen` holds two blocks with the same text. The memory is keyed by the base id,
         // so the first one's insert made the second look like a repeat **within the same frame**, and the checker,

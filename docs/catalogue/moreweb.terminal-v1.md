@@ -96,6 +96,21 @@ A span is `{ "start": 0, "end": 2, "style": { … } }` with `bold`, `italic`, `u
 `reverse` and colour as `indexed:N` or `rgb:R,G,B`. Per-span attributes are the gap every
 surveyed standard has and the thing a `Diff` is built from.
 
+### Wide characters
+
+A line is a row of **cells**, not a run of text. A glyph that occupies two cells - the CJK range, many
+emoji - puts its character in the first cell, and the page carries a space for the second. So `lines`
+stays padded to the screen's columns and a `Table`'s `columns` still name cells.
+
+The cost is real and named: the text of a CJK row reads with a space after every glyph, and a search for
+the run does not find it. A format that wanted both the text and its display width would carry a width
+per cell; this one chose the column, because every offset in a page - `rows`, `columns`, the cell a
+span starts at - is a screen coordinate.
+
+Recorded from a whiptail dialog whose title is `标题`: the page's line is `标 题`, the `Frame`'s title
+`标 题`, and the round trip is exact - the screen draws back because the space is where the second cell
+was. `a_wide_glyph_keeps_the_space_of_its_second_cell` in `crates/pages` holds it.
+
 ### `ToolCall` — what the program read, ran or edited
 
 ```json
