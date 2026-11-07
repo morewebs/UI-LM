@@ -49,13 +49,26 @@ foreach ($relative in $documents) {
         # Only sentences about the catalogue's **whole** vocabulary are counted. "Those two kinds are drawn by
         # rules" is true and says nothing about how many exist (round 25).
         if ($line -match 'label') { continue }
-        if ($line -notmatch 'catalogue|vocabulary|holds \w+ kinds|^(#|\s*[-*]\s)') { continue }
+        # Table rows count too: the handoff's evidence row carried "seven kinds" over six names, and the filter skipped
+        # it because it starts with `|` - the sentence the guard exists for was the one it could not see.
+        if ($line -notmatch 'catalogue|vocabulary|holds \w+ kinds|^(#|\s*[-*]\s|\|)') { continue }
         foreach ($m in [regex]::Matches($line, '(\w+)\s+kinds\b')) {
             $word = $m.Groups[1].Value.ToLower()
             $digits = @{ "one"=1; "two"=2; "three"=3; "four"=4; "five"=5; "six"=6; "seven"=7; "eight"=8; "nine"=9 }
             $stated = if ($digits.ContainsKey($word)) { $digits[$word] } elseif ($word -match '^\d+$') { [int]$word } else { -1 }
             if ($stated -gt 0 -and $stated -ne $kinds.Count) {
                 $failures += ("{0}: says {1} kinds; the catalogue defines {2}" -f $relative, $stated, $kinds.Count)
+            }
+            # A sentence that states the count and lists the kinds must list them all. The handoff's evidence row said
+            # "seven kinds" over six names for as long as Table existed; counting the sentence was not reading it.
+            $prose = @{ "Block"='block'; "ToolCall"='tool call'; "Meter"='meter'; "Thought"='thought|reasoning';
+                        "Diff"='diff'; "Frame"='frame'; "Table"='table' }
+            $named = @($kinds | Where-Object { $line -match $prose[$_] })
+            if ($named.Count -ge 3) {
+                $left = @($kinds | Where-Object { $named -notcontains $_ })
+                if ($left.Count -gt 0) {
+                    $failures += ("{0}: states the count and its list leaves out {1}" -f $relative, ($left -join ", "))
+                }
             }
         }
     }

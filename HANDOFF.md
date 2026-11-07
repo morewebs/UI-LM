@@ -9,7 +9,8 @@ the gap is named.
 ## What this is
 
 A terminal screen is read into a **page** — a description of what was on screen: blocks of text,
-tool calls, meters, reasoning lines, diffs, and the panes of a full-screen application — and the
+tool calls, meters, reasoning lines, diffs, tables, floating windows, and the panes of a full-screen
+application — and the
 page is drawn again somewhere else: HTML for a browser, terminal text for a terminal, or live as
 the screen changes. A small trained model decides what each row *is*; the code that watched the
 screen decides how it *looks* and how a component is shaped.
@@ -71,7 +72,7 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 
 | claim | evidence |
 |---|---|
-| a screen's text becomes a page holding blocks, tool calls, meters, thoughts, diffs, frames and panes | **seven kinds**, 779 frames assembled at 100% given the reader's own answers |
+| a screen's text becomes a page holding blocks, tool calls, meters, thoughts, diffs, frames, tables and panes | **seven kinds**, 779 frames assembled at 100% given the reader's own answers |
 | a page draws back every line of content | **0 sessions below 100%**, split screens and resized dividers included, on both reader and model pages |
 | the page carries the screen's styling | 5,957 components compared field by field, **0 differing** |
 | provenance is honest | 12,512 components, 10,465 carried, **0 contradictions** |

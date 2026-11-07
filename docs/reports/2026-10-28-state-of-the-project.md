@@ -12,7 +12,7 @@ You give it a terminal program. It:
 
 1. **records** what the program draws, screen by screen, with colour and position;
 2. **describes** each screen as a structured page — text blocks, tool calls, meters, reasoning
-   lines, diffs, and the panes of a full-screen application;
+   lines, diffs, tables, floating windows, and the panes of a full-screen application;
 3. **draws that page again** somewhere else — a browser, a terminal, or a live view that updates as
    the program runs;
 4. **lets you type back** into the program from the browser.
