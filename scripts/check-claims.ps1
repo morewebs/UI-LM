@@ -70,6 +70,29 @@ foreach ($relative in $documents) {
     }
 }
 
+# The catalogue's draw contract says what a runtime owes each part of a page; a kind missing from that table is a kind
+# the guide never tells a stranger to draw. `check-kinds` proves the renderer draws all seven; this proves the table says so.
+$catalogue = Join-Path $repo "docs\catalogue\moreweb.terminal-v1.md"
+if (Test-Path $catalogue) {
+    $text = Get-Content -LiteralPath $catalogue -Raw -Encoding UTF8
+    $section = [regex]::Match($text, '## What a runtime must draw([\s\S]*?)(
+## |\z)')
+    if (-not $section.Success) {
+        Write-Host "the catalogue no longer holds the draw contract, so nothing was compared"
+        exit 1
+    }
+    # Only the table's rows count. The prose after it mentions `Table` and `Frame` - "whether a `Frame` is a dialog
+    # element" - and a first version that read the whole section passed a mutation that removed the row.
+    $rows = (($section.Groups[1].Value -split "`n") | Where-Object { $_ -match '^\|' }) -join "`n"
+    $unlisted = @($kinds | Where-Object { $rows -notmatch ('`' + [regex]::Escape($_) + '`') })
+    if ($unlisted.Count -gt 0) {
+        Write-Host ("  the draw contract does not list: " + ($unlisted -join ", "))
+        Write-Host "the catalogue does not tell a runtime to draw every kind"
+        exit 1
+    }
+    Write-Host ("the draw contract names every kind: {0}" -f $kinds.Count)
+}
+
 # A glossary that says "seven kinds" and defines six matches every count check and still leaves one kind a stranger cannot
 # look up: `Table` was missing for as long as the kind existed. The section must define each kind with a bold entry.
 $glossary = Join-Path $repo "GLOSSARY.md"
