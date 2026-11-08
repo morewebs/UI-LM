@@ -35,7 +35,7 @@ stated here rather than in a footnote.
 | every recording here | **124 recordings, 1,685 frames** from **12 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
 | seven evaluation sets | Grok and non-Grok screens, 344 frames | 100% every set |
 | **a second agent CLI** | **21 recordings, 1111 frames, never trained on** | **100%, every component** |
-| fresh batches | recorded **after** training, **27 batches** | 100% every batch, every kind it held |
+| fresh batches | recorded **after** training, **28 batches** | 100% every batch, every kind it held |
 
 **The floor matters as much as the score.** `score` also reports a text-only converter that splits
 paragraphs; a set where the floor is already 100% cannot distinguish the model from that converter, and
