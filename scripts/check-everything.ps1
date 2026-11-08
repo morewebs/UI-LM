@@ -20,9 +20,20 @@ $ErrorActionPreference = "Continue"
 $repo = Split-Path -Parent $PSScriptRoot
 Set-Location $repo
 
-if (-not (Test-Path "target\debug\ui-lm-capture.exe")) {
-    Write-Host "build first: cargo build --workspace"
+# The checks need all three binaries, and nothing else here builds them. `cargo test` produces
+# `ui-lm-capture.exe` for its integration tests, but `ui-lm-serve.exe` and `ui-lm-validate.exe` come only from
+# `cargo build --workspace`. On 2026-11-08 an invalidated `target/` left the capture binary in place and five checks
+# spent the run reporting "no binaries, so nothing was measured" - five false failures that named no defect. The runner
+# produces what it measures, and stops if it cannot.
+$buildStarted = Get-Date
+& cargo build --workspace *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "cargo build --workspace failed, so nothing can be measured"
     exit 1
+}
+$buildSeconds = ((Get-Date) - $buildStarted).TotalSeconds
+if ($buildSeconds -gt 5) {
+    Write-Host ("  the workspace took {0:N0}s to build" -f $buildSeconds)
 }
 
 # The other half of the orphan fix (rounds 166-168). Assigning this process to a job whose members are killed when its
