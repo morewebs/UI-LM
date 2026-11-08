@@ -131,14 +131,15 @@ and the sentence is narrower than the one it replaces.
 
 ## How to check any of this yourself
 
-One command answers "is this tree sound", and takes about eight minutes:
+One command answers "is this tree sound", and takes about half an hour:
 
 ```
 powershell -File scripts/check-everything.ps1
 ```
 
-It runs 29 checks and prints one table. With `-Quick` it skips the five that record new material
-and answers in under a minute — that is the loop for working; the full run is the loop for shipping.
+It runs 30 checks and prints one table. With `-Quick` it skips the nine slowest and takes about
+fifteen minutes — that is the loop for working; the full run is the loop for shipping, and takes about
+half an hour.
 With `-Tag v0.11.1` it also downloads that release and proves the archive does what this document says.
 
 **Every line in the table can fail**, and each was made to fail at least once before it was trusted:
