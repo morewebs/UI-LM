@@ -5,10 +5,10 @@ seen on a recorded screen. It is the reference for the runtime and for the next 
 it and the code disagree, the code is right and this page is a bug.
 
 **The format has a machine-readable schema**: [`moreweb.terminal-v1.schema.json`](moreweb.terminal-v1.schema.json).
-Every key, type and optionality in it was derived from the corpus - 1,639 pages across 110 recordings - rather than from
+Every key, type and optionality in it was derived from the corpus as it stood when the format was decided - 1,639 pages across 110 recordings - rather than from
 
 
-**And a conformance kit**: [`../conformance/`](../conformance/) holds four pages with the screen each must draw. `ui-lm-capture tui --page page.json` draws either an example or a page from any other program, and `scripts/check-conformance.ps1` fails when a page stops drawing what it is defined by.
+**And a conformance kit**: [`../conformance/`](../conformance/) holds eight pages with the screen each must draw. `ui-lm-capture tui --page page.json` draws either an example or a page from any other program, and `scripts/check-conformance.ps1` fails when a page stops drawing what it is defined by.
 an example, and `scripts/check-schema.py` validates every page against it on every run. A runtime that implements this
 format can read a page only if that file accepts it.
 
@@ -164,7 +164,7 @@ has finished drawing.
 `Format-Table` with many, so what makes a table is **two vertical strips of two or more characters holding a digit in a
 majority of the rows**, separated by a blank column - and the run must be a block of its own, not a streak inside prose.
 
-Measured on this corpus: **49 components in 105 recordings**, headed by `ls`, `ps`, `df`, `top`, `dir` and formatted
+Measured on this corpus: **62 components in 26 recordings**, headed by `ls`, `df`, `top`, `pip`, `git` and formatted
 listings. The alignment rule it replaced scored zero on `df` and matched `vim`'s help rows - see ADR 0007 for the
 rejection and ADR 0008 for the decision.
 
@@ -223,9 +223,9 @@ surveyed standard can express: a per-line kind *and* per-span attributes at once
 | `Block` `shortcuts` | a recorded permission card (`Yes, proceed = y`) |
 | `ToolCall` | recorded screens (`Read notes.txt`, `Hook … failed`) |
 | `Meter` | recorded screens (`1.3K / 500K`) |
-| `Diff` | **constructed frames only** — no recorded screen has drawn a diff body |
+| `Diff` | recorded screens — git, Freebuff under `cmd.exe`, a Python script and a shell script: 114 components in 16 recordings |
 | `Thought` | a recorded screen with reasoning raised: `♦ Thought for 3.0s` |
-| `Table` | **not implemented** — nothing recorded has drawn one |
+| `Table` | recorded screens — `df`, `top`, `ls`, `pip`, PowerShell's `Format-Table` and the word grid: 62 components in 26 recordings |
 
 
 ## `Block` is carrying the structure
@@ -284,8 +284,8 @@ A recorded `/help` overlay draws a command list — rows of `New Session … Ctr
 under `Session`, `Context` and headings of their own. It is described as `shortcuts` on a
 `Block`, not as a `Table`, for two reasons: the rows are label-and-key pairs, which is what
 `shortcuts` exists for, and the overlay has no column headers — the group names are
-headings over sections, not names for columns. `Table` stays unimplemented; a genuine grid
-with `Table`'s shape has still not been drawn by anything recorded.
+headings over sections, not names for columns. The overlay is still not a `Table`: that kind reads a grid of aligned cells (ADR 0008), and this
+overlay draws label-and-key pairs, not columns of names.
 
 A side effect worth knowing: that overlay's bottom border is scrolled off, and the input
 box touches it below. Blocks now split at every opening border, so the overlay and the
@@ -403,6 +403,5 @@ text, and as whatever comes next.
 ## Degradation
 
 An unknown component is rendered as a labelled placeholder and never dropped. That rule
-belongs to the runtime, and it is the reason this document names `Table` and `Thought` as
-absent rather than leaving them implied: a page must not name a component a renderer of
-this catalogue cannot draw.
+belongs to the runtime, and it is the reason this document names every component it defines rather than leaving them
+implied: a page must not name a component a renderer of this catalogue cannot draw.

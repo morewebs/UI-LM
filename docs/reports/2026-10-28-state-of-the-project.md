@@ -28,19 +28,19 @@ the code constructs.
 | a screen's text becomes a page holding real components | every evaluation set at 100% |
 | a page draws back into a terminal, every line of content | 100% on every recording, split screens included |
 | the page carries the screen's colour | 6,303 spans on the corpus; reaches HTML, terminal and the live view |
-| pages say honestly whether a component was read or carried | 688 components, 0 contradictions |
-| a second agent CLI reads perfectly without training | **323 frames of Freebuff at 100%** — Block, ToolCall, Thought and Diff — and it is the richest structured source in the corpus at 8.89 components a frame |
+| pages say honestly whether a component was read or carried | **12,596 components, 10,504 carried, 0 contradictions** |
+| a second agent CLI reads perfectly without training | **1111 frames of Freebuff at 100%** — Block, ToolCall, Thought and Diff — and it is the richest structured source in the corpus at 8.77 components a frame |
 | the model works off its training application | trained on one; **every component of every batch recorded since**; and on the eight non-Grok recordings, three of which have a floor low enough to prove anything — all three perfect. Five of those eight have a floor of 100% and prove nothing |
 | new screens, recorded after training, read perfectly | **every batch since training, every kind it held, nothing missed** — the per-batch numbers are in the report |
 | a split screen's panes hold their own components | both paths ask the same question before splitting; audited on model pages too |
 | a floating window is named | **`Frame`**, added in round 48 from a vim popup: the first kind added since the vocabulary settled, and the first that needed a boundary before it needed a predicate |
 | the hard recordings hold their shapes | **23 hard recordings**, all at 100% on score and both round trips: an agent in a pane, an agent beside a shell, two agents, two text buffers, and a word grid whose last row stops short |
 | an agent running in one pane of a split reads perfectly | 100% on the two recordings that drove the container (53.9% and 96.0% when it was written) |
-| every word the page holds reaches the browser document | 124 recordings **on both paths**, checked; markup arrives escaped |
-| every recording on this machine reads on either builder | **124 recordings, 3370 pages**, reader and model, no error |
+| every word the page holds reaches the browser document | 125 recordings **on both paths**, checked; markup arrives escaped |
+| every recording on this machine reads on either builder | **125 recordings, 3372 pages**, reader and model, no error |
 | every page a builder makes is consistent with its screen |  frames audited on **each** path, no violations |
 | the download works | **v0.65.0**, three platforms, verified by downloading it and running it |
-| the checks can fail | **31 scripts and 4 fuzz properties, each shown failing with the output kept** (`docs/checks.md`); three refuse to pass on empty material and one has a clock |
+| the checks can fail | **31 scripts and 4 fuzz properties, each shown failing with the output kept** (`docs/checks.md`); thirteen refuse to pass on empty material and one has a clock |
 | the viewer keeps up | typing, redraws, half-written files, cleared screens — each checked |
 | exporting a session is cheap | 4.4 ms and 3.9 KB per page, linear to 1,510 pages, capped by a check |
 
@@ -51,7 +51,7 @@ the code constructs.
   being trained on it — that is the generalisation evidence, and it rests on one second application. The other agent
   CLIs — `claude`, `aider`, `codex`, `gemini`, `ollama`, `opencode` — were looked for in WSL and on Windows and none is
   installed, so a field of applications is not available here.
-- **Every screen came from this machine**, and most were chosen by me. Ten clean batches is the
+- **Every screen came from this machine**, and most were chosen by me. Thirty-three clean batches is the
   strongest claim available; it is not the same as a stranger's workflow.
 - **The model is at its ceiling, and that is measured three ways.** 60% more corpus: +0.1% row
   accuracy. A twentieth feature: worse on every screen family. Training on plain screens: three
@@ -80,7 +80,7 @@ hour. `HANDOFF.md` is the short version for whoever picks this up next.
    Freebuff, an npm TUI, was recorded eleven times and the untrained model reproduces every component at 100%.
 3. **Stop calling it a model success and start calling it a reader success.** This one is not a task and has not been
    resolved: the model's raw labels still disagree with the reader on 2–12% of rows, and the exact pages are the
-   reader's and the guards' work. The current frontiers are the four in `HANDOFF.md`.
+   reader's and the guards' work. The current frontiers are the ones `HANDOFF.md` names.
 
 ## What the last week added, in one paragraph
 
@@ -92,15 +92,6 @@ printing what each path computed, after five plausible explanations had each bee
 test. That ratio — five theories, one trace — is the most useful thing this month taught about how the
 work should be done.
 
-## What the last week added, in one paragraph
-
-The pane container — a split screen read one pane at a time, on both the reader and the model path —
-is implemented and shipped in v0.8.0. It took twelve rounds of attempts, seven reverted, before landing
-in five consecutive green steps. The last defect it produced took six more rounds to find and was **one
-line**: the two paths were asking different questions before deciding to split. What found it was a
-trace printing what each path computed, after five plausible explanations had each been disproved by a
-small test. That ratio — five theories, one trace — is the most useful thing this month taught about how
-the work should be done.
 ## One limitation worth stating plainly
 
 A wide character — a CJK glyph, an emoji — fills two terminal cells, and the page records both. So the
@@ -117,12 +108,12 @@ continuation cell in the frame format, which is a format change rather than a re
 written down rather than wished away.
 ## What "100% on fresh material" does and does not mean
 
-Eight batches recorded after the model was trained, **nothing missed in any of them**:
-Block, Meter, Thought and ToolCall all perfect.
+Thirty-three batches recorded after the model was trained, **nothing missed in any of them**:
+every kind each batch held, perfect.
 
 **`Diff` was missing until it was asked for.** The agent reports an *edit* as a tool line with
 counts — `♦ Edit edit.txt +1/-1` — but asking it to run `git diff` makes the output block hold a real
-two-sided diff, and the reader finds it: `Diff 1/1` on a recording made after training. So all six
+two-sided diff, and the reader finds it: `Diff 1/1` on a recording made after training. So all seven
 kinds are perfect on new material.
 
 The claim is now: *all seven kinds are perfect on new material from the training application* — with the
@@ -140,7 +131,7 @@ powershell -File scripts/check-everything.ps1
 It runs 30 checks and prints one table. With `-Quick` it skips the nine slowest and takes about
 fifteen minutes — that is the loop for working; the full run is the loop for shipping, and takes about
 half an hour.
-With `-Tag v0.11.1` it also downloads that release and proves the archive does what this document says.
+With `-Tag v0.65.0` it also downloads that release and proves the archive does what this document says.
 
 **Every line in the table can fail**, and each was made to fail at least once before it was trusted:
 
@@ -157,15 +148,16 @@ have been caught lying at least once.
 
 ## What I would do with another month
 
-1. **A second agent's transcripts.** This is the only claim the project cannot test for itself: every
-   screen ever recorded came from one application. The vocabulary's generality is assumed, not measured.
-2. **A layout check for the renderers.** `check-html` compares words and — since this week — pane
-   structure. It still cannot tell whether a page's *arrangement* matches the screen's.
-3. **Wide-character strings.** The page is column-exact and the string is padded; a flagged continuation
-   cell in the frame format would close the gap between the two.
-4. **Distrust the suite a little more.** Twenty-one properties are proven; the ones that failed were
-   always the ones nobody had pointed at material they could not handle. The next defect is most likely
-   in a check that has only ever been given easy input.
+1. **A consumer for the layout question.** `check-html` compares words and pane structure, but cannot tell
+   whether a page's *arrangement* matches the screen's; whether losing side-by-side layout matters is a
+   decision no consumer has asked for yet (ADR 0004's addendum records the measurement).
+2. **A field of applications, on another machine.** One second agent is measured; the other agent CLIs are
+   not installed here, so the vocabulary's generality still rests on one extra program.
+3. **A string, not a cell row.** A wide-character string is padded by the cell rule; closing that gap needs a
+   flagged continuation cell in the frame format, which is a format change rather than a reader one.
+4. **Distrust the suite a little more.** The properties that failed were always the ones nobody had pointed
+   at material they could not handle. The next defect is most likely in a check that has only ever been
+   given easy input.
 
 ## If you have material from another application
 

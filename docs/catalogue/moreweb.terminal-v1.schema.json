@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://morewebs.dev/ui-lm/terminal/v0.9.1",
   "title": "moreweb terminal page, v0.9.1",
-  "description": "One screen described as a page. Every key, type and optionality in this file was derived from the corpus - 1,639 pages - not from a single example (rounds 150-151).",
+  "description": "One screen described as a page. Every key, type and optionality in this file was derived from the corpus as it stood when the format was decided - 1,639 pages - not from a single example (rounds 150-151).",
   "type": "object",
   "required": [
     "version",

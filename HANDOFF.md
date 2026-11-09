@@ -72,12 +72,12 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 
 | claim | evidence |
 |---|---|
-| a screen's text becomes a page holding blocks, tool calls, meters, thoughts, diffs, frames, tables and panes | **seven kinds**, 779 frames assembled at 100% given the reader's own answers |
+| a screen's text becomes a page holding blocks, tool calls, meters, thoughts, diffs, frames, tables and panes | **seven kinds**, 1387 frames assembled at 100% given the reader's own answers |
 | a page draws back every line of content | **0 sessions below 100%**, split screens and resized dividers included, on both reader and model pages |
-| the page carries the screen's styling | 5,957 components compared field by field, **0 differing** |
-| provenance is honest | 12,595 components, 10,504 carried, **0 contradictions** |
+| the page carries the screen's styling | 10,956 components compared field by field, **0 differing** |
+| provenance is honest | 12,596 components, 10,504 carried, **0 contradictions** |
 | the reader and the label path agree | every evaluation set at 100%, and every hard case on score, round trip and shape |
-| the model generalises off its training application | trained on Grok alone; **591 frames of Freebuff at 100%** — Block 4652, ToolCall 158, Thought 385, Diff 54 |
+| the model generalises off its training application | trained on Grok alone; **1111 frames of Freebuff at 100%** — Block 8714, ToolCall 371, Thought 550, Diff 106 |
 | the download works | **v0.65.0** verified by downloading, unzipping, and running `version` and `score` on a real session |
 ## Fragile spots, and why they are written this way
 
@@ -125,7 +125,7 @@ all of which need either the machine or a decision that is not this document's t
 
 ## What was the second item, and is now done
 
-**A corpus from a second agent** — Freebuff, an npm TUI, installed and recorded eleven times: 580 frames
+**A corpus from a second agent** — Freebuff, an npm TUI, installed and recorded 21 times: 1111 frames
 across reading, writing, diffing (including a rename), searching, a full fix cycle, and two refusals. The model
 was trained on Grok alone and reproduces **every component at 100%**. `check-agents` holds it, and the
 decisions that came out of it are in `docs/reports/2026-10-28-model.md`: a bullet marks a tool row, a reasoning
@@ -157,7 +157,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
 shape, and **v0.65.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
-The corpus is **124 recordings, 1685 frames** per path, recorded from **12 distinct commands** — derived from the
+The corpus is **125 recordings, 1686 frames** per path, recorded from **12 distinct commands** — derived from the
 `command` field of every recording, which is the only definition that admits checking. Among them: Grok (the training
 application), Freebuff (a second agent CLI), `whiptail` (the only program here that draws a floating dialog), and
 `man`, `less`, `df`, `vim`, `top`, `git`, `cmd` and PowerShell — programs that are not agents at all.
@@ -198,18 +198,17 @@ refused was refused by counting something.
 
 **The provenance contradiction is fixed.** `pages()` decides `carried` from the memory as it was **before** the frame,
 not from the set the loop is filling: two identical blocks in one frame are both `seen`, because neither was on screen
-earlier. The corpus measures **12,595 components, 10,504 carried, 0 contradictions**, and `check-corpus` now pins zero.
+earlier. The corpus measures **12,596 components, 10,504 carried, 0 contradictions**, and `check-corpus` now pins zero.
 The two earlier attempts failed because they also lost the restore step; the smallest test of the shape is
 `two_identical_blocks_in_one_frame_are_both_seen` in `crates/pages/src/lib.rs`.
 
 ## Two open threads, each with its next step
 
-1. **`Table` shipped, and both signals are measured.** Values catch numeric columns; a dash underline catches a word
-   table (`cases/hard/pwsh-word-table`, required). A table inside a pane is `cases/hard/pane-with-tables`. The heading and
-   the dash row are cell rows too - skipping them made the audit fail and left four lines of `pwsh-table` out of the
-   document. v0.45.0 cut each cell at the end of the dashes (`hosts` stored as `host`); the cell now runs to the next
-   column, which is what the values rule already did. **Next step:** a word table the application does not underline,
-   which neither signal can see, and which the corpus does not hold.
+1. **`Table` shipped, and the word grid closed its last frontier.** Values catch numeric columns; a dash underline
+   catches an underlined word table; and a grid of single words needs neither (ADR 0009 - `ls -C`, `pip list`, `pr`).
+   `eval/apps/mount-column` is the measured boundary: a `mount` listing through `column -t` is a table to a person,
+   its cells hold spaces, and the page reads it as one `Block` that round trips 39/39 lines. **Next step:** none - a
+   rule that accepted prose cells is ADR 0007's rejection.
 2. **The reader's silence is measured, and the answer is "the document's own blocks, in order".** A page built from
    layout divs and CSS - the shape a framework emits - reads back as its text in document order: inline spans join on
    a line, each block element is its own line. No rows are invented from CSS, and nothing is dropped.

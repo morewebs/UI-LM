@@ -12,8 +12,8 @@ ADR 0008). That is the split the project runs on: what a thing *is*, is learned;
 |---|---|
 | weights | `models/page.json`, 19 x 5 matrix and 5 biases, SHA-256 begins `433465EADD618E45` |
 | features | 19, read off the screen itself: tool glyphs, meter ratios, indentation, box characters, elapsed-time phrases, diff markers, and so on |
-| generalisation | **124 recordings, every one at 100%** - including five made after training: a `git clone`, a
-scripted progress loop, a table of words, a split screen and a diff |
+| generalisation | **125 recordings, every one at 100%** - including six made after training: a `git clone`, a
+scripted progress loop, a table of words, a split screen, a diff and a `column -t` mount listing |
 | parameters | 100 |
 | inference | Rust, `crates/model`, no runtime dependencies |
 | training code | `scripts/train_model.py`, `python3 scripts/train_model.py` |
@@ -32,8 +32,8 @@ stated here rather than in a footnote.
 
 | set | what it is | result |
 |---|---|---|
-| every recording here | **124 recordings, 1,685 frames** from **12 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
-| seven evaluation sets | Grok and non-Grok screens, 344 frames | 100% every set |
+| every recording here | **125 recordings, 1,686 frames** from **12 distinct commands**, both builders | every one read without an error; both builders consistent with their screens |
+| seven evaluation sets | Grok and non-Grok screens, 345 frames | 100% every set |
 | **a second agent CLI** | **21 recordings, 1111 frames, never trained on** | **100%, every component** |
 | fresh batches | recorded **after** training, **33 batches** | 100% every batch, every kind it held |
 

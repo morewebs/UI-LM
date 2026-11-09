@@ -32,7 +32,7 @@ if ($kinds.Count -lt 2) {
     exit 1
 }
 
-$documents = @("README.md", "HANDOFF.md", "GLOSSARY.md", "docs\model-card.md",
+$documents = @("README.md", "HANDOFF.md", "GLOSSARY.md", "docs\model-card.md", "docs\catalogue\moreweb.terminal-v1.md",
                "docs\reports\2026-10-28-state-of-the-project.md", "docs\reports\2026-10-29-month-in-review.md")
 $failures = @()
 $checked = 0
@@ -75,7 +75,11 @@ foreach ($relative in $documents) {
 
     # 2. a component called rejected or absent
     foreach ($kind in $kinds) {
-        foreach ($pattern in @("$kind``? is rejected", "$kind``? does not exist", "$kind``? was rejected")) {
+        # "Not implemented" joined the class after the catalogue still called `Table` and `Diff` absent for weeks
+        # after the corpus held both: the three phrases it used were not in this list, so nothing failed.
+        foreach ($pattern in @("$kind``? is rejected", "$kind``? does not exist", "$kind``? was rejected",
+                               "$kind``? is not implemented", "$kind``? stays unimplemented",
+                               "$kind``? remains unimplemented", "$kind``? is unimplemented")) {
             if ($text -match $pattern) {
                 $failures += ("{0}: calls {1} rejected or absent, and the catalogue defines it" -f $relative, $kind)
             }

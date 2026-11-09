@@ -142,7 +142,7 @@ powershell -File scripts/check-everything.ps1 # all 31 checks, about half an hou
 
 ## What is proven
 
-Against **124 recordings and 1,685 frames** from twelve distinct commands — two agent CLIs, `whiptail`, `vim`, `top`,
+Against **125 recordings and 1,686 frames** from twelve distinct commands — two agent CLIs, `whiptail`, `vim`, `top`,
 `df`, `man`, `less`, `git`, `cmd` and PowerShell — gathered on two machines:
 
 - **The reader and the model both describe every evaluation frame, and both are consistent with their screens.** Seven
