@@ -157,7 +157,7 @@ Write-Host ("the pinned diff count holds: {0} of {1} carry no @@ header" -f $noH
 # Provenance contradictions are zero, and the ceiling is zero. The builder decides `carried` by asking whether a base id
 # was in the memory **before this frame**; testing the set the loop was filling made two identical blocks in one frame
 # look like a repeat, and one component in `two-agents-one-screen` was pinned for thirteen rounds (rounds 229-230). The
-# count is 12,595 components with every carried one having appeared in an earlier frame. A single contradiction is now a
+# count is 12,596 components with every carried one having appeared in an earlier frame. A single contradiction is now a
 # regression rather than an explained cost.
 $provenanceErrors = 0
 $readerProvenance = & $capture provenance --session $sessions[0].FullName 2>$null
