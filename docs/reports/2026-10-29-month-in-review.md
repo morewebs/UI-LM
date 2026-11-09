@@ -1,6 +1,6 @@
 # The month in review
 
-**UI-LM, 2026-10-27 to 2026-11-09.** 70 releases, 31 checks and four fuzz properties. This page is
+**UI-LM, 2026-10-27 to 2026-11-09.** 71 releases, 31 checks and four fuzz properties. This page is
 the short version; the long version is `2026-10-28-model.md`, the state of the product is
 `2026-10-28-state-of-the-project.md`, and the model itself is described in `docs/model-card.md`.
 
@@ -19,11 +19,11 @@ description of the screen, and anything that can read the page can rebuild the s
 
 | | |
 |---|---|
-| releases | **v0.1.0 → v0.65.0**, three platforms each, every one verified by downloading it |
+| releases | **v0.1.0 → v0.66.0**, three platforms each, every one verified by downloading it |
 | checks | **31 scripts**, one table, **every check shown failing with its output kept** |
 | fuzz properties | 4 — reader, renderers, model, raw bytes |
 | model card | `docs/model-card.md` — weights, features, training data, and what it cannot do |
-| fresh material | **thirty-three batches, not one component missed** — counted per batch in the report |
+| fresh material | **thirty-four batches, not one component missed** — counted per batch in the report |
 | hardest recordings | **23**, from an agent in a pane to two agents on one screen: all at 100% on score, round trip and shape |
 
 ## The defects worth remembering
@@ -84,11 +84,11 @@ agent.
 
 | | |
 |---|---|
-| releases | **70**, v0.1.0 through v0.65.0, three platforms each, every one verified by downloading it |
+| releases | **71**, v0.1.0 through v0.66.0, three platforms each, every one verified by downloading it |
 | commits | 917 |
 | checks | **31 scripts** and 4 fuzz properties, each with the failure that proved it in `docs/checks.md` |
 | hard recordings | **23** shapes, all at 100% on score and both round trips |
-| fresh material | **33 batches**, every one perfect, every one recorded after training |
+| fresh material | **34 batches**, every one perfect, every one recorded after training |
 | the final audit | `every check passed in 1483.7s` |
 | unproven | **a grid whose cells hold spaces** (`mount` through `column -t` reads as one `Block`, measured); **a layout's arrangement**, which no check can see |
 

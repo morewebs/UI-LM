@@ -39,7 +39,7 @@ the code constructs.
 | every word the page holds reaches the browser document | 125 recordings **on both paths**, checked; markup arrives escaped |
 | every recording on this machine reads on either builder | **125 recordings, 3372 pages**, reader and model, no error |
 | every page a builder makes is consistent with its screen |  frames audited on **each** path, no violations |
-| the download works | **v0.65.0**, three platforms, verified by downloading it and running it |
+| the download works | **v0.66.0**, three platforms, verified by downloading it and running it |
 | the checks can fail | **31 scripts and 4 fuzz properties, each shown failing with the output kept** (`docs/checks.md`); thirteen refuse to pass on empty material and one has a clock |
 | the viewer keeps up | typing, redraws, half-written files, cleared screens — each checked |
 | exporting a session is cheap | 4.4 ms and 3.9 KB per page, linear to 1,510 pages, capped by a check |
@@ -51,7 +51,7 @@ the code constructs.
   being trained on it — that is the generalisation evidence, and it rests on one second application. The other agent
   CLIs — `claude`, `aider`, `codex`, `gemini`, `ollama`, `opencode` — were looked for in WSL and on Windows and none is
   installed, so a field of applications is not available here.
-- **Every screen came from this machine**, and most were chosen by me. Thirty-three clean batches is the
+- **Every screen came from this machine**, and most were chosen by me. Thirty-four clean batches is the
   strongest claim available; it is not the same as a stranger's workflow.
 - **The model is at its ceiling, and that is measured three ways.** 60% more corpus: +0.1% row
   accuracy. A twentieth feature: worse on every screen family. Training on plain screens: three
@@ -108,7 +108,7 @@ continuation cell in the frame format, which is a format change rather than a re
 written down rather than wished away.
 ## What "100% on fresh material" does and does not mean
 
-Thirty-three batches recorded after the model was trained, **nothing missed in any of them**:
+Thirty-four batches recorded after the model was trained, **nothing missed in any of them**:
 every kind each batch held, perfect.
 
 **`Diff` was missing until it was asked for.** The agent reports an *edit* as a tool line with
@@ -131,7 +131,7 @@ powershell -File scripts/check-everything.ps1
 It runs 30 checks and prints one table. With `-Quick` it skips the nine slowest and takes about
 fifteen minutes — that is the loop for working; the full run is the loop for shipping, and takes about
 half an hour.
-With `-Tag v0.65.0` it also downloads that release and proves the archive does what this document says.
+With `-Tag v0.66.0` it also downloads that release and proves the archive does what this document says.
 
 **Every line in the table can fail**, and each was made to fail at least once before it was trusted:
 

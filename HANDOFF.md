@@ -78,7 +78,7 @@ pages, if provenance contradicts itself, or if a page stops drawing back every l
 | provenance is honest | 12,596 components, 10,504 carried, **0 contradictions** |
 | the reader and the label path agree | every evaluation set at 100%, and every hard case on score, round trip and shape |
 | the model generalises off its training application | trained on Grok alone; **1111 frames of Freebuff at 100%** — Block 8714, ToolCall 371, Thought 550, Diff 106 |
-| the download works | **v0.65.0** verified by downloading, unzipping, and running `version` and `score` on a real session |
+| the download works | **v0.66.0** verified by downloading, unzipping, and running `version` and `score` on a real session |
 ## Fragile spots, and why they are written this way
 
 - **Assembly guards are deliberately narrow.** `crates/pages/src/labeled.rs` demotes labels the
@@ -154,7 +154,7 @@ somebody gets round to the documents — which is what happened for twenty-four 
 ## Where it stands now
 
 **31 checks, about half an hour, every axis green**, **23 hard cases** at 100% on score, round trip and
-shape, and **v0.65.0** verified by download and by asking the binary what it was built from (`version` prints the
+shape, and **v0.66.0** verified by download and by asking the binary what it was built from (`version` prints the
 commit and a digest of the working tree).
 
 The corpus is **125 recordings, 1686 frames** per path, recorded from **12 distinct commands** — derived from the
